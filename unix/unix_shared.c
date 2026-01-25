@@ -1,7 +1,8 @@
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <time.h>
 
-#include <include/orca.h>
+#include "../platform.h"
 
 longTime_t
 SYS_GetMilliseconds(void)

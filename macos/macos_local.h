@@ -3,9 +3,7 @@
 
 #import <AppKit/AppKit.h>
 
-#include <include/api.h>
-#include <include/event.h>
-#include <include/renderer.h>
+#include "../platform.h"
 
 @interface WindowDelegate : NSObject<NSWindowDelegate>
 @property (weak) NSWindow* window;

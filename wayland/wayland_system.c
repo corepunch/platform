@@ -1,4 +1,4 @@
-#include <include/orca.h>
+#include "../platform.h"
 #include <unistd.h>
 
 #define APPNAME "highperf"

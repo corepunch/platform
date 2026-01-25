@@ -1,6 +1,5 @@
 #include "wayland_local.h"
-#include <include/orca.h>
-#include <include/renderer.h>
+#include "../platform.h"
 
 static struct _WND* windows = NULL;
 
