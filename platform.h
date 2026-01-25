@@ -204,13 +204,13 @@ typedef struct _OPENFILENAME {
 } OPENFILENAME;
 
 ORCA_API bool_t
-SYS_GetOpenFileName(struct _OPENFILENAME const *);
+SYS_GetOpenFileName(OPENFILENAME const *);
 
 ORCA_API bool_t
-SYS_GetSaveFileName(struct _OPENFILENAME const *);
+SYS_GetSaveFileName(OPENFILENAME const *);
 
 ORCA_API bool_t
-SYS_GetFolderName(struct _OPENFILENAME const *);
+SYS_GetFolderName(OPENFILENAME const *);
 
 ORCA_API void
 SYS_Init(void);
