@@ -21,7 +21,7 @@ struct
 } queue = { 0 };
 
 void
-Queue_Remove(lpObject_t hobj)
+Queue_Remove(void* hobj)
 {
   for (uint16_t r = queue.read; r != queue.write; r++)
     if (queue.data[r].hobj == hobj)
@@ -29,7 +29,7 @@ Queue_Remove(lpObject_t hobj)
 }
 
 void
-SV_PostMessageW(lpObject_t obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
+SV_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 {
   NSEvent *customEvent =
   [NSEvent otherEventWithType:NSEventTypeApplicationDefined

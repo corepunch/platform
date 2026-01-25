@@ -42,7 +42,6 @@
 // Basic types
 typedef unsigned int bool_t;
 typedef unsigned long longTime_t;
-typedef struct Object* lpObject_t;
 typedef uint32_t wParam_t;
 typedef void* lParam_t;
 typedef unsigned char byte_t;
@@ -165,7 +164,7 @@ struct buffer
 
 struct message
 {
-  lpObject_t hobj;
+  void* hobj;
   uint32_t message;
   union {
     wParam_t wParam;
@@ -185,7 +184,7 @@ struct isize2
 };
 
 ORCA_API void
-SV_PostMessageW(lpObject_t, uint32_t event, uint32_t wparam, void* lparam);
+SV_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
 
 ORCA_API void
 NotifyFileDropEvent(char const *filename, float x, float y);
@@ -243,7 +242,7 @@ ORCA_API int
 SYS_PollEvent(struct message*);
 
 ORCA_API void
-Queue_Remove(lpObject_t);
+Queue_Remove(void*);
 
 /*
  Window operations
