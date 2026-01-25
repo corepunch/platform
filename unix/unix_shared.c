@@ -5,7 +5,7 @@
 #include "../platform.h"
 
 longTime_t
-SYS_GetMilliseconds(void)
+WI_GetMilliseconds(void)
 {
   struct timeval tp;
   struct timezone tzp;
@@ -22,7 +22,7 @@ SYS_GetMilliseconds(void)
 }
 
 void
-SYS_Sleep(longTime_t msec)
+WI_Sleep(longTime_t msec)
 {
   struct timespec ts;
 
@@ -38,102 +38,102 @@ typedef struct
   uint32_t keynum;
 } keyname_t;
 
-keyname_t keynames[] = { { "tab", K_TAB },
-  { "enter", K_ENTER },
-  { "escape", K_ESCAPE },
-  { "space", K_SPACE },
-  { "backspace", K_BACKSPACE },
-  { "up", K_UPARROW },
-  { "down", K_DOWNARROW },
-  { "left", K_LEFTARROW },
-  { "right", K_RIGHTARROW },
+keyname_t keynames[] = { { "tab", WI_KEY_TAB },
+  { "enter", WI_KEY_ENTER },
+  { "escape", WI_KEY_ESCAPE },
+  { "space", WI_KEY_SPACE },
+  { "backspace", WI_KEY_BACKSPACE },
+  { "up", WI_KEY_UPARROW },
+  { "down", WI_KEY_DOWNARROW },
+  { "left", WI_KEY_LEFTARROW },
+  { "right", WI_KEY_RIGHTARROW },
   
-  { "alt", K_ALT },
-  { "ctrl", K_CTRL },
-  { "shift", K_SHIFT },
+  { "alt", WI_KEY_ALT },
+  { "ctrl", WI_KEY_CTRL },
+  { "shift", WI_KEY_SHIFT },
   
-  { "f1", K_F1 },
-  { "f2", K_F2 },
-  { "f3", K_F3 },
-  { "f4", K_F4 },
-  { "f5", K_F5 },
-  { "f6", K_F6 },
-  { "f7", K_F7 },
-  { "f8", K_F8 },
-  { "f9", K_F9 },
-  { "f10", K_F10 },
-  { "f11", K_F11 },
-  { "f12", K_F12 },
+  { "f1", WI_KEY_F1 },
+  { "f2", WI_KEY_F2 },
+  { "f3", WI_KEY_F3 },
+  { "f4", WI_KEY_F4 },
+  { "f5", WI_KEY_F5 },
+  { "f6", WI_KEY_F6 },
+  { "f7", WI_KEY_F7 },
+  { "f8", WI_KEY_F8 },
+  { "f9", WI_KEY_F9 },
+  { "f10", WI_KEY_F10 },
+  { "f11", WI_KEY_F11 },
+  { "f12", WI_KEY_F12 },
   
-  { "ins", K_INS },
-  { "del", K_DEL },
-  { "pgdn", K_PGDN },
-  { "pgup", K_PGUP },
-  { "home", K_HOME },
-  { "end", K_END },
+  { "ins", WI_KEY_INS },
+  { "del", WI_KEY_DEL },
+  { "pgdn", WI_KEY_PGDN },
+  { "pgup", WI_KEY_PGUP },
+  { "home", WI_KEY_HOME },
+  { "end", WI_KEY_END },
   
-  { "mouse1", K_MOUSE1 },
-  { "mouse2", K_MOUSE2 },
-  { "mouse3", K_MOUSE3 },
+  { "mouse1", WI_KEY_MOUSE1 },
+  { "mouse2", WI_KEY_MOUSE2 },
+  { "mouse3", WI_KEY_MOUSE3 },
   
-  { "joy1", K_JOY1 },
-  { "joy2", K_JOY2 },
-  { "joy3", K_JOY3 },
-  { "joy4", K_JOY4 },
+  { "joy1", WI_KEY_JOY1 },
+  { "joy2", WI_KEY_JOY2 },
+  { "joy3", WI_KEY_JOY3 },
+  { "joy4", WI_KEY_JOY4 },
   
-  { "aux1", K_AUX1 },
-  { "aux2", K_AUX2 },
-  { "aux3", K_AUX3 },
-  { "aux4", K_AUX4 },
-  { "aux5", K_AUX5 },
-  { "aux6", K_AUX6 },
-  { "aux7", K_AUX7 },
-  { "aux8", K_AUX8 },
-  { "aux9", K_AUX9 },
-  { "aux10", K_AUX10 },
-  { "aux11", K_AUX11 },
-  { "aux12", K_AUX12 },
-  { "aux13", K_AUX13 },
-  { "aux14", K_AUX14 },
-  { "aux15", K_AUX15 },
-  { "aux16", K_AUX16 },
-  { "aux17", K_AUX17 },
-  { "aux18", K_AUX18 },
-  { "aux19", K_AUX19 },
-  { "aux20", K_AUX20 },
-  { "aux21", K_AUX21 },
-  { "aux22", K_AUX22 },
-  { "aux23", K_AUX23 },
-  { "aux24", K_AUX24 },
-  { "aux25", K_AUX25 },
-  { "aux26", K_AUX26 },
-  { "aux27", K_AUX27 },
-  { "aux28", K_AUX28 },
-  { "aux29", K_AUX29 },
-  { "aux30", K_AUX30 },
-  { "aux31", K_AUX31 },
-  { "aux32", K_AUX32 },
+  { "aux1", WI_KEY_AUX1 },
+  { "aux2", WI_KEY_AUX2 },
+  { "aux3", WI_KEY_AUX3 },
+  { "aux4", WI_KEY_AUX4 },
+  { "aux5", WI_KEY_AUX5 },
+  { "aux6", WI_KEY_AUX6 },
+  { "aux7", WI_KEY_AUX7 },
+  { "aux8", WI_KEY_AUX8 },
+  { "aux9", WI_KEY_AUX9 },
+  { "aux10", WI_KEY_AUX10 },
+  { "aux11", WI_KEY_AUX11 },
+  { "aux12", WI_KEY_AUX12 },
+  { "aux13", WI_KEY_AUX13 },
+  { "aux14", WI_KEY_AUX14 },
+  { "aux15", WI_KEY_AUX15 },
+  { "aux16", WI_KEY_AUX16 },
+  { "aux17", WI_KEY_AUX17 },
+  { "aux18", WI_KEY_AUX18 },
+  { "aux19", WI_KEY_AUX19 },
+  { "aux20", WI_KEY_AUX20 },
+  { "aux21", WI_KEY_AUX21 },
+  { "aux22", WI_KEY_AUX22 },
+  { "aux23", WI_KEY_AUX23 },
+  { "aux24", WI_KEY_AUX24 },
+  { "aux25", WI_KEY_AUX25 },
+  { "aux26", WI_KEY_AUX26 },
+  { "aux27", WI_KEY_AUX27 },
+  { "aux28", WI_KEY_AUX28 },
+  { "aux29", WI_KEY_AUX29 },
+  { "aux30", WI_KEY_AUX30 },
+  { "aux31", WI_KEY_AUX31 },
+  { "aux32", WI_KEY_AUX32 },
   
-  { "kp_home", K_KP_HOME },
-  { "kp_uparrow", K_KP_UPARROW },
-  { "kp_pgup", K_KP_PGUP },
-  { "kp_leftarrow", K_KP_LEFTARROW },
-  { "kp_5", K_KP_5 },
-  { "kp_rightarrow", K_KP_RIGHTARROW },
-  { "kp_end", K_KP_END },
-  { "kp_downarrow", K_KP_DOWNARROW },
-  { "kp_pgdn", K_KP_PGDN },
-  { "kp_enter", K_KP_ENTER },
-  { "kp_ins", K_KP_INS },
-  { "kp_del", K_KP_DEL },
-  { "kp_slash", K_KP_SLASH },
-  { "kp_minus", K_KP_MINUS },
-  { "kp_plus", K_KP_PLUS },
+  { "kp_home", WI_KEY_KP_HOME },
+  { "kp_uparrow", WI_KEY_KP_UPARROW },
+  { "kp_pgup", WI_KEY_KP_PGUP },
+  { "kp_leftarrow", WI_KEY_KP_LEFTARROW },
+  { "kp_5", WI_KEY_KP_5 },
+  { "kp_rightarrow", WI_KEY_KP_RIGHTARROW },
+  { "kp_end", WI_KEY_KP_END },
+  { "kp_downarrow", WI_KEY_KP_DOWNARROW },
+  { "kp_pgdn", WI_KEY_KP_PGDN },
+  { "kp_enter", WI_KEY_KP_ENTER },
+  { "kp_ins", WI_KEY_KP_INS },
+  { "kp_del", WI_KEY_KP_DEL },
+  { "kp_slash", WI_KEY_KP_SLASH },
+  { "kp_minus", WI_KEY_KP_MINUS },
+  { "kp_plus", WI_KEY_KP_PLUS },
   
-  { "mwheelup", K_MWHEELUP },
-  { "mwheeldown", K_MWHEELDOWN },
+  { "mwheelup", WI_KEY_MWHEELUP },
+  { "mwheeldown", WI_KEY_MWHEELDOWN },
   
-  { "pause", K_PAUSE },
+  { "pause", WI_KEY_PAUSE },
   
   { "semicolon",
     ';' }, // because a raw semicolon seperates commands
@@ -142,8 +142,8 @@ keyname_t keynames[] = { { "tab", K_TAB },
 
 char keyshift[256];
 
-ORCA_API char const *
-Key_KeynumToString(uint32_t keynum)
+char const *
+WI_KeynumToString(uint32_t keynum)
 {
   keyname_t* kn;
   static char tinystr[2];

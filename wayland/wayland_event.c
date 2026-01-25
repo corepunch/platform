@@ -263,13 +263,13 @@ get_xdg_surface_listener(void)
 }
 
 int
-WaitEvent(TIME time)
+WI_WaitEvent(TIME time)
 {
   return 0;
 }
 
 int
-SYS_PollEvent(PEVENT pEvent, bool_t (*dispatch)(struct message*))
+WI_PollEvent(PEVENT pEvent, bool_t (*dispatch)(struct WI_Message*))
 {
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];

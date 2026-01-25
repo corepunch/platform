@@ -8,13 +8,13 @@ static PATHSTR g_local = { 0 };
 static PATHSTR g_lib = { 0 };
 
 char const*
-SYS_GetPlatform(void)
+WI_GetPlatform(void)
 {
   return "linux (wayland)";
 }
 
 char const*
-SYS_SettingsDirectory()
+WI_SettingsDirectory()
 {
   if (g_local[0] == 0) {
     snprintf(g_local, sizeof(g_local), "%s/." APPNAME, getenv("HOME"));
@@ -23,7 +23,7 @@ SYS_SettingsDirectory()
 }
 
 static void
-SYS_BundleDirectory(char* buf, int sz, char const* dir)
+WI_BundleDirectory(char* buf, int sz, char const* dir)
 {
   char path[512];
   snprintf(path, sizeof(path), "/proc/%d/exe", getpid());
@@ -43,19 +43,19 @@ SYS_BundleDirectory(char* buf, int sz, char const* dir)
 }
 
 char const*
-SYS_ShareDirectory()
+WI_ShareDirectory()
 {
   if (g_share[0] == 0) {
-    SYS_BundleDirectory(g_share, sizeof(g_share), "/share/" APPNAME);
+    WI_BundleDirectory(g_share, sizeof(g_share), "/share/" APPNAME);
   }
   return g_share;
 }
 
 char const*
-SYS_LibDirectory()
+WI_LibDirectory()
 {
   if (g_lib[0] == 0) {
-    SYS_BundleDirectory(g_lib, sizeof(g_lib), "/lib/" APPNAME);
+    WI_BundleDirectory(g_lib, sizeof(g_lib), "/lib/" APPNAME);
   }
   return g_lib;
 }

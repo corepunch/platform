@@ -33,9 +33,9 @@ typedef uint16_t WORD;
 typedef uint32_t DWORD;
 typedef char const *PCSTR;
 typedef char PATHSTR[1024];
-typedef struct isize2 *PSIZE2;
-typedef struct isize2 const *PCSIZE2;
-typedef struct message EVENT, *PEVENT;
+typedef struct WI_Size *PSIZE2;
+typedef struct WI_Size const *PCSIZE2;
+typedef struct WI_Message EVENT, *PEVENT;
 typedef struct vec2 VECTOR2D;
 typedef unsigned long TIME;
 

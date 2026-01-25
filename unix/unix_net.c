@@ -99,7 +99,7 @@ int net_connect(char const *ipaddr, int port)
   return sockfd;
 }
 
-int net_packet(int net_socket, struct buffer* net_message)
+int net_packet(int net_socket, struct WI_Buffer* net_message)
 {
   int ret = (int)read(net_socket, net_message->data, net_message->maxsize);
   if (ret == net_message->maxsize) {
@@ -115,7 +115,7 @@ int net_packet(int net_socket, struct buffer* net_message)
   return ret;
 }
 
-int net_send_packet(int sock, struct buffer* net_message)
+int net_send_packet(int sock, struct WI_Buffer* net_message)
 {
   return (int)write(sock, net_message->data, net_message->cursize);
 }

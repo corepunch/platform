@@ -35,8 +35,8 @@
 #endif
 
 // Platform API export macro
-#ifndef ORCA_API
-#define ORCA_API __attribute__((visibility("default")))
+#ifndef WI_API
+#define WI_API __attribute__((visibility("default")))
 #endif
 
 // Basic types
@@ -48,113 +48,104 @@ typedef unsigned char byte_t;
 
 enum
 {
-  K_TAB = 9,
-  K_ENTER = 13,
-  K_ESCAPE = 27,
-  K_SPACE = 32,
-  K_BACKSPACE = 127,
-  K_UPARROW = 128,
-  K_DOWNARROW = 129,
-  K_LEFTARROW = 130,
-  K_RIGHTARROW = 131,
-  K_ALT = 132,
-  K_CTRL = 133,
-  K_SHIFT = 134,
-  K_F1 = 135,
-  K_F2 = 136,
-  K_F3 = 137,
-  K_F4 = 138,
-  K_F5 = 139,
-  K_F6 = 140,
-  K_F7 = 141,
-  K_F8 = 142,
-  K_F9 = 143,
-  K_F10 = 144,
-  K_F11 = 145,
-  K_F12 = 146,
-  K_INS = 147,
-  K_DEL = 148,
-  K_PGDN = 149,
-  K_PGUP = 150,
-  K_HOME = 151,
-  K_END = 152,
-  K_KP_HOME = 160,
-  K_KP_UPARROW = 161,
-  K_KP_PGUP = 162,
-  K_KP_LEFTARROW = 163,
-  K_KP_5 = 164,
-  K_KP_RIGHTARROW = 165,
-  K_KP_END = 166,
-  K_KP_DOWNARROW = 167,
-  K_KP_PGDN = 168,
-  K_KP_ENTER = 169,
-  K_KP_INS = 170,
-  K_KP_DEL = 171,
-  K_KP_SLASH = 172,
-  K_KP_MINUS = 173,
-  K_KP_PLUS = 174,
-  K_PAUSE = 255,
-  K_MOUSE1 = 200,
-  K_MOUSE2 = 201,
-  K_MOUSE3 = 202,
-  K_JOY1 = 203,
-  K_JOY2 = 204,
-  K_JOY3 = 205,
-  K_JOY4 = 206,
-  K_AUX1 = 207,
-  K_AUX2 = 208,
-  K_AUX3 = 209,
-  K_AUX4 = 210,
-  K_AUX5 = 211,
-  K_AUX6 = 212,
-  K_AUX7 = 213,
-  K_AUX8 = 214,
-  K_AUX9 = 215,
-  K_AUX10 = 216,
-  K_AUX11 = 217,
-  K_AUX12 = 218,
-  K_AUX13 = 219,
-  K_AUX14 = 220,
-  K_AUX15 = 221,
-  K_AUX16 = 222,
-  K_AUX17 = 223,
-  K_AUX18 = 224,
-  K_AUX19 = 225,
-  K_AUX20 = 226,
-  K_AUX21 = 227,
-  K_AUX22 = 228,
-  K_AUX23 = 229,
-  K_AUX24 = 230,
-  K_AUX25 = 231,
-  K_AUX26 = 232,
-  K_AUX27 = 233,
-  K_AUX28 = 234,
-  K_AUX29 = 235,
-  K_AUX30 = 236,
-  K_AUX31 = 237,
-  K_AUX32 = 238,
-  K_MWHEELDOWN = 239,
-  K_MWHEELUP = 240,
+  WI_KEY_TAB = 9,
+  WI_KEY_ENTER = 13,
+  WI_KEY_ESCAPE = 27,
+  WI_KEY_SPACE = 32,
+  WI_KEY_BACKSPACE = 127,
+  WI_KEY_UPARROW = 128,
+  WI_KEY_DOWNARROW = 129,
+  WI_KEY_LEFTARROW = 130,
+  WI_KEY_RIGHTARROW = 131,
+  WI_KEY_ALT = 132,
+  WI_KEY_CTRL = 133,
+  WI_KEY_SHIFT = 134,
+  WI_KEY_F1 = 135,
+  WI_KEY_F2 = 136,
+  WI_KEY_F3 = 137,
+  WI_KEY_F4 = 138,
+  WI_KEY_F5 = 139,
+  WI_KEY_F6 = 140,
+  WI_KEY_F7 = 141,
+  WI_KEY_F8 = 142,
+  WI_KEY_F9 = 143,
+  WI_KEY_F10 = 144,
+  WI_KEY_F11 = 145,
+  WI_KEY_F12 = 146,
+  WI_KEY_INS = 147,
+  WI_KEY_DEL = 148,
+  WI_KEY_PGDN = 149,
+  WI_KEY_PGUP = 150,
+  WI_KEY_HOME = 151,
+  WI_KEY_END = 152,
+  WI_KEY_KP_HOME = 160,
+  WI_KEY_KP_UPARROW = 161,
+  WI_KEY_KP_PGUP = 162,
+  WI_KEY_KP_LEFTARROW = 163,
+  WI_KEY_KP_5 = 164,
+  WI_KEY_KP_RIGHTARROW = 165,
+  WI_KEY_KP_END = 166,
+  WI_KEY_KP_DOWNARROW = 167,
+  WI_KEY_KP_PGDN = 168,
+  WI_KEY_KP_ENTER = 169,
+  WI_KEY_KP_INS = 170,
+  WI_KEY_KP_DEL = 171,
+  WI_KEY_KP_SLASH = 172,
+  WI_KEY_KP_MINUS = 173,
+  WI_KEY_KP_PLUS = 174,
+  WI_KEY_PAUSE = 255,
+  WI_KEY_MOUSE1 = 200,
+  WI_KEY_MOUSE2 = 201,
+  WI_KEY_MOUSE3 = 202,
+  WI_KEY_JOY1 = 203,
+  WI_KEY_JOY2 = 204,
+  WI_KEY_JOY3 = 205,
+  WI_KEY_JOY4 = 206,
+  WI_KEY_AUX1 = 207,
+  WI_KEY_AUX2 = 208,
+  WI_KEY_AUX3 = 209,
+  WI_KEY_AUX4 = 210,
+  WI_KEY_AUX5 = 211,
+  WI_KEY_AUX6 = 212,
+  WI_KEY_AUX7 = 213,
+  WI_KEY_AUX8 = 214,
+  WI_KEY_AUX9 = 215,
+  WI_KEY_AUX10 = 216,
+  WI_KEY_AUX11 = 217,
+  WI_KEY_AUX12 = 218,
+  WI_KEY_AUX13 = 219,
+  WI_KEY_AUX14 = 220,
+  WI_KEY_AUX15 = 221,
+  WI_KEY_AUX16 = 222,
+  WI_KEY_AUX17 = 223,
+  WI_KEY_AUX18 = 224,
+  WI_KEY_AUX19 = 225,
+  WI_KEY_AUX20 = 226,
+  WI_KEY_AUX21 = 227,
+  WI_KEY_AUX22 = 228,
+  WI_KEY_AUX23 = 229,
+  WI_KEY_AUX24 = 230,
+  WI_KEY_AUX25 = 231,
+  WI_KEY_AUX26 = 232,
+  WI_KEY_AUX27 = 233,
+  WI_KEY_AUX28 = 234,
+  WI_KEY_AUX29 = 235,
+  WI_KEY_AUX30 = 236,
+  WI_KEY_AUX31 = 237,
+  WI_KEY_AUX32 = 238,
+  WI_KEY_MWHEELDOWN = 239,
+  WI_KEY_MWHEELUP = 240,
 };
 
 enum
 {
-  MOD_SHIFT = 1 << 16,
-  MOD_CTRL = 1 << 17,
-  MOD_ALT = 1 << 18,
-  MOD_CMD = 1 << 19,
+  WI_MOD_SHIFT = 1 << 16,
+  WI_MOD_CTRL = 1 << 17,
+  WI_MOD_ALT = 1 << 18,
+  WI_MOD_CMD = 1 << 19,
 };
 
-typedef enum _EVTMOUSEBTN
-{
-  BUT_LEFT,
-  BUT_RIGHT,
-  BUT_MIDDLE,
-  BUT_UNKNOWN,
-  BUT_COUNT,
-} EVTMOUSEBTN;
-
-struct buffer
+struct WI_Buffer
 {
   byte_t* data;
   int maxsize;
@@ -162,7 +153,7 @@ struct buffer
   int readcount;
 };
 
-struct message
+struct WI_Message
 {
   void* hobj;
   uint32_t message;
@@ -178,15 +169,21 @@ struct message
   uint32_t id;
 };
 
-struct isize2
+struct WI_Size
 {
   uint32_t width, height;
 };
 
-ORCA_API void
-SV_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
+WI_API void
+WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
 
-ORCA_API void
+WI_API int
+WI_PollEvent(struct WI_Message*);
+
+WI_API void
+WI_RemoveFromQueue(void*);
+
+WI_API void
 NotifyFileDropEvent(char const *filename, float x, float y);
 
 enum {
@@ -194,92 +191,89 @@ enum {
   OFN_PATHMUSTEXIST = 1 << 1,
 };
 
-typedef struct _OPENFILENAME {
+typedef struct _WI_OpenFileName {
   char *lpstrFile;
   uint32_t nMaxFile;
   char const *lpstrFilter;
   char const *lpstrTitle;
   uint32_t Flags;
-} OPENFILENAME;
+} WI_OpenFileName;
 
-ORCA_API bool_t
-SYS_GetOpenFileName(OPENFILENAME const *);
+WI_API bool_t
+WI_GetOpenFileName(WI_OpenFileName const *);
 
-ORCA_API bool_t
-SYS_GetSaveFileName(OPENFILENAME const *);
+WI_API bool_t
+WI_GetSaveFileName(WI_OpenFileName const *);
 
-ORCA_API bool_t
-SYS_GetFolderName(OPENFILENAME const *);
+WI_API bool_t
+WI_GetFolderName(WI_OpenFileName const *);
 
-ORCA_API void
-SYS_Init(void);
+WI_API void
+WI_Init(void);
 
-ORCA_API void
-SYS_Shutdown(void);
+WI_API void
+WI_Shutdown(void);
 
-ORCA_API longTime_t
-SYS_GetMilliseconds(void);
+WI_API longTime_t
+WI_GetMilliseconds(void);
 
-ORCA_API void
-SYS_Sleep(longTime_t msec);
+WI_API void
+WI_Sleep(longTime_t msec);
 
-ORCA_API bool_t
-SYS_IsDarkTheme(void);
+WI_API bool_t
+WI_IsDarkTheme(void);
 
-ORCA_API char const *
-SYS_GetPlatform(void);
+WI_API char const *
+WI_GetPlatform(void);
 
-ORCA_API char const *
-SYS_SettingsDirectory(void);
+WI_API char const *
+WI_SettingsDirectory(void);
 
-ORCA_API char const *
-SYS_ShareDirectory(void);
+WI_API char const *
+WI_ShareDirectory(void);
 
-ORCA_API char const *
-SYS_LibDirectory(void);
-
-ORCA_API int
-SYS_PollEvent(struct message*);
-
-ORCA_API void
-Queue_Remove(void*);
+WI_API char const *
+WI_LibDirectory(void);
 
 /*
  Window operations
  */
 
-ORCA_API bool_t
-VID_CreateWindow(char const *, uint32_t width, uint32_t height, uint32_t flags);
+WI_API bool_t
+WI_CreateWindow(char const *, uint32_t width, uint32_t height, uint32_t flags);
 
-ORCA_API bool_t
-VID_CreateSurface(uint32_t width, uint32_t height);
+WI_API bool_t
+WI_CreateSurface(uint32_t width, uint32_t height);
 
-ORCA_API float
-VID_GetScaling(void);
+WI_API float
+WI_GetScaling(void);
 
-ORCA_API void
-VID_Shutdown(void);
+WI_API void
+WI_Shutdown(void);
 
-ORCA_API bool_t
-VID_SetSize(uint32_t width, uint32_t height, bool_t centered);
+WI_API bool_t
+WI_SetSize(uint32_t width, uint32_t height, bool_t centered);
 
-ORCA_API uint32_t
-VID_GetSize(struct isize2*);
+WI_API uint32_t
+WI_GetSize(struct WI_Size*);
 
-ORCA_API int
-WaitEvent(longTime_t);
+WI_API int
+WI_WaitEvent(longTime_t);
 
-ORCA_API void
-VID_MakeCurrentContext(void);
+WI_API void
+WI_MakeCurrentContext(void);
 
-ORCA_API void
-VID_BeginPaint(void);
+WI_API void
+WI_BeginPaint(void);
 
-ORCA_API void
-VID_EndPaint(void);
+WI_API void
+WI_EndPaint(void);
 
-ORCA_API void
-VID_BindFramebuffer(void);
+WI_API void
+WI_BindFramebuffer(void);
+
+WI_API char const *
+WI_KeynumToString(uint32_t keynum);
 
 
 #endif

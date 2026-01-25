@@ -131,7 +131,7 @@ initEGL(void)
 }
 
 int
-SYS_Init(void)
+WI_Init(void)
 {
   int rc;
 
@@ -149,7 +149,7 @@ SYS_Init(void)
 }
 
 void
-SYS_Shutdown(void)
+WI_Shutdown(void)
 {
   eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
   eglDestroySurface(egl_display, egl_surface);
@@ -162,7 +162,7 @@ SYS_Shutdown(void)
 }
 
 HWND
-SYS_CreateWindow(LPCSTR name, DWORD width, DWORD height, DWORD flags)
+WI_CreateWindow(LPCSTR name, DWORD width, DWORD height, DWORD flags)
 {
   return NULL;
 }
@@ -204,13 +204,13 @@ GetWindowSize(HWND hWnd, LPSIZE2 lpSize)
 }
 
 LPCSTR
-SYS_GetPlatform(void)
+WI_GetPlatform(void)
 {
   return "qnx";
 }
 
 int
-WaitEvent(TIME time)
+WI_WaitEvent(TIME time)
 {
   return 0;
 }
@@ -234,19 +234,19 @@ PollEvent(struct event* ev)
 }
 
 LPCSTR
-SYS_LibDirectory(void)
+WI_LibDirectory(void)
 {
   return ".";
 }
 
 LPCSTR
-SYS_SettingsDirectory(void)
+WI_SettingsDirectory(void)
 {
   return ".";
 }
 
 LPCSTR
-SYS_ShareDirectory(void)
+WI_ShareDirectory(void)
 {
   return ".";
 }

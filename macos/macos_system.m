@@ -21,19 +21,19 @@ bool_t __openFile = FALSE;
 char const *__openFileType = NULL;
 void (*__openProjectFile)(char const *);
 
-void SYS_OpenFile(char const *ext, void (*callback)(char const *)) {
+void WI_OpenFile(char const *ext, void (*callback)(char const *)) {
 	__openFile = TRUE;
 	__openFileType = ext;
 	__openProjectFile = callback;
 }
 
-void SYS_OpenFolder(void (*callback)(char const *)) {
+void WI_OpenFolder(void (*callback)(char const *)) {
 	__openFile = TRUE;
 	__openFileType = NULL;
 	__openProjectFile = callback;
 }
 
-char const *SYS_DocumentsDirectory(void) {
+char const *WI_DocumentsDirectory(void) {
     if (documents[0] == 0) {
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray<NSURL*>* urls = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
@@ -43,7 +43,7 @@ char const *SYS_DocumentsDirectory(void) {
 	return documents;
 }
 
-char const *SYS_SettingsDirectory(void) {
+char const *WI_SettingsDirectory(void) {
     if (local[0] == 0) {
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray<NSURL*>* urls = [fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
@@ -62,7 +62,7 @@ char const *SYS_SettingsDirectory(void) {
 }
 
 
-char const *SYS_ShareDirectory(void) {
+char const *WI_ShareDirectory(void) {
     if (share[0] == 0) {
         unsigned size = sizeof(share);
         _NSGetExecutablePath(share, &size);
@@ -87,18 +87,18 @@ char const *SYS_ShareDirectory(void) {
     return share;
 }
 
-char const *SYS_LibDirectory(void) {
-    return SYS_ShareDirectory();
+char const *WI_LibDirectory(void) {
+    return WI_ShareDirectory();
 }
 
-void SYS_SetDragContents(char const *contents) {
+void WI_SetDragContents(char const *contents) {
 }
 
-char const *SYS_GetPlatform(void) {
+char const *WI_GetPlatform(void) {
     return "macos";
 }
 
-//void SYS_GetOpenFileName(void (*callback)(char const *)) {
+//void WI_GetOpenFileName(void (*callback)(char const *)) {
 //    // Create and configure the open panel
 //    NSOpenPanel *panel = [NSOpenPanel openPanel];
 //    [panel setCanChooseFiles:NO];
@@ -125,7 +125,7 @@ char const *SYS_GetPlatform(void) {
 //    }];
 //}
 
-bool_t SYS_GetOpenFileName(struct _OPENFILENAME const *ofn) {
+bool_t WI_GetOpenFileName(struct _WI_OpenFileName const *ofn) {
   @autoreleasepool {
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.canChooseFiles = YES;
@@ -141,7 +141,7 @@ bool_t SYS_GetOpenFileName(struct _OPENFILENAME const *ofn) {
   }
 }
 
-bool_t SYS_GetFolderName(struct _OPENFILENAME const *ofn) {
+bool_t WI_GetFolderName(struct _WI_OpenFileName const *ofn) {
   @autoreleasepool {
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.canChooseFiles = NO;
@@ -162,7 +162,7 @@ bool_t SYS_GetFolderName(struct _OPENFILENAME const *ofn) {
 #include <unistd.h>
 #include <sys/wait.h>
 
-int SYS_ExecuteProcess(char const *process) {
+int WI_ExecuteProcess(char const *process) {
 #if 0
     pid_t pid;
     
@@ -203,7 +203,7 @@ int SYS_ExecuteProcess(char const *process) {
 	return 0;
 }
 
-void SYS_Init(void) {
+void WI_Init(void) {
   //    id menubar     = [[NSMenu new] autorelease];
   //    id appMenuItem = [[NSMenuItem new] autorelease];
   //    [menubar addItem:appMenuItem];
@@ -232,5 +232,3 @@ void SYS_Init(void) {
   }
 }
 
-void SYS_Shutdown(void) {
-}

@@ -46,7 +46,7 @@ static struct keymap const darwin_scancode_table[] = {
   { '[', 33 },
   { 'i', 34 },
   { 'p', 35 },
-  { K_ENTER, 36 },
+  { WI_KEY_ENTER, 36 },
   { 'l', 37 },
   { 'j', 38 },
   { '\'', 39 },
@@ -58,21 +58,21 @@ static struct keymap const darwin_scancode_table[] = {
   { 'n', 45 },
   { 'm', 46 },
   { '.', 47 },
-  { K_TAB, 48 },
-  { K_SPACE, 49 },
+  { WI_KEY_TAB, 48 },
+  { WI_KEY_SPACE, 49 },
   { '`', 50 },
-  { K_BACKSPACE, 51 },
-  { K_KP_ENTER, 52 },
-  { K_ESCAPE, 53 },
+  { WI_KEY_BACKSPACE, 51 },
+  { WI_KEY_KP_ENTER, 52 },
+  { WI_KEY_ESCAPE, 53 },
   //    { 'rgui', 54 }, // rgui
   //    { 'lgui', 55 }, // lgui
-  { K_SHIFT, 56 }, // lshift
+  { WI_KEY_SHIFT, 56 }, // lshift
                    //    { 'capslock', 57 }, // capslock
-  { K_ALT, 58 },   // lalt
-  { K_CTRL, 59 },  // lctrl
-  { K_SHIFT, 60 }, // rshift
-  { K_ALT, 61 },   // ralt
-  { K_CTRL, 62 },  // rctrl
+  { WI_KEY_ALT, 58 },   // lalt
+  { WI_KEY_CTRL, 59 },  // lctrl
+  { WI_KEY_SHIFT, 60 }, // rshift
+  { WI_KEY_ALT, 61 },   // ralt
+  { WI_KEY_CTRL, 62 },  // rctrl
                    //    { 'rgui', 63 }, // rgui
                    //    { 'f17', 64 },
                    //    { 'kp_period', 65 },
@@ -85,8 +85,8 @@ static struct keymap const darwin_scancode_table[] = {
                    //    { 'volumeup', 72 },
                    //    { 'volumedown', 73 },
                    //    { 'mute', 74 },
-  { K_KP_SLASH, 75 },
-  { K_KP_ENTER, 76 },
+  { WI_KEY_KP_SLASH, 75 },
+  { WI_KEY_KP_ENTER, 76 },
   //    { 'unknown', 77 },
   //    { 'kp_minus', 78 },
   //    { 'f18', 79 },
@@ -106,37 +106,37 @@ static struct keymap const darwin_scancode_table[] = {
   //    { 'international3', 93 },
   //    { 'international1', 94 },
   //    { 'kp_comma', 95 },
-  { K_F5, 96 },
-  { K_F6, 97 },
-  { K_F7, 98 },
-  { K_F3, 99 },
-  { K_F8, 100 },
-  { K_F9, 101 },
+  { WI_KEY_F5, 96 },
+  { WI_KEY_F6, 97 },
+  { WI_KEY_F7, 98 },
+  { WI_KEY_F3, 99 },
+  { WI_KEY_F8, 100 },
+  { WI_KEY_F9, 101 },
   //    { 'lang2', 102 },
-  { K_F11, 103 },
+  { WI_KEY_F11, 103 },
   //    { 'lang1', 104 },
   //    { 'printscreen', 105 },
   //    { 'f16', 106 },
   //    { 'scrolllock', 107 },
   //    { 'unknown', 108 },
-  { K_F10, 109 },
+  { WI_KEY_F10, 109 },
   //    { 'application', 110 },
-  { K_F12, 111 },
+  { WI_KEY_F12, 111 },
   //    { 'unknown', 112 },
   //    { 'pause', 113 },
   //    { 'insert', 114 },
-  { K_HOME, 115 },
-  { K_PGUP, 116 },
-  { K_DEL, 117 },
-  { K_F4, 118 },
-  { K_END, 119 },
-  { K_F2, 120 },
-  { K_PGDN, 121 },
-  { K_F1, 122 },
-  { K_LEFTARROW, 123 },
-  { K_RIGHTARROW, 124 },
-  { K_DOWNARROW, 125 },
-  { K_UPARROW, 126 },
+  { WI_KEY_HOME, 115 },
+  { WI_KEY_PGUP, 116 },
+  { WI_KEY_DEL, 117 },
+  { WI_KEY_F4, 118 },
+  { WI_KEY_END, 119 },
+  { WI_KEY_F2, 120 },
+  { WI_KEY_PGDN, 121 },
+  { WI_KEY_F1, 122 },
+  { WI_KEY_LEFTARROW, 123 },
+  { WI_KEY_RIGHTARROW, 124 },
+  { WI_KEY_DOWNARROW, 125 },
+  { WI_KEY_UPARROW, 126 },
   //    { 'power', 127 },
   { 0, 0 }
 };

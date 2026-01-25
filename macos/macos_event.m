@@ -16,12 +16,12 @@ uint32_t KEY_GetKeyName(uint32_t keycode) {
 
 struct
 {
-  struct message data[0x10000];
+  struct WI_Message data[0x10000];
   uint16_t read, write;
 } queue = { 0 };
 
 void
-Queue_Remove(void* hobj)
+WI_RemoveFromQueue(void* hobj)
 {
   for (uint16_t r = queue.read; r != queue.write; r++)
     if (queue.data[r].hobj == hobj)
@@ -29,7 +29,7 @@ Queue_Remove(void* hobj)
 }
 
 void
-SV_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
+WI_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 {
   NSEvent *customEvent =
   [NSEvent otherEventWithType:NSEventTypeApplicationDefined
@@ -41,7 +41,7 @@ SV_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
                       subtype:queue.write
                         data1:wParam
                         data2:0];
-  queue.data[queue.write++] = (struct message) {
+  queue.data[queue.write++] = (struct WI_Message) {
     .hobj = obj,
     .message = Msg,
     .wParam = wParam,
@@ -54,7 +54,7 @@ SV_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 void
 NotifyFileDropEvent(char const *filename, float x, float y)
 {
-//	struct message * ev       = malloc(sizeof(EVENT));
+//	struct WI_Message * ev       = malloc(sizeof(EVENT));
 //	ev->type               = ;
 //	ev->windowNumber       = (int)windowNumber;
 //	ev->next               = window_events;
@@ -69,16 +69,16 @@ modkey(NSEventModifierFlags modifierFlags)
 {
 	uint32_t flags=0;
 	if (modifierFlags & NSEventModifierFlagShift) {
-		flags |= MOD_SHIFT;
+		flags |= WI_MOD_SHIFT;
 	}
 	if (modifierFlags & NSEventModifierFlagCommand) {
-		flags |= MOD_CMD;
+		flags |= WI_MOD_CMD;
 	}
 	if (modifierFlags & NSEventModifierFlagControl) {
-		flags |= MOD_CTRL;
+		flags |= WI_MOD_CTRL;
 	}
 	if (modifierFlags & NSEventModifierFlagOption) {
-		flags |= MOD_ALT;
+		flags |= WI_MOD_ALT;
 	}
 	return flags;
 }
@@ -135,7 +135,7 @@ GetKeyCode(NSEvent *event)
 }
 
 int
-SYS_PollEvent(struct message * e)
+WI_PollEvent(struct WI_Message * e)
 {
 //	NSDate  *date = [NSDate date];
   NSEvent *event;
@@ -148,7 +148,7 @@ start_over:
 
   if (event.type == NSEventTypeApplicationDefined) {
     queue.read = event.subtype;
-    memcpy(e, &queue.data[queue.read], sizeof(struct message));
+    memcpy(e, &queue.data[queue.read], sizeof(struct WI_Message));
     [event release];
     if (!e->message) {
       goto start_over;

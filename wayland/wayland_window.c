@@ -34,7 +34,7 @@ ResizeWindow(PWND win, DWORD width, DWORD height)
 }
 
 PWND
-SYS_CreateWindow(PCSTR name, DWORD width, DWORD height, DWORD flags)
+WI_CreateWindow(PCSTR name, DWORD width, DWORD height, DWORD flags)
 {
   PWND self = ZeroAlloc(sizeof(struct _WND));
   ResizeWindow(self, width, height);
@@ -80,7 +80,7 @@ DestroyWindow(PWND hwnd)
 }
 
 void
-SYS_MakeCurrentContext(PWND self)
+WI_MakeCurrentContext(PWND self)
 {
   eglMakeCurrent (egl_display, self->egl_surface, self->egl_surface, self->egl_context);
 }
@@ -89,7 +89,7 @@ SYS_MakeCurrentContext(PWND self)
 void
 BeginPaint(PWND self)
 {
-  SYS_MakeCurrentContext(self);
+  WI_MakeCurrentContext(self);
   wl_display_dispatch(display);
 }
 
