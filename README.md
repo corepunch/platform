@@ -1,9 +1,11 @@
 # platform
 Platform layer for input/event handling and window management
 
+[![Build](https://github.com/corepunch/platform/actions/workflows/build.yml/badge.svg)](https://github.com/corepunch/platform/actions/workflows/build.yml)
+
 ## Building
 
-This project includes a Makefile that automatically detects your platform (Linux or macOS) and builds the appropriate dynamic library.
+Simple Makefile that auto-detects your platform and builds the appropriate dynamic library using wildcards for source files.
 
 ### Prerequisites
 
@@ -11,7 +13,7 @@ This project includes a Makefile that automatically detects your platform (Linux
 - GCC compiler
 - Wayland development libraries (optional, for Wayland support):
   ```bash
-  sudo apt-get install libwayland-dev libwayland-egl1 libxkbcommon-dev libegl-dev
+  sudo apt-get install libwayland-dev libwayland-egl1-mesa libxkbcommon-dev libegl-dev libgl-dev
   ```
 
 **macOS:**
@@ -21,20 +23,9 @@ This project includes a Makefile that automatically detects your platform (Linux
 ### Build Commands
 
 ```bash
-# Build the dynamic library
-make
-
-# Clean build artifacts
-make clean
-
-# Install to /usr/local/lib (requires sudo on most systems)
-sudo make install
-
-# Uninstall from /usr/local/lib
-sudo make uninstall
-
-# Show available targets
-make help
+make          # Build the dynamic library
+make clean    # Clean build artifacts
+make install  # Install to /usr/local/lib (requires sudo)
 ```
 
 ### Output
