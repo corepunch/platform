@@ -34,7 +34,7 @@ SYS_Sleep(longTime_t msec)
 
 typedef struct
 {
-  lpcString_t name;
+  char const *name;
   uint32_t keynum;
 } keyname_t;
 
@@ -142,7 +142,7 @@ keyname_t keynames[] = { { "tab", K_TAB },
 
 char keyshift[256];
 
-ORCA_API lpcString_t
+ORCA_API char const *
 Key_KeynumToString(uint32_t keynum)
 {
   keyname_t* kn;

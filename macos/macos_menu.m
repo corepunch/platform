@@ -2,11 +2,12 @@
 
 #include "macos_local.h"
 
+typedef struct lua_State lua_State;
+
 @interface                  MenuCommand : NSObject
 @property lua_State        *state;
 @property(retain) NSString *callback;
 @end
-
 
 
 @implementation MenuCommand
@@ -18,13 +19,13 @@
 }
 - (void)perform:(id)sender
 {
-    lua_getglobal(self.state, "PerformCommand");
-    lua_pushstring(self.state, [self.callback UTF8String]);
-    if (lua_pcall(self.state, 1, LUA_MULTRET, 0) != LUA_OK)
-    {
-        Con_Error("%s", lua_tostring(self.state, -1));
-        lua_pop(self.state, 1);
-    }
+    // lua_getglobal(self.state, "PerformCommand");
+    // lua_pushstring(self.state, [self.callback UTF8String]);
+    // if (lua_pcall(self.state, 1, LUA_MULTRET, 0) != LUA_OK)
+    // {
+    //     fprintf(stderr, "%s\n", lua_tostring(self.state, -1));
+    //     lua_pop(self.state, 1);
+    // }
 }
 //- (bool)validateMenuItem:(NSMenuItem *)menuItem
 //{
@@ -32,7 +33,7 @@
 //    lua_pushstring(self.state, [self.callback UTF8String]);
 //    if (lua_pcall(self.state, 1, LUA_MULTRET, 0) != LUA_OK)
 //    {
-//        Con_Error("%s", lua_tostring(self.state, -1));
+//        fprintf(stderr, "%s\n", lua_tostring(self.state, -1));
 //        lua_pop(self.state, 1);
 //        return NO;
 //    }

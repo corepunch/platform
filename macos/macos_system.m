@@ -18,22 +18,22 @@ static char share[1024] = { 0 };
 //void INP_NullEvent(void);
 
 bool_t __openFile = FALSE;
-lpcString_t  __openFileType = NULL;
-void (*__openProjectFile)(lpcString_t );
+char const *__openFileType = NULL;
+void (*__openProjectFile)(char const *);
 
-void SYS_OpenFile(lpcString_t  ext, void (*callback)(lpcString_t )) {
+void SYS_OpenFile(char const *ext, void (*callback)(char const *)) {
 	__openFile = TRUE;
 	__openFileType = ext;
 	__openProjectFile = callback;
 }
 
-void SYS_OpenFolder(void (*callback)(lpcString_t )) {
+void SYS_OpenFolder(void (*callback)(char const *)) {
 	__openFile = TRUE;
 	__openFileType = NULL;
 	__openProjectFile = callback;
 }
 
-lpcString_t  SYS_DocumentsDirectory(void) {
+char const *SYS_DocumentsDirectory(void) {
     if (documents[0] == 0) {
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray<NSURL*>* urls = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
@@ -43,7 +43,7 @@ lpcString_t  SYS_DocumentsDirectory(void) {
 	return documents;
 }
 
-lpcString_t  SYS_SettingsDirectory(void) {
+char const *SYS_SettingsDirectory(void) {
     if (local[0] == 0) {
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray<NSURL*>* urls = [fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
@@ -62,13 +62,13 @@ lpcString_t  SYS_SettingsDirectory(void) {
 }
 
 
-lpcString_t  SYS_ShareDirectory(void) {
+char const *SYS_ShareDirectory(void) {
     if (share[0] == 0) {
         unsigned size = sizeof(share);
         _NSGetExecutablePath(share, &size);
-        LPSTR c = share + strlen(share) - 1;
+        char *c = share + strlen(share) - 1;
 #if !TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
-        lpcString_t  resource = "/Resources/";
+        char const *resource = "/Resources/";
         for (int i = 1;; c--) {
             if (*c == '/') {
                 if (i > 0){
@@ -87,18 +87,18 @@ lpcString_t  SYS_ShareDirectory(void) {
     return share;
 }
 
-lpcString_t  SYS_LibDirectory(void) {
+char const *SYS_LibDirectory(void) {
     return SYS_ShareDirectory();
 }
 
-void SYS_SetDragContents(lpcString_t  contents) {
+void SYS_SetDragContents(char const *contents) {
 }
 
-lpcString_t SYS_GetPlatform(void) {
+char const *SYS_GetPlatform(void) {
     return "macos";
 }
 
-//void SYS_GetOpenFileName(void (*callback)(lpcString_t)) {
+//void SYS_GetOpenFileName(void (*callback)(char const *)) {
 //    // Create and configure the open panel
 //    NSOpenPanel *panel = [NSOpenPanel openPanel];
 //    [panel setCanChooseFiles:NO];
@@ -115,7 +115,7 @@ lpcString_t SYS_GetPlatform(void) {
 //            NSLog(@"Selected folder: %@", [selectedFolder path]);
 //            
 //            // Convert the folder path to a C string
-//            lpcString_t  folderPath = [[selectedFolder path] UTF8String];
+//            char const *folderPath = [[selectedFolder path] UTF8String];
 //            
 //            // Call the C callback with the selected folder path
 //            if (callback) {
@@ -162,7 +162,7 @@ bool_t SYS_GetFolderName(struct _OPENFILENAME const *ofn) {
 #include <unistd.h>
 #include <sys/wait.h>
 
-int SYS_ExecuteProcess(lpcString_t process) {
+int SYS_ExecuteProcess(char const *process) {
 #if 0
     pid_t pid;
     
@@ -176,8 +176,8 @@ int SYS_ExecuteProcess(lpcString_t process) {
     
     if (pid == 0) { // Child process
                     // Define the command and arguments
-        LPSTR command = "./orca";
-        LPSTR args[] = {
+        char *command = "./orca";
+        char *args[] = {
             "./orca",
             "-data=/Users/igor/Developer/ui-framework/projects/cluster/Cluster.xml",
             "-start=Cluster/Screens/InstrumentCluster",
@@ -192,7 +192,7 @@ int SYS_ExecuteProcess(lpcString_t process) {
         exit(1);
     } else { // Parent process
              // Do not wait for the child process
-        Con_Error("Child process (PID %d) started in parallel", pid);
+        fprintf(stderr, "Child process (PID %d) started in parallel\n", pid);
         
         // Optionally, you can perform other tasks here in the parent process
         

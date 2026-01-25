@@ -2,8 +2,8 @@ UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
     CC = clang
-    CFLAGS = -Wall -Wextra -fPIC -I. -fobjc-arc
-    LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa
+    CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION
+    LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface
     LIB_EXT = dylib
     SOURCES = $(wildcard macos/*.m) $(wildcard unix/*.c)
 else ifeq ($(UNAME_S),Linux)

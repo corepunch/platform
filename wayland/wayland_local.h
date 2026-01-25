@@ -24,6 +24,11 @@ typedef struct _WND
   int height;
 }* PWND;
 
+struct vec2 {
+  float x;
+  float y;
+};
+
 typedef uint16_t WORD;
 typedef uint32_t DWORD;
 typedef char const *PCSTR;

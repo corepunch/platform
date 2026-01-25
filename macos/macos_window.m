@@ -126,7 +126,7 @@ static void ConfigureOpenGLView(NSOpenGLView *openglView) {
 }
 
 bool_t
-VID_CreateWindow(lpcString_t title, uint32_t width, uint32_t height, uint32_t flags)
+VID_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
 {
   if (wstate.Window) {
 //    [g_window setContentSize:NSMakeSize(width, height)];
@@ -255,46 +255,9 @@ ORCA_API void VID_MakeCurrentContext(void) {
   }
 }
 
-#include <source/renderer/r_local.h>
-
-ORCA_API HRESULT
-IOSurface_CreateTextureFrom(uint32_t surfaceID, struct Texture* img)
-{
-  CGLContextObj cglContext = CGLGetCurrentContext();
-  IOSurfaceRef sharedSurface = IOSurfaceLookup(surfaceID);
-  if (sharedSurface) {
-    GLuint name = 0;
-    GLsizei surface_w = (GLsizei)IOSurfaceGetWidth(sharedSurface);
-    GLsizei surface_h = (GLsizei)IOSurfaceGetHeight(sharedSurface);
-    R_Call(glGenTextures, 1, &name);
-    R_Call(glBindTexture, GL_TEXTURE_RECTANGLE, name);
-    // At the moment, CGLTexImageIOSurface2D requires the GL_TEXTURE_RECTANGLE target
-    CGLError cglError = CGLTexImageIOSurface2D(cglContext, GL_TEXTURE_RECTANGLE, GL_RGBA, surface_w, surface_h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, sharedSurface, 0);
-    if (cglError == kCGLNoError) {
-      // Render with this texture in the second app
-      NSLog(@"Successfully accessed and used the shared IOSurface.");
-      R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      R_Call(glBindTexture, GL_TEXTURE_RECTANGLE_EXT, 0);
-      img->Width = surface_w;
-      img->Height = surface_h;
-      img->Scale = 1;
-      img->texnum = name;
-      img->IOSurface = TRUE;
-      return S_OK;
-    } else {
-      NSLog(@"Failed to bind IOSurface to texture: %d", cglError);
-      R_Call(glBindTexture, GL_TEXTURE_RECTANGLE_EXT, 0);
-      R_Call(glDeleteTextures, 1, &name);
-      return E_FAIL;
-    }
-  } else {
-    NSLog(@"Failed to find IOSurface: %d", surfaceID);
-    return E_FAIL;
-  }
-}
+#include <OpenGL/OpenGL.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
 
 BOOL
 IOSurface_Create(uint32_t w, uint32_t h)
@@ -312,18 +275,18 @@ IOSurface_Create(uint32_t w, uint32_t h)
     return NO;
   }
   CGLContextObj ctx = CGLGetCurrentContext();
-  R_Call(glGenTextures, 1, &wstate.texnum);
-  R_Call(glGenFramebuffers, 1, &wstate.framebuffer);
-  R_Call(glBindFramebuffer, GL_FRAMEBUFFER, wstate.framebuffer);
+  glGenTextures(1, &wstate.texnum);
+  glGenFramebuffers(1, &wstate.framebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, wstate.framebuffer);
   // Attach IOSurface to OpenGL texture
-  R_Call(glBindTexture,GL_TEXTURE_RECTANGLE,wstate.texnum);
-  R_Call(CGLTexImageIOSurface2D,ctx,GL_TEXTURE_RECTANGLE,GL_RGBA,w,h,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8_REV,wstate.surf,0);
-  R_Call(glFramebufferTexture2D,GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE,wstate.texnum, 0);
-  R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  R_Call(glTexParameteri, GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  R_Call(glBindTexture,GL_TEXTURE_RECTANGLE,0);
+  glBindTexture(GL_TEXTURE_RECTANGLE_EXT, wstate.texnum);
+  CGLTexImageIOSurface2D(ctx, GL_TEXTURE_RECTANGLE_EXT, GL_RGBA, w, h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, wstate.surf, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_EXT, wstate.texnum, 0);
+  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_RECTANGLE_EXT, 0);
   
   wstate.width = w;
   wstate.height = h;
@@ -332,7 +295,7 @@ IOSurface_Create(uint32_t w, uint32_t h)
   SV_PostMessageW(NULL, kEventWindowPaint, MAKEDWORD(w, h), 0);
   
   _IOSurface = IOSurfaceGetID(wstate.surf);
-  NSLog(@"IOSurface ID: %u", _IOSurface);  // Share this ID with the other app
+  fprintf(stderr, "IOSurface ID: %u\n", _IOSurface);  // Share this ID with the other app
   return YES;
 }
 

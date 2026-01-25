@@ -66,7 +66,7 @@ NET_Sent(int sockfd, void const* buf, size_t len)
   send(sockfd, buf, len, 0);
 }
 
-int net_connect(lpcString_t ipaddr, int port)
+int net_connect(char const *ipaddr, int port)
 {
   int sockfd;
   struct sockaddr_in addr;
@@ -94,7 +94,7 @@ int net_connect(lpcString_t ipaddr, int port)
     close(sockfd);
     return -1;
   } else {
-    Con_Error("Connected to a server at %s:%d", ipaddr, port);
+    fprintf(stderr, "Connected to a server at %s:%d\n", ipaddr, port);
   }
   return sockfd;
 }
@@ -104,7 +104,7 @@ int net_packet(int net_socket, struct buffer* net_message)
   int ret = (int)read(net_socket, net_message->data, net_message->maxsize);
   if (ret == net_message->maxsize) {
     net_message->cursize = 0;
-    Con_Error("Oversized packet from %d", net_socket);
+    fprintf(stderr, "Oversized packet from %d\n", net_socket);
     return -1;
   }
   if (ret > 0) {

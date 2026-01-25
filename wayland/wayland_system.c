@@ -61,7 +61,7 @@ SYS_LibDirectory()
 }
 
 char const*
-KEY_GetKeyName(int keycode)
+KEY_GetKeyName(uint32_t keycode)
 {
   // for (keymap_t const *km = darwin_scancode_table; km->keycode != -1;
   // km++) {

@@ -4,7 +4,7 @@
 #include "macos_keymap.h"
 #include "macos_local.h"
 
-uint32_t KEY_GetKeyName(int keycode) {
+uint32_t KEY_GetKeyName(uint32_t keycode) {
 	for (struct keymap const *km = darwin_scancode_table; km->keyname; km++) {
 		if (keycode == km->keycode)
 		{
@@ -52,7 +52,7 @@ SV_PostMessageW(lpObject_t obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 }
 
 void
-NotifyFileDropEvent(lpcString_t filename, float x, float y)
+NotifyFileDropEvent(char const *filename, float x, float y)
 {
 //	struct message * ev       = malloc(sizeof(EVENT));
 //	ev->type               = ;
@@ -184,7 +184,7 @@ start_over:
 	case NSEventTypeKeyDown:
 	case NSEventTypeKeyUp:
 		e->wParam = KEY_GetKeyName(GetKeyCode(event)) | modkey(event.modifierFlags);
-		strncpy((LPSTR )&e->lParam, event.characters.UTF8String, sizeof(e->lParam));
+		strncpy((char *)&e->lParam, event.characters.UTF8String, sizeof(e->lParam));
 		break;
 	default:
 		break;

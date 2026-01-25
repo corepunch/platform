@@ -6,7 +6,7 @@
 #include "../platform.h"
 
 @interface WindowDelegate : NSObject<NSWindowDelegate>
-@property (weak) NSWindow* window;
+@property (assign) NSWindow* window;
 @end
 
 //@interface StatusToolBarItem: NSView
