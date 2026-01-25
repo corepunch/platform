@@ -29,6 +29,9 @@
 typedef int bool_t;
 typedef const char* lpcString_t;
 typedef unsigned long longTime_t;
+typedef void* lpObject_t;
+typedef uint32_t wParam_t;
+typedef void* lParam_t;
 
 enum
 {
@@ -127,6 +130,28 @@ enum
   MOD_CTRL = 1 << 17,
   MOD_ALT = 1 << 18,
   MOD_CMD = 1 << 19,
+};
+
+// Event message types
+enum
+{
+  kEventLeftMouseDown = 1000,
+  kEventLeftMouseUp,
+  kEventLeftDoubleClick,
+  kEventRightMouseDown,
+  kEventRightMouseUp,
+  kEventRightDoubleClick,
+  kEventOtherMouseDown,
+  kEventOtherMouseUp,
+  kEventOtherDoubleClick,
+  kEventLeftMouseDragged,
+  kEventRightMouseDragged,
+  kEventOtherMouseDragged,
+  kEventMouseMoved,
+  kEventScrollWheel,
+  kEventKeyDown,
+  kEventKeyUp,
+  kEventWindowPaint,
 };
 
 typedef enum _EVTMOUSEBTN
