@@ -1,3 +1,6 @@
+OUTDIR ?= .
+LIBNAME = libplatform.$(LIB_EXT)
+TARGET = $(OUTDIR)/$(LIBNAME)
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
@@ -6,7 +9,7 @@ ifeq ($(UNAME_S),Darwin)
 	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface
 	LIB_EXT = dylib
 	SOURCES = $(wildcard macos/*.m) $(wildcard unix/*.c)
-	LDFLAGS += -dynamiclib -install_name @rpath/libplatform.dylib
+	LDFLAGS += -dynamiclib -install_name @rpath/$(LIBNAME)
 else ifeq ($(UNAME_S),Linux)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
@@ -25,9 +28,6 @@ else
 	$(error Unsupported OS: $(UNAME_S))
 endif
 
-OUTDIR ?= .
-LIBNAME = libplatform.$(LIB_EXT)
-TARGET = $(OUTDIR)/$(LIBNAME)
 OBJECTS = $(patsubst %.m,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 
 all: $(TARGET)
