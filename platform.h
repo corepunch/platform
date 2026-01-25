@@ -40,11 +40,12 @@
 #endif
 
 // Basic types
-typedef int bool_t;
+typedef unsigned int bool_t;
 typedef unsigned long longTime_t;
-typedef void* lpObject_t;
+typedef struct Object* lpObject_t;
 typedef uint32_t wParam_t;
 typedef void* lParam_t;
+typedef unsigned char byte_t;
 
 enum
 {
@@ -154,24 +155,33 @@ typedef enum _EVTMOUSEBTN
   BUT_COUNT,
 } EVTMOUSEBTN;
 
-// Structure declarations for platform-specific implementations
-struct buffer {
-  uint8_t* data;
-  size_t cursize;
-  size_t maxsize;
+struct buffer
+{
+  byte_t* data;
+  int maxsize;
+  int cursize;
+  int readcount;
 };
 
-struct message {
+struct message
+{
+  lpObject_t hobj;
   uint32_t message;
-  uint32_t wParam;
-  void* lParam;
-  void* hobj;
-  float x, y;
+  union {
+    wParam_t wParam;
+    struct { uint16_t x, y; };
+    struct { uint16_t keyCode, modflags; };
+  };
+  union {
+    lParam_t lParam;
+    struct { int16_t dx, dy; };
+  };
+  uint32_t id;
 };
 
-struct isize2 {
-  int width;
-  int height;
+struct isize2
+{
+  uint32_t width, height;
 };
 
 ORCA_API void
@@ -201,5 +211,76 @@ SYS_GetSaveFileName(struct _OPENFILENAME const *);
 
 ORCA_API bool_t
 SYS_GetFolderName(struct _OPENFILENAME const *);
+
+ORCA_API void
+SYS_Init(void);
+
+ORCA_API void
+SYS_Shutdown(void);
+
+ORCA_API longTime_t
+SYS_GetMilliseconds(void);
+
+ORCA_API void
+SYS_Sleep(longTime_t msec);
+
+ORCA_API bool_t
+SYS_IsDarkTheme(void);
+
+ORCA_API char const *
+SYS_GetPlatform(void);
+
+ORCA_API char const *
+SYS_SettingsDirectory(void);
+
+ORCA_API char const *
+SYS_ShareDirectory(void);
+
+ORCA_API char const *
+SYS_LibDirectory(void);
+
+ORCA_API int
+SYS_PollEvent(struct message*);
+
+ORCA_API void
+Queue_Remove(lpObject_t);
+
+/*
+ Window operations
+ */
+
+ORCA_API bool_t
+VID_CreateWindow(char const *, uint32_t width, uint32_t height, uint32_t flags);
+
+ORCA_API bool_t
+VID_CreateSurface(uint32_t width, uint32_t height);
+
+ORCA_API float
+VID_GetScaling(void);
+
+ORCA_API void
+VID_Shutdown(void);
+
+ORCA_API bool_t
+VID_SetSize(uint32_t width, uint32_t height, bool_t centered);
+
+ORCA_API uint32_t
+VID_GetSize(struct isize2*);
+
+ORCA_API int
+WaitEvent(longTime_t);
+
+ORCA_API void
+VID_MakeCurrentContext(void);
+
+ORCA_API void
+VID_BeginPaint(void);
+
+ORCA_API void
+VID_EndPaint(void);
+
+ORCA_API void
+VID_BindFramebuffer(void);
+
 
 #endif
