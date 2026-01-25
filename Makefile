@@ -25,8 +25,7 @@ else
 endif
 
 LIB = libplatform.$(LIB_EXT)
-OBJECTS = $(SOURCES:.c=.o)
-OBJECTS := $(OBJECTS:.m=.o)
+OBJECTS = $(patsubst %.m,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 
 all: $(LIB)
 
