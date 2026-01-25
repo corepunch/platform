@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwayland-dev libwayland-egl1-mesa libxkbcommon-dev libegl-dev libgl-dev
+    
+    - name: Build
+      run: make
+    
+    - name: Check library
+      run: |
+        ls -lh libplatform.so
+        file libplatform.so
+        nm -D libplatform.so | grep " T " || true
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: libplatform-linux
+        path: libplatform.so
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build
+      run: make
+    
+    - name: Check library
+      run: |
+        ls -lh libplatform.dylib
+        file libplatform.dylib
+        nm -gU libplatform.dylib || true
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: libplatform-macos
+        path: libplatform.dylib

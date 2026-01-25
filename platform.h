@@ -1,6 +1,13 @@
 #ifndef __PLATFORM_H__
 #define __PLATFORM_H__
 
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
 #ifndef MAX
 #define MAX(x, y) ((x) >= (y) ? (x) : (y))
 #endif
@@ -12,6 +19,19 @@
 #ifndef CLAMP
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
 #endif
+
+// Platform API export macro
+#ifndef ORCA_API
+#define ORCA_API
+#endif
+
+// Basic types
+typedef int bool_t;
+typedef const char* lpcString_t;
+typedef unsigned long longTime_t;
+typedef void* lpObject_t;
+typedef uint32_t wParam_t;
+typedef void* lParam_t;
 
 enum
 {
@@ -112,6 +132,28 @@ enum
   MOD_CMD = 1 << 19,
 };
 
+// Event message types
+enum
+{
+  kEventLeftMouseDown = 1000,
+  kEventLeftMouseUp,
+  kEventLeftDoubleClick,
+  kEventRightMouseDown,
+  kEventRightMouseUp,
+  kEventRightDoubleClick,
+  kEventOtherMouseDown,
+  kEventOtherMouseUp,
+  kEventOtherDoubleClick,
+  kEventLeftMouseDragged,
+  kEventRightMouseDragged,
+  kEventOtherMouseDragged,
+  kEventMouseMoved,
+  kEventScrollWheel,
+  kEventKeyDown,
+  kEventKeyUp,
+  kEventWindowPaint,
+};
+
 typedef enum _EVTMOUSEBTN
 {
   BUT_LEFT,
@@ -121,6 +163,33 @@ typedef enum _EVTMOUSEBTN
   BUT_COUNT,
 } EVTMOUSEBTN;
 
-typedef unsigned long longTime_t;
+// Structure declarations for platform-specific implementations
+struct buffer {
+  uint8_t* data;
+  size_t cursize;
+  size_t maxsize;
+};
+
+struct message {
+  uint32_t message;
+  uint32_t wParam;
+  void* lParam;
+  void* hobj;
+  float x, y;
+};
+
+struct isize2 {
+  int width;
+  int height;
+};
+
+struct vec2 {
+  float x;
+  float y;
+};
+
+// Function declarations that may be implemented externally
+void Con_Error(const char* fmt, ...);
+void* ZeroAlloc(size_t size);
 
 #endif

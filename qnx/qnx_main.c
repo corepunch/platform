@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <include/orca.h>
+#include "../platform.h"
 
 screen_context_t screen_ctx;
 screen_window_t screen_win;

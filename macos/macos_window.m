@@ -2,9 +2,6 @@
 
 #import <OpenGL/gl.h>
 
-#include <include/orca.h>
-#include <include/renderer.h>
-
 #define USE_SINGLE_WINDOW
 
 #define MIN_WINDOW_WIDTH 640
