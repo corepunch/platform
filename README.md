@@ -34,12 +34,6 @@ int main(void) {
         return 1;
     }
     
-    // Create an OpenGL surface
-    if (!WI_CreateSurface(800, 600)) {
-        fprintf(stderr, "Failed to create surface\n");
-        return 1;
-    }
-    
     // Main event loop
     struct WI_Message msg;
     int running = 1;
