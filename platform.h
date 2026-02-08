@@ -155,7 +155,7 @@ struct WI_Buffer
 
 struct WI_Message
 {
-  void* hobj;
+  void* target;
   uint32_t message;
   union {
     wParam_t wParam;

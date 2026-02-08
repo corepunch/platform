@@ -21,10 +21,10 @@ struct
 } queue = { 0 };
 
 void
-WI_RemoveFromQueue(void* hobj)
+WI_RemoveFromQueue(void* target)
 {
   for (uint16_t r = queue.read; r != queue.write; r++)
-    if (queue.data[r].hobj == hobj)
+    if (queue.data[r].target == target)
       memset(&queue.data[r], 0, sizeof(queue.data[r]));
 }
 
@@ -42,7 +42,7 @@ WI_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
                         data1:wParam
                         data2:0];
   queue.data[queue.write++] = (struct WI_Message) {
-    .hobj = obj,
+    .target = obj,
     .message = Msg,
     .wParam = wParam,
     .lParam = lParam
@@ -167,7 +167,7 @@ start_over:
 	int x = event.locationInWindow.x;
 	int y = event.window.contentView.frame.size.height - event.locationInWindow.y;
 
-	e->hobj = (void *)event.window;
+	e->target = (void *)event.window;
 	e->message = GetEventType(event);
 	e->wParam = MAKEDWORD(x, y);
 	
