@@ -4,8 +4,8 @@
 
 #define USE_SINGLE_WINDOW
 
-#define MIN_WINDOW_WIDTH 640
-#define MIN_WINDOW_HEIGHT 480
+#define MIN_WINDOW_WIDTH 256
+#define MIN_WINDOW_HEIGHT 256
 
 WI_API uint32_t _IOSurface = -1;
 
@@ -68,8 +68,8 @@ GetScreenFrame(uint32_t width)
 static NSRect
 CenterOnScreen(uint32_t width, uint32_t height)
 {
-	width  = width < MIN_WINDOW_WIDTH ? MIN_WINDOW_WIDTH : width;
-	height = height < MIN_WINDOW_HEIGHT ? MIN_WINDOW_HEIGHT : height;
+	width  = MAX(MIN_WINDOW_WIDTH, width);
+	height = MAX(MIN_WINDOW_HEIGHT, height);
 	NSRect screenRect = GetScreenFrame(width);
 	float  x = (screenRect.size.width - width) / 2 + screenRect.origin.x;
 	float  y = (screenRect.size.height - height) / 2 + screenRect.origin.y;
@@ -202,7 +202,7 @@ uint32_t WI_GetSize(struct WI_Size * pSize) {
     pSize->width = wstate.width;
     pSize->height = wstate.height;
   }
-  return MAKEDWORD(MAX(640, wstate.width), MAX(480, wstate.height));
+  return MAKEDWORD(MAX(MIN_WINDOW_WIDTH, wstate.width), MAX(MIN_WINDOW_HEIGHT, wstate.height));
 }
 
 bool_t WI_SetSize(uint32_t width, uint32_t height, bool_t centered) {
@@ -210,8 +210,8 @@ bool_t WI_SetSize(uint32_t width, uint32_t height, bool_t centered) {
     return TRUE;
   }
   if (wstate.Window) {
-    wstate.width = MAX(640, width);
-    wstate.height = MAX(480, height);
+    wstate.width = MAX(MIN_WINDOW_WIDTH, width);
+    wstate.height = MAX(MIN_WINDOW_HEIGHT, height);
     [wstate.Window setContentSize:NSMakeSize(wstate.width, wstate.height)];
     if (centered) {
       [wstate.Window setFrameOrigin:CenterOnScreen(wstate.width, wstate.height).origin];
