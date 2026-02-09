@@ -8,8 +8,11 @@
 #include <EGL/egl.h>
 #include <GL/gl.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "xdg-shell-client.h"
+
+#define ZeroAlloc(size) calloc(1, size)
 
 typedef struct _WND
 {

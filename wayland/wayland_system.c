@@ -1,7 +1,11 @@
 #include "../platform.h"
 #include <unistd.h>
+#include <time.h>
+#include <sys/stat.h>
 
 #define APPNAME "highperf"
+
+static char documents[1024] = { 0 };
 
 static PATHSTR g_share = { 0 };
 static PATHSTR g_local = { 0 };
@@ -70,4 +74,102 @@ KEY_GetKeyName(uint32_t keycode)
   //     }
   // }
   return "";
+}
+
+char const*
+WI_DocumentsDirectory(void)
+{
+  if (documents[0] == 0) {
+    char const* home = getenv("HOME");
+    if (home) {
+      snprintf(documents, sizeof(documents), "%s/Documents", home);
+    }
+  }
+  return documents;
+}
+
+longTime_t
+WI_GetMilliseconds(void)
+{
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (longTime_t)(ts.tv_sec * 1000UL + ts.tv_nsec / 1000000UL);
+}
+
+void
+WI_Sleep(longTime_t msec)
+{
+  struct timespec ts;
+  ts.tv_sec = msec / 1000;
+  ts.tv_nsec = (msec % 1000) * 1000000;
+  nanosleep(&ts, NULL);
+}
+
+bool_t
+WI_IsDarkTheme(void)
+{
+  // Try to detect dark theme from environment variables
+  // This is a simplified implementation - a full implementation would
+  // require checking desktop environment settings via D-Bus
+  char const* gtk_theme = getenv("GTK_THEME");
+  if (gtk_theme && strstr(gtk_theme, "dark")) {
+    return TRUE;
+  }
+  
+  // Check if running in a known dark theme
+  char const* theme = getenv("QT_STYLE_OVERRIDE");
+  if (theme && strstr(theme, "dark")) {
+    return TRUE;
+  }
+  
+  return FALSE;
+}
+
+bool_t
+WI_GetOpenFileName(struct _WI_OpenFileName const* ofn)
+{
+  // File dialogs require GTK or Qt integration
+  // For now, this is a stub that returns FALSE
+  // A full implementation would use gtk_file_chooser_dialog_new() or zenity
+  (void)ofn;
+  return FALSE;
+}
+
+bool_t
+WI_GetSaveFileName(struct _WI_OpenFileName const* ofn)
+{
+  // File dialogs require GTK or Qt integration
+  // For now, this is a stub that returns FALSE
+  (void)ofn;
+  return FALSE;
+}
+
+bool_t
+WI_GetFolderName(struct _WI_OpenFileName const* ofn)
+{
+  // File dialogs require GTK or Qt integration
+  // For now, this is a stub that returns FALSE
+  (void)ofn;
+  return FALSE;
+}
+
+char const*
+WI_KeynumToString(uint32_t keynum)
+{
+  static char tinystr[2];
+  keynum = keynum & 0xff;
+  
+  if (keynum == (uint32_t)-1)
+    return "<KEY NOT FOUND>";
+    
+  if (keynum > 32 && keynum < 127) {
+    // Printable ASCII
+    tinystr[0] = keynum;
+    tinystr[1] = 0;
+    return tinystr;
+  }
+  
+  // For special keys, return a generic string
+  // A full implementation would use a keyname table like in unix_shared.c
+  return "<UNKNOWN KEYNUM>";
 }
