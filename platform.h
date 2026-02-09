@@ -248,9 +248,6 @@ WI_CreateSurface(uint32_t width, uint32_t height);
 WI_API float
 WI_GetScaling(void);
 
-WI_API void
-WI_Shutdown(void);
-
 WI_API bool_t
 WI_SetSize(uint32_t width, uint32_t height, bool_t centered);
 

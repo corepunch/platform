@@ -130,3 +130,64 @@ SetWindowPosition(PWND win, PCSIZE2 pSize)
 
   ResizeWindow(win, pSize->width, pSize->height);
 }
+
+// API wrapper functions for compatibility with macOS interface
+
+uint32_t
+WI_GetSize(struct WI_Size* size)
+{
+  extern struct _WND window;
+  if (size) {
+    size->width = window.width;
+    size->height = window.height;
+  }
+  return MAKEDWORD(window.width, window.height);
+}
+
+bool_t
+WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
+{
+  extern struct _WND window;
+  (void)centered; // Wayland doesn't support window positioning
+  ResizeWindow(&window, width, height);
+  return TRUE;
+}
+
+float
+WI_GetScaling(void)
+{
+  // Wayland uses per-output scaling, but for simplicity we return 1.0
+  // A full implementation would track which output the window is on
+  return 1.0f;
+}
+
+void
+WI_BeginPaint(void)
+{
+  extern struct _WND window;
+  BeginPaint(&window);
+}
+
+void
+WI_EndPaint(void)
+{
+  extern struct _WND window;
+  EndPaint(&window);
+}
+
+void
+WI_BindFramebuffer(void)
+{
+  // EGL doesn't need explicit framebuffer binding like macOS IOSurface
+  // The default framebuffer is always active
+}
+
+bool_t
+WI_CreateSurface(uint32_t width, uint32_t height)
+{
+  // Offscreen surfaces are not implemented in Wayland
+  // This would require EGL pbuffer surfaces
+  (void)width;
+  (void)height;
+  return FALSE;
+}
