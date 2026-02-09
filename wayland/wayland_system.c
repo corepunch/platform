@@ -156,6 +156,8 @@ WI_GetFolderName(struct _WI_OpenFileName const* ofn)
 char const*
 WI_KeynumToString(uint32_t keynum)
 {
+  // Note: This function is not thread-safe due to the static buffer
+  // This is consistent with the unix implementation
   static char tinystr[2];
   keynum = keynum & 0xff;
   
