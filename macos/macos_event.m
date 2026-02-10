@@ -154,9 +154,7 @@ start_over:
       goto start_over;
     }
     return 1;
-  } else if (event.type != NSEventTypeKeyDown
-             && event.type != NSEventTypeFlagsChanged) // it's crashing otherwise upon taking a screenshot
-  {
+  } else if (event.type != NSEventTypeKeyDown) {
     [NSApp sendEvent:event];
     [NSApp updateWindows];
   }

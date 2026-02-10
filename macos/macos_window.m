@@ -118,11 +118,14 @@ static void ConfigureOpenGLView(NSOpenGLView *openglView) {
   [openglView setOpenGLContext:context];
   [openglView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
   [openglView setWantsBestResolutionOpenGLSurface:YES];
-  [openglView setOpenGLContext:context];
   
   [context makeCurrentContext];
   [context setValues:&interval
         forParameter:NSOpenGLContextParameterSwapInterval];
+  
+  // Under manual retain/release, NSOpenGLView retains the context when set.
+  // Release our local ownership to avoid a leak reported by the analyzer.
+  [context release];
 }
 
 bool_t
