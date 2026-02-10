@@ -2,6 +2,7 @@
 
 #include "wayland_local.h"
 #include <unistd.h>
+#include <poll.h>
 
 static struct
 {
@@ -265,11 +266,29 @@ get_xdg_surface_listener(void)
 int
 WI_WaitEvent(TIME time)
 {
+  extern struct wl_display* display;
+  
+  if (time > 0) {
+    // Use poll or epoll to wait with timeout
+    struct pollfd fds[1];
+    fds[0].fd = wl_display_get_fd(display);
+    fds[0].events = POLLIN;
+    
+    int ret = poll(fds, 1, time);
+    if (ret > 0) {
+      wl_display_dispatch(display);
+      return 1;
+    }
+    return 0;
+  }
+  
+  // No timeout, just dispatch pending events
+  wl_display_dispatch_pending(display);
   return 0;
 }
 
 int
-WI_PollEvent(PEVENT pEvent, bool_t (*dispatch)(struct WI_Message*))
+WI_PollEvent(PEVENT pEvent)
 {
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];
@@ -283,6 +302,49 @@ void NotifyWindowEvent(void *window, uint32_t eventType, uint32_t wparam) {
   events.queue[events.write++] = (EVENT){ 
     .wParam = wparam,
     .message = kEventWindowPaint,
-    .hobj = window,
+    .target = window,
   };
+}
+
+void
+WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
+{
+  if (events.write - events.read >= sizeof(events.queue) / sizeof(events.queue[0])) {
+    // Queue is full, ignore the message
+    return;
+  }
+  events.queue[events.write++] = (EVENT){
+    .target = hobj,
+    .message = event,
+    .wParam = wparam,
+    .lParam = lparam,
+  };
+}
+
+void
+WI_RemoveFromQueue(void* hobj)
+{
+  WORD read_idx = events.read;
+  WORD write_idx = events.write;
+  WORD new_write = events.read;
+  
+  // Scan through the queue and keep events not matching hobj
+  while (read_idx != write_idx) {
+    if (events.queue[read_idx].target != hobj) {
+      events.queue[new_write++] = events.queue[read_idx];
+    }
+    read_idx++;
+  }
+  
+  events.write = new_write;
+}
+
+void
+NotifyFileDropEvent(char const* filename, float x, float y)
+{
+  // File drop not fully implemented yet
+  // Would need to allocate and copy filename string
+  (void)filename;
+  (void)x;
+  (void)y;
 }
