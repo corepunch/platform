@@ -197,7 +197,7 @@ void WI_Shutdown(void) {
 float
 WI_GetScaling(void)
 {
-  return wstate.backingScale;
+  return MAX(wstate.backingScale, 1);
 }
 
 uint32_t WI_GetSize(struct WI_Size * pSize) {
