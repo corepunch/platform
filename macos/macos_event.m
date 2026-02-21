@@ -31,6 +31,12 @@ WI_RemoveFromQueue(void* target)
 void
 WI_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 {
+  struct WI_Message const msg = {
+    .target = obj,
+    .message = Msg,
+    .wParam = wParam,
+    .lParam = lParam
+  };
   NSEvent *customEvent =
   [NSEvent otherEventWithType:NSEventTypeApplicationDefined
                      location:NSZeroPoint
@@ -41,12 +47,17 @@ WI_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
                       subtype:queue.write
                         data1:wParam
                         data2:0];
-  queue.data[queue.write++] = (struct WI_Message) {
-    .target = obj,
-    .message = Msg,
-    .wParam = wParam,
-    .lParam = lParam
-  };
+  for (uint16_t r = queue.read; ++r != queue.write;) {
+    if (queue.data[r].message != Msg)
+      continue;
+    switch (Msg) {
+      case kEventWindowResized:
+      case kEventWindowPaint:
+        queue.data[r] = msg;
+        return;
+    }
+  }
+  queue.data[queue.write++] = msg;
   // Post the event to the application's event queue
   [NSApp postEvent:customEvent atStart:NO];
 }
