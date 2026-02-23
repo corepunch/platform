@@ -166,8 +166,7 @@ struct WI_Message
     lParam_t lParam;
     struct { int16_t dx, dy; };
   };
-  uint32_t id:31;
-  uint32_t syncronous:1;
+  uint32_t id;
 };
 
 struct WI_Size
