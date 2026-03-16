@@ -3,7 +3,13 @@ LIBNAME = libplatform.$(LIB_EXT)
 TARGET = $(OUTDIR)/$(LIBNAME)
 UNAME_S := $(shell uname -s)
 
-ifeq ($(UNAME_S),Darwin)
+ifdef EMSCRIPTEN
+	CC = emcc
+	CFLAGS = -Wall -Wextra -I. -sUSE_WEBGL2=1 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=2
+	LDFLAGS = -sSIDE_MODULE=1
+	LIB_EXT = wasm
+	SOURCES = $(wildcard webgl/*.c)
+else ifeq ($(UNAME_S),Darwin)
 	CC = clang
 	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION
 	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface
