@@ -54,3 +54,25 @@ jobs:
       with:
         name: libplatform-macos
         path: libplatform.dylib
+
+  build-webgl:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Emscripten
+      uses: mymindstorm/setup-emsdk@v14
+
+    - name: Build
+      run: emmake make
+
+    - name: Check library
+      run: |
+        ls -lh libplatform.wasm
+        file libplatform.wasm
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: libplatform-webgl
+        path: libplatform.wasm

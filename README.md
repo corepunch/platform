@@ -8,7 +8,7 @@ A lightweight, cross-platform C library providing a unified API for window manag
 
 ## Features
 
-- **Cross-platform**: Native support for Linux (Wayland), macOS (AppKit/Cocoa), and QNX
+- **Cross-platform**: Native support for Linux (Wayland), macOS (AppKit/Cocoa), QNX, and WebGL (browser)
 - **Window Management**: Create and manage windows with OpenGL/EGL context support
 - **Event System**: Unified event handling for mouse, keyboard, and window events
 - **Input Processing**: Comprehensive keyboard and mouse input with modifier support
@@ -99,6 +99,11 @@ On **macOS**:
 clang -o myapp main.c -L. -lplatform -framework AppKit -framework OpenGL
 ```
 
+On **WebGL (browser via Emscripten)**:
+```bash
+emcc -o myapp.js main.c -L. -lplatform -sUSE_WEBGL2=1 -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
+```
+
 Make sure `libplatform.so` (Linux) or `libplatform.dylib` (macOS) is in your library path or current directory.
 
 ## API Overview
@@ -184,6 +189,15 @@ Simple Makefile that auto-detects your platform and builds the appropriate dynam
 
 ### Prerequisites
 
+**WebGL (Emscripten):**
+- Emscripten SDK (`emcc` compiler):
+  ```bash
+  # Install via emsdk (https://emscripten.org/docs/getting_started/downloads.html)
+  git clone https://github.com/emscripten-core/emsdk.git
+  cd emsdk && ./emsdk install latest && ./emsdk activate latest
+  source ./emsdk_env.sh
+  ```
+
 **Linux:**
 - GCC compiler
 - Wayland development libraries (optional, for Wayland support):
@@ -198,15 +212,17 @@ Simple Makefile that auto-detects your platform and builds the appropriate dynam
 ### Build Commands
 
 ```bash
-make          # Build the dynamic library
-make clean    # Clean build artifacts
-make install  # Install to /usr/local/lib (requires sudo)
+make              # Build the dynamic library
+emmake make       # Build for WebGL (requires Emscripten environment sourced)
+make clean        # Clean build artifacts
+make install      # Install to /usr/local/lib (requires sudo)
 ```
 
 ### Output
 
 - **Linux**: `libplatform.so`
 - **macOS**: `libplatform.dylib`
+- **WebGL**: `libplatform.wasm` (Emscripten side module)
 
 The library exports platform-specific functions for window management, event handling, networking, and system utilities.
 
@@ -215,6 +231,7 @@ The library exports platform-specific functions for window management, event han
 - **Linux (Wayland)**: Full support with Wayland, EGL, and OpenGL
 - **macOS**: Full support with AppKit and Cocoa frameworks
 - **QNX**: Source files available (qnx/)
+- **WebGL (browser)**: Full support via Emscripten — mouse, keyboard, scroll, and resize events; WebGL 1/2 rendering context
 
 ## Header
 
