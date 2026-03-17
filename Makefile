@@ -2,20 +2,22 @@ OUTDIR ?= .
 LIBNAME = libplatform.$(LIB_EXT)
 TARGET = $(OUTDIR)/$(LIBNAME)
 UNAME_S := $(shell uname -s)
+HASH := \#
 
 ifdef EMSCRIPTEN
 	CC = emcc
 	CFLAGS = -Wall -Wextra -I. -sUSE_WEBGL2=1 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=2
 	LDFLAGS = -sSIDE_MODULE=1
 	LIB_EXT = wasm
-	SOURCES = $(wildcard webgl/*.c)
+	FIND_SOURCES = find webgl -name "*.c"
+	LANG = c
 else ifeq ($(UNAME_S),Darwin)
 	CC = clang
 	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION
-	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface
+	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -install_name @rpath/$(LIBNAME)
 	LIB_EXT = dylib
-	SOURCES = $(wildcard macos/*.m) $(wildcard unix/*.c)
-	LDFLAGS += -dynamiclib -install_name @rpath/$(LIBNAME)
+	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; )
+	LANG = objective-c
 else ifeq ($(UNAME_S),Linux)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
@@ -26,29 +28,22 @@ else ifeq ($(UNAME_S),Linux)
 	ifneq ($(WAYLAND_CFLAGS),)
 		CFLAGS += $(WAYLAND_CFLAGS)
 		LDFLAGS += $(shell pkg-config --libs wayland-client wayland-egl xkbcommon egl gl)
-		SOURCES = $(wildcard wayland/*.c) $(wildcard unix/*.c)
+		FIND_SOURCES = ( find wayland -name "*.c"; find unix -name "*.c"; )
 	else
-		SOURCES = $(wildcard unix/*.c)
+		FIND_SOURCES = find unix -name "*.c"
 	endif
+	LANG = c
 else
 	$(error Unsupported OS: $(UNAME_S))
 endif
 
-OBJECTS = $(patsubst %.m,%.o,$(patsubst %.c,%.o,$(SOURCES)))
-
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $^
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.o: %.m
-	$(CC) $(CFLAGS) -c $< -o $@
+$(TARGET):
+	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
 
 clean:
-	rm -f $(OBJECTS) $(TARGET) */*.o
+	rm -f $(TARGET)
 
 install: $(TARGET)
 	install -d /usr/local/lib /usr/local/include
