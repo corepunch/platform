@@ -135,6 +135,21 @@ bool_t WI_GetOpenFileName(struct _WI_OpenFileName const *ofn) {
     if (result == NSModalResponseOK) {
       NSString *path = [[panel URL] path];
       strncpy(ofn->lpstrFile, [path UTF8String], ofn->nMaxFile);
+      ofn->lpstrFile[ofn->nMaxFile - 1] = '\0';
+      return TRUE;
+    }
+    return FALSE;
+  }
+}
+
+bool_t WI_GetSaveFileName(struct _WI_OpenFileName const *ofn) {
+  @autoreleasepool {
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    NSInteger result = [panel runModal];
+    if (result == NSModalResponseOK) {
+      NSString *path = [[panel URL] path];
+      strncpy(ofn->lpstrFile, [path UTF8String], ofn->nMaxFile);
+      ofn->lpstrFile[ofn->nMaxFile - 1] = '\0';
       return TRUE;
     }
     return FALSE;
@@ -151,10 +166,17 @@ bool_t WI_GetFolderName(struct _WI_OpenFileName const *ofn) {
     if (result == NSModalResponseOK) {
       NSString *path = [[panel URL] path];
       strncpy(ofn->lpstrFile, [path UTF8String], ofn->nMaxFile);
+      ofn->lpstrFile[ofn->nMaxFile - 1] = '\0';
       return TRUE;
     }
     return FALSE;
   }
+}
+
+bool_t WI_IsDarkTheme(void) {
+  NSAppearance *appearance = [NSApp effectiveAppearance];
+  NSAppearanceName bestMatch = [appearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameDarkAqua, NSAppearanceNameAqua]];
+  return [bestMatch isEqualToString:NSAppearanceNameDarkAqua] ? TRUE : FALSE;
 }
 
 #include <stdio.h>

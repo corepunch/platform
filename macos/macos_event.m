@@ -205,3 +205,18 @@ start_over:
 	
 	return 1;
 }
+
+int
+WI_WaitEvent(longTime_t msec)
+{
+  @autoreleasepool {
+    NSDate *date = msec > 0
+      ? [NSDate dateWithTimeIntervalSinceNow:(double)msec / 1000.0]
+      : [NSDate distantFuture];
+    NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                       untilDate:date
+                                          inMode:NSDefaultRunLoopMode
+                                         dequeue:NO];
+    return event ? 1 : 0;
+  }
+}

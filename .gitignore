@@ -1,5 +1,8 @@
 .DS_Store
 
+# Generated documentation (built by CI and published to GitHub Pages)
+docs/
+
 # Prerequisites
 *.d
 
