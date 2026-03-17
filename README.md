@@ -8,7 +8,7 @@ A lightweight, cross-platform C library providing a unified API for window manag
 
 ## Features
 
-- **Cross-platform**: Native support for Linux (Wayland), macOS (AppKit/Cocoa), QNX, and WebGL (browser)
+- **Cross-platform**: Native support for Linux (Wayland or X11), macOS (AppKit/Cocoa), QNX, and WebGL (browser)
 - **Window Management**: Create and manage windows with OpenGL/EGL context support
 - **Event System**: Unified event handling for mouse, keyboard, and window events
 - **Input Processing**: Comprehensive keyboard and mouse input with modifier support
@@ -89,7 +89,12 @@ int main(void) {
 
 ### Compiling the Example
 
-On **Linux**:
+On **Linux (X11)**:
+```bash
+gcc -o myapp main.c -L. -lplatform -lX11 -lEGL -lGL
+```
+
+On **Linux (Wayland)**:
 ```bash
 gcc -o myapp main.c -L. -lplatform -lwayland-client -lwayland-egl -lEGL -lGL
 ```
@@ -200,10 +205,15 @@ Simple Makefile that auto-detects your platform and builds the appropriate dynam
 
 **Linux:**
 - GCC compiler
-- Wayland development libraries (optional, for Wayland support):
+- Wayland development libraries (preferred, for Wayland support):
   ```bash
   sudo apt-get install libwayland-dev libwayland-egl1-mesa libxkbcommon-dev libegl-dev libgl-dev
   ```
+- Or X11 development libraries (fallback, if Wayland is unavailable):
+  ```bash
+  sudo apt-get install libx11-dev libegl-dev libgl-dev
+  ```
+- Build order: **Wayland** (preferred) → **X11** (fallback) → **unix-only** (networking only)
 
 **macOS:**
 - Clang compiler (included with Xcode Command Line Tools)
@@ -228,10 +238,16 @@ The library exports platform-specific functions for window management, event han
 
 ## Platform Support
 
-- **Linux (Wayland)**: Full support with Wayland, EGL, and OpenGL
+- **Linux (Wayland)**: Full support with Wayland, EGL, and OpenGL (preferred when available)
+- **Linux (X11)**: Full support with Xlib, EGL, and OpenGL (fallback when Wayland is unavailable)
 - **macOS**: Full support with AppKit and Cocoa frameworks
 - **QNX**: Source files available (qnx/)
 - **WebGL (browser)**: Full support via Emscripten — mouse, keyboard, scroll, and resize events; WebGL 1/2 rendering context
+
+The Linux backend is selected automatically at build time:
+1. If Wayland libraries are detected via `pkg-config`, the Wayland backend is used
+2. If Wayland is unavailable but X11 libraries are detected, the X11 backend is used
+3. If neither is available, a unix-only build is produced (networking only, no windowing)
 
 ## Header
 

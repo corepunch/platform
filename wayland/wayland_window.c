@@ -33,14 +33,18 @@ ResizeWindow(PWND win, DWORD width, DWORD height)
   win->height = height;
 }
 
-PWND
-WI_CreateWindow(PCSTR name, DWORD width, DWORD height, DWORD flags)
+bool_t
+WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flags)
 {
-  PWND self = ZeroAlloc(sizeof(struct _WND));
-  ResizeWindow(self, width, height);
-  self->next = windows;
-  windows = self;
-  return self;
+  extern struct _WND window;
+  (void)flags;
+  if (width > 0 && height > 0) {
+    ResizeWindow(&window, width, height);
+  }
+  if (name && window.xdg_toplevel) {
+    xdg_toplevel_set_title(window.xdg_toplevel, name);
+  }
+  return TRUE;
 }
 
 void
@@ -80,16 +84,17 @@ DestroyWindow(PWND hwnd)
 }
 
 void
-WI_MakeCurrentContext(PWND self)
+WI_MakeCurrentContext(void)
 {
-  eglMakeCurrent (egl_display, self->egl_surface, self->egl_surface, self->egl_context);
+  extern struct _WND window;
+  eglMakeCurrent(egl_display, window.egl_surface, window.egl_surface, window.egl_context);
 }
 
 
 void
 BeginPaint(PWND self)
 {
-  WI_MakeCurrentContext(self);
+  WI_MakeCurrentContext();
   wl_display_dispatch(display);
 }
 
