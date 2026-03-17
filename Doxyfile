@@ -12,10 +12,11 @@ OUTPUT_DIRECTORY    = docs
 #---------------------------------------------------------------------------
 # Input
 #---------------------------------------------------------------------------
-INPUT               = platform.h events.h
-FILE_PATTERNS       = *.h
+INPUT               = README.md platform.h events.h
+FILE_PATTERNS       = *.h *.md
 RECURSIVE           = NO
 EXCLUDE_PATTERNS    =
+USE_MDFILE_AS_MAINPAGE = README.md
 
 #---------------------------------------------------------------------------
 # Source & language
