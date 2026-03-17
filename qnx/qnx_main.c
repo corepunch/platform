@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../platform.h"
+#include "qnx_local.h"
 
 screen_context_t screen_ctx;
 screen_window_t screen_win;
@@ -130,22 +130,22 @@ initEGL(void)
   return EXIT_SUCCESS;
 }
 
-int
+void
 WI_Init(void)
 {
   int rc;
 
   rc = initScreen();
   if (rc != EXIT_SUCCESS) {
-    return EXIT_FAILURE;
+    fprintf(stderr, "WI_Init: initScreen failed\n");
+    return;
   }
 
   rc = initEGL();
   if (rc != EXIT_SUCCESS) {
-    return EXIT_FAILURE;
+    fprintf(stderr, "WI_Init: initEGL failed\n");
+    return;
   }
-
-  return EXIT_SUCCESS;
 }
 
 void
@@ -161,10 +161,10 @@ WI_Shutdown(void)
   screen_destroy_context(screen_ctx);
 }
 
-HWND
-WI_CreateWindow(LPCSTR name, DWORD width, DWORD height, DWORD flags)
+bool_t
+WI_CreateWindow(char const *name, uint32_t width, uint32_t height, uint32_t flags)
 {
-  return NULL;
+  return FALSE;
 }
 
 void
@@ -203,16 +203,10 @@ GetWindowSize(HWND hWnd, LPSIZE2 lpSize)
   lpSize->height = surface_height;
 }
 
-LPCSTR
+char const *
 WI_GetPlatform(void)
 {
   return "qnx";
-}
-
-int
-WI_WaitEvent(TIME time)
-{
-  return 0;
 }
 
 int
@@ -233,19 +227,19 @@ PollEvent(struct event* ev)
   // return 1;
 }
 
-LPCSTR
+char const *
 WI_LibDirectory(void)
 {
   return ".";
 }
 
-LPCSTR
+char const *
 WI_SettingsDirectory(void)
 {
   return ".";
 }
 
-LPCSTR
+char const *
 WI_ShareDirectory(void)
 {
   return ".";
