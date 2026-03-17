@@ -29,6 +29,9 @@ jobs:
         file libplatform.so
         nm -D libplatform.so | grep " T " || true
     
+    - name: Test API
+      run: make test
+    
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
@@ -48,6 +51,9 @@ jobs:
         ls -lh libplatform.dylib
         file libplatform.dylib
         nm -gU libplatform.dylib || true
+    
+    - name: Test API
+      run: make test
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4

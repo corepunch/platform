@@ -4,6 +4,9 @@ TARGET = $(OUTDIR)/$(LIBNAME)
 UNAME_S := $(shell uname -s)
 HASH := \#
 
+TEST_SRC = /tmp/test_platform_api.c
+TEST_BIN = /tmp/test_platform_api
+
 ifdef EMSCRIPTEN
 	CC = emcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
@@ -18,6 +21,7 @@ else ifeq ($(UNAME_S),Darwin)
 	LIB_EXT = dylib
 	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; )
 	LANG = objective-c
+	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -rpath $(abspath $(OUTDIR))
 else ifeq ($(UNAME_S),Linux)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
@@ -33,6 +37,7 @@ else ifeq ($(UNAME_S),Linux)
 		FIND_SOURCES = find unix -name "*.c"
 	endif
 	LANG = c
+	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR))
 else
 	$(error Unsupported OS: $(UNAME_S))
 endif
@@ -42,6 +47,23 @@ all: $(TARGET)
 $(TARGET):
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
 
+# Parse platform.h to find all WI_API functions, generate a C test that asserts
+# each function pointer is non-NULL (i.e. the symbol is defined), then compile,
+# link and run that test against the built library.
+ifdef EMSCRIPTEN
+test:
+	@echo "API test skipped for WebGL/Emscripten (WASM side modules cannot be linked natively)"
+else
+test: $(TARGET)
+	@printf '#include "platform.h"\n#include <assert.h>\nint main(void) {\n' > $(TEST_SRC)
+	@awk '/^WI_API[[:space:]]/{getline; sub(/[(].*/,""); printf "    assert(%s != NULL);\n", $$1}' platform.h >> $(TEST_SRC)
+	@printf '    return 0;\n}\n' >> $(TEST_SRC)
+	@$(CC) -I. $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
+	@$(TEST_BIN)
+	@rm -f $(TEST_SRC) $(TEST_BIN)
+	@echo "All platform API functions are defined."
+endif
+
 clean:
 	rm -f $(TARGET)
 
@@ -50,4 +72,4 @@ install: $(TARGET)
 	install -m 755 $(TARGET) /usr/local/lib/
 	install -m 644 platform.h /usr/local/include/
 
-.PHONY: all clean install
+.PHONY: all clean install test
