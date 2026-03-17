@@ -5,7 +5,7 @@
  * This header defines the public API for the platform library, providing
  * a unified interface for window management, event handling, OpenGL/EGL
  * rendering context management, file dialogs, and system utilities across
- * macOS, Linux (Wayland), QNX, and WebGL (Emscripten) targets.
+ * macOS, Linux (Wayland or X11), QNX, and WebGL (Emscripten) targets.
  *
  * All public symbols are exported via the #WI_API visibility macro.
  */
@@ -66,6 +66,12 @@
 /** @defgroup types Basic types
  *  @{
  */
+#ifndef TRUE
+#define TRUE  1 /**< Boolean true value. */
+#endif
+#ifndef FALSE
+#define FALSE 0 /**< Boolean false value. */
+#endif
 typedef unsigned int   bool_t;      /**< Boolean: `TRUE` (non-zero) or `FALSE` (0). */
 typedef unsigned long  longTime_t;  /**< Millisecond timestamp / duration. */
 typedef uint32_t       wParam_t;    /**< Word-sized event parameter. */
@@ -429,7 +435,7 @@ WI_IsDarkTheme(void);
 /**
  * @brief Return a short string identifying the current platform.
  *
- * @return One of `"macos"`, `"linux (wayland)"`, `"qnx"`, or `"webgl"`.
+ * @return One of `"macos"`, `"linux (wayland)"`, `"linux (x11)"`, `"qnx"`, or `"webgl"`.
  *         The returned pointer is valid for the lifetime of the process.
  */
 WI_API char const *

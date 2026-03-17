@@ -28,13 +28,22 @@ else ifeq ($(UNAME_S),Linux)
 	LDFLAGS = -shared
 	LIB_EXT = so
 	# Try to detect Wayland libraries
-	WAYLAND_CFLAGS := $(shell pkg-config --cflags wayland-client wayland-egl xkbcommon egl gl 2>/dev/null)
-	ifneq ($(WAYLAND_CFLAGS),)
-		CFLAGS += $(WAYLAND_CFLAGS)
-		LDFLAGS += $(shell pkg-config --libs wayland-client wayland-egl xkbcommon egl gl)
+	WAYLAND_LIBS := $(shell pkg-config --libs wayland-client wayland-egl xkbcommon egl gl 2>/dev/null)
+	ifneq ($(WAYLAND_LIBS),)
+		CFLAGS += $(shell pkg-config --cflags wayland-client wayland-egl xkbcommon egl gl 2>/dev/null)
+		LDFLAGS += $(WAYLAND_LIBS)
 		FIND_SOURCES = ( find wayland -name "*.c"; find unix -name "*.c"; )
 	else
-		FIND_SOURCES = find unix -name "*.c"
+		# Try to detect X11 libraries as fallback
+		X11_LIBS := $(shell pkg-config --libs x11 egl gl 2>/dev/null)
+		ifneq ($(X11_LIBS),)
+			CFLAGS += $(shell pkg-config --cflags x11 egl gl 2>/dev/null)
+			LDFLAGS += $(X11_LIBS)
+			FIND_SOURCES = ( find x11 -name "*.c"; find unix -name "*.c"; )
+		else
+			# Fallback to unix-only (no windowing support)
+			FIND_SOURCES = find unix -name "*.c"
+		endif
 	endif
 	LANG = c
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR))
