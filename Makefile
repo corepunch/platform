@@ -6,8 +6,8 @@ HASH := \#
 
 ifdef EMSCRIPTEN
 	CC = emcc
-	CFLAGS = -Wall -Wextra -I. -sUSE_WEBGL2=1 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=2
-	LDFLAGS = -sSIDE_MODULE=1
+	CFLAGS = -Wall -Wextra -fPIC -I.
+	LDFLAGS = -sSIDE_MODULE=1 -sUSE_WEBGL2=1 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=2
 	LIB_EXT = wasm
 	FIND_SOURCES = find webgl -name "*.c"
 	LANG = c
