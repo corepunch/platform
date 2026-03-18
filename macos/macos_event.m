@@ -148,14 +148,16 @@ GetKeyCode(NSEvent *event)
 int
 WI_PollEvent(struct WI_Message * e)
 {
-//	NSDate  *date = [NSDate date];
   NSEvent *event;
 
 start_over:
   event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                             untilDate:[NSDate distantFuture]
+                             untilDate:[NSDate date]
                                 inMode:NSDefaultRunLoopMode
                                dequeue:YES];
+
+  if (!event)
+    return 0;
 
   if (event.type == NSEventTypeApplicationDefined) {
     queue.read = event.subtype;

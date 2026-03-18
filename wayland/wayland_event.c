@@ -267,7 +267,10 @@ int
 WI_WaitEvent(TIME time)
 {
   extern struct wl_display* display;
-  
+
+  if (!display)
+    return 0;
+
   if (time > 0) {
     // Use poll or epoll to wait with timeout
     struct pollfd fds[1];
