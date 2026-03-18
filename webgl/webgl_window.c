@@ -14,8 +14,8 @@ WI_CreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
   g_canvas_height = (int)height;
   emscripten_set_canvas_element_size("#canvas", (int)width, (int)height);
   emscripten_webgl_make_context_current(g_webgl_ctx);
-  WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
-  WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
+  // WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
+  WI_PostMessageW(NULL, kEventWindowPaint, MAKEDWORD(width, height), NULL);
   return TRUE;
 }
 
