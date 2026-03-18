@@ -99,6 +99,14 @@ x11_process_events(void)
     return;
   }
 
+  /* State for double-click detection */
+  static uint32_t last_button = 0;
+  static Time     last_time   = 0;
+  static int      last_x      = 0;
+  static int      last_y      = 0;
+  /* Bitmask of currently held mouse buttons (bit N = button N) */
+  static uint32_t buttons_held = 0;
+
   XEvent xev;
   while (XPending(x_display)) {
     XNextEvent(x_display, &xev);
@@ -111,10 +119,16 @@ x11_process_events(void)
       uint32_t key = keysym_to_wi_key(sym);
       if (key) {
         uint32_t mods = x11_modifiers(xev.xkey.state);
-        events.queue[events.write++] = (EVENT){
-          .message = (xev.type == KeyPress) ? kEventKeyDown : kEventKeyUp,
-          .wParam  = key | mods,
-        };
+        EVENT *e = &events.queue[events.write++];
+        e->target  = NULL;
+        e->message = (xev.type == KeyPress) ? kEventKeyDown : kEventKeyUp;
+        e->wParam  = key | mods;
+        e->lParam  = NULL;
+        /* Store the UTF-8 character for key-down events */
+        if (xev.type == KeyPress) {
+          XLookupString(&xev.xkey, (char*)&e->lParam,
+                        (int)sizeof(e->lParam) - 1, NULL, NULL);
+        }
       }
       break;
     }
@@ -125,13 +139,74 @@ x11_process_events(void)
       uint32_t msg = 0;
       switch (xev.xbutton.button) {
       case Button1:
-        msg = pressed ? kEventLeftMouseDown  : kEventLeftMouseUp;
+        if (pressed) buttons_held |=  (1u << Button1);
+        else         buttons_held &= ~(1u << Button1);
+        if (pressed) {
+          /* Double-click detection */
+          int dx = xev.xbutton.x - last_x;
+          int dy = xev.xbutton.y - last_y;
+          int dist2 = dx*dx + dy*dy;
+          if (last_button == Button1 &&
+              (xev.xbutton.time - last_time) <= 300 &&
+              dist2 <= 25) {
+            msg = kEventLeftDoubleClick;
+            last_time = 0; /* reset so triple-click doesn't double-fire */
+          } else {
+            msg = kEventLeftMouseDown;
+            last_time = xev.xbutton.time;
+            last_button = Button1;
+            last_x = xev.xbutton.x;
+            last_y = xev.xbutton.y;
+          }
+        } else {
+          msg = kEventLeftMouseUp;
+        }
         break;
       case Button2:
-        msg = pressed ? kEventOtherMouseDown : kEventOtherMouseUp;
+        if (pressed) buttons_held |=  (1u << Button2);
+        else         buttons_held &= ~(1u << Button2);
+        if (pressed) {
+          int dx = xev.xbutton.x - last_x;
+          int dy = xev.xbutton.y - last_y;
+          int dist2 = dx*dx + dy*dy;
+          if (last_button == Button2 &&
+              (xev.xbutton.time - last_time) <= 300 &&
+              dist2 <= 25) {
+            msg = kEventOtherDoubleClick;
+            last_time = 0;
+          } else {
+            msg = kEventOtherMouseDown;
+            last_time = xev.xbutton.time;
+            last_button = Button2;
+            last_x = xev.xbutton.x;
+            last_y = xev.xbutton.y;
+          }
+        } else {
+          msg = kEventOtherMouseUp;
+        }
         break;
       case Button3:
-        msg = pressed ? kEventRightMouseDown : kEventRightMouseUp;
+        if (pressed) buttons_held |=  (1u << Button3);
+        else         buttons_held &= ~(1u << Button3);
+        if (pressed) {
+          int dx = xev.xbutton.x - last_x;
+          int dy = xev.xbutton.y - last_y;
+          int dist2 = dx*dx + dy*dy;
+          if (last_button == Button3 &&
+              (xev.xbutton.time - last_time) <= 300 &&
+              dist2 <= 25) {
+            msg = kEventRightDoubleClick;
+            last_time = 0;
+          } else {
+            msg = kEventRightMouseDown;
+            last_time = xev.xbutton.time;
+            last_button = Button3;
+            last_x = xev.xbutton.x;
+            last_y = xev.xbutton.y;
+          }
+        } else {
+          msg = kEventRightMouseUp;
+        }
         break;
       case Button4:
         if (pressed) {
@@ -164,15 +239,31 @@ x11_process_events(void)
       break;
     }
 
-    case MotionNotify:
+    case MotionNotify: {
+      int16_t dx = (int16_t)(xev.xmotion.x - (int)events.pointer_x);
+      int16_t dy = (int16_t)(xev.xmotion.y - (int)events.pointer_y);
       events.pointer_x = (float)xev.xmotion.x;
       events.pointer_y = (float)xev.xmotion.y;
+
+      uint32_t msg;
+      if (buttons_held & (1u << Button1))
+        msg = kEventLeftMouseDragged;
+      else if (buttons_held & (1u << Button3))
+        msg = kEventRightMouseDragged;
+      else if (buttons_held & (1u << Button2))
+        msg = kEventOtherMouseDragged;
+      else
+        msg = kEventMouseMoved;
+
       events.queue[events.write++] = (EVENT){
         .x = (uint16_t)xev.xmotion.x,
         .y = (uint16_t)xev.xmotion.y,
-        .message = kEventMouseMoved,
+        .dx = dx,
+        .dy = dy,
+        .message = msg,
       };
       break;
+    }
 
     case ConfigureNotify: {
       extern struct _WND window;
