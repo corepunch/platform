@@ -1,5 +1,6 @@
 #include "windows_local.h"
 #include "../platform.h"
+#include <commdlg.h>
 #include <shlobj.h>
 
 static char g_documents[MAX_PATH] = { 0 };

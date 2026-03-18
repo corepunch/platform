@@ -317,8 +317,8 @@ WI_PollEvent(PEVENT pEvent)
 void
 WI_PostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 {
-  if ((uint16_t)(events.write - events.read) >=
-      (uint16_t)(sizeof(events.queue) / sizeof(events.queue[0]))) {
+  if (events.write - events.read >=
+      (int)(sizeof(events.queue) / sizeof(events.queue[0]))) {
     return;
   }
   events.queue[events.write++] = (EVENT){
