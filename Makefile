@@ -47,6 +47,20 @@ else ifeq ($(UNAME_S),Linux)
 	endif
 	LANG = c
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR))
+else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
+	CC = gcc
+	CFLAGS = -Wall -Wextra -I. -DPLATFORM_BUILD
+	LDFLAGS = -shared \
+	          -Wl,--out-implib,$(OUTDIR)/libplatform.dll.a \
+	          -lopengl32 -lgdi32 -luser32 -lcomdlg32 \
+	          -lole32 -lshell32 -ladvapi32 -lws2_32
+	LIB_EXT = dll
+	FIND_SOURCES = find windows -name "*.c"
+	LANG = c
+	# Put the test binary next to the DLL so Windows finds it at runtime
+	TEST_SRC = $(OUTDIR)/test_platform_api_tmp.c
+	TEST_BIN = $(OUTDIR)/test_platform_api.exe
+	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform
 else
 	$(error Unsupported OS: $(UNAME_S))
 endif
