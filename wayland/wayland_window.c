@@ -40,10 +40,12 @@ WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flag
   (void)flags;
   if (width > 0 && height > 0) {
     ResizeWindow(&window, width, height);
+    WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
   }
   if (name && window.xdg_toplevel) {
     xdg_toplevel_set_title(window.xdg_toplevel, name);
   }
+  WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
   return TRUE;
 }
 
@@ -155,6 +157,7 @@ WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
   extern struct _WND window;
   (void)centered; // Wayland doesn't support window positioning
   ResizeWindow(&window, width, height);
+  WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
   return TRUE;
 }
 

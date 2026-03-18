@@ -21,6 +21,7 @@ WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t fla
   }
 
   XFlush(x_display);
+  WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
   return TRUE;
 }
 

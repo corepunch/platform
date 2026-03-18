@@ -188,10 +188,11 @@ WI_GetScaling(void)
 bool_t
 WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
 {
-  (void)width;
-  (void)height;
   (void)centered;
-  return FALSE;
+  /* Actual screen/EGL window resize is not yet implemented on QNX.
+   * Notify the application so it can respond to the size change. */
+  WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
+  return TRUE;
 }
 
 uint32_t
