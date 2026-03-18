@@ -6,6 +6,8 @@ HASH := \#
 
 TEST_SRC = /tmp/test_platform_api.c
 TEST_BIN = /tmp/test_platform_api
+TEST_MSG_BIN  = /tmp/test_messages
+TEST_TIMER_BIN = /tmp/test_timer
 
 ifdef EMSCRIPTEN
 	CC = emcc
@@ -61,6 +63,8 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	TEST_SRC = $(OUTDIR)/test_platform_api_tmp.c
 	TEST_BIN = $(OUTDIR)/test_platform_api.exe
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform
+	TEST_MSG_BIN   = $(OUTDIR)/test_messages.exe
+	TEST_TIMER_BIN = $(OUTDIR)/test_timer.exe
 else
 	$(error Unsupported OS: $(UNAME_S))
 endif
@@ -85,6 +89,14 @@ test: $(TARGET)
 	@$(TEST_BIN)
 	@rm -f $(TEST_SRC) $(TEST_BIN)
 	@echo "All platform API functions are defined."
+	@$(CC) -I. tests/test_messages.c $(TEST_LDFLAGS) -o $(TEST_MSG_BIN)
+	@$(TEST_MSG_BIN)
+	@rm -f $(TEST_MSG_BIN)
+	@echo "Message queue tests passed."
+	@$(CC) -I. tests/test_timer.c $(TEST_LDFLAGS) -o $(TEST_TIMER_BIN)
+	@$(TEST_TIMER_BIN)
+	@rm -f $(TEST_TIMER_BIN)
+	@echo "Timer tests passed."
 endif
 
 clean:
