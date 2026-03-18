@@ -164,7 +164,13 @@ WI_Shutdown(void)
 bool_t
 WI_CreateWindow(char const *name, uint32_t width, uint32_t height, uint32_t flags)
 {
-  return FALSE;
+  (void)name;
+  (void)flags;
+  if (width > 0 && height > 0) {
+    WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
+  }
+  WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
+  return TRUE;
 }
 
 void
