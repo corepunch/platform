@@ -64,6 +64,8 @@ void
 WI_EndPaint(void)
 {
   // WebGL swapping is handled by the browser automatically
+  // Yield to browser so it can present the frame via requestAnimationFrame
+  emscripten_sleep(0);  // requires -sASYNCIFY=1
 }
 
 void
