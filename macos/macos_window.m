@@ -132,6 +132,24 @@ static void ConfigureOpenGLView(NSOpenGLView *openglView) {
 bool_t
 WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
 {
+  /*
+  NSOpenGLPixelFormatAttribute attrs[] = {
+    NSOpenGLPFAAccelerated,
+    NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
+    0
+  };
+  
+  NSOpenGLPixelFormat *pf =
+  [[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
+  
+  NSOpenGLContext *ctx =
+  [[NSOpenGLContext alloc] initWithFormat:pf shareContext:nil];
+  
+  // No window/view needed
+  [ctx makeCurrentContext];
+  
+  return TRUE;
+  */
   if (wstate.Window) {
 //    [g_window setContentSize:NSMakeSize(width, height)];
 //    [g_window setFrameOrigin:CenterOnScreen(width, height).origin];
