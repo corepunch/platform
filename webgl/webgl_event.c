@@ -202,7 +202,7 @@ webgl_register_callbacks(void)
   emscripten_set_mousemove_callback("#canvas", NULL, EM_FALSE, on_mousemove);
   emscripten_set_mousedown_callback("#canvas", NULL, EM_FALSE, on_mousedown);
   emscripten_set_mouseup_callback("#canvas", NULL, EM_FALSE, on_mouseup);
-  emscripten_set_dblclick_callback("#canvas", NULL, EM_FALSE, on_dblclick);
+  // emscripten_set_dblclick_callback("#canvas", NULL, EM_FALSE, on_dblclick);
   emscripten_set_wheel_callback("#canvas", NULL, EM_FALSE, on_wheel);
   emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keydown);
   emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keyup);
