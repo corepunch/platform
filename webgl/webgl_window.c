@@ -56,6 +56,10 @@ void
 WI_BeginPaint(void)
 {
   emscripten_webgl_make_context_current(g_webgl_ctx);
+
+  glClearColor(0.0, 1.0, 0.0, 1.0);
+  glColorMask(1,1,1,1);
+  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void
