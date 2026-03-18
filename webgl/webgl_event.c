@@ -6,6 +6,7 @@ static struct
   EVENT queue[0x10000];
   WORD write, read;
   float pointer_x, pointer_y;
+  uint32_t buttons; /* bitmask of currently pressed mouse buttons */
 } events = { 0 };
 
 static uint32_t
@@ -55,12 +56,27 @@ on_mousemove(int eventType, const EmscriptenMouseEvent *e, void *userData)
 {
   (void)eventType;
   (void)userData;
+  int16_t dx = (int16_t)(e->targetX - (int)events.pointer_x);
+  int16_t dy = (int16_t)(e->targetY - (int)events.pointer_y);
   events.pointer_x = (float)e->targetX;
   events.pointer_y = (float)e->targetY;
+
+  uint32_t msg;
+  if (events.buttons & (1u << 0))
+    msg = kEventLeftMouseDragged;
+  else if (events.buttons & (1u << 2))
+    msg = kEventRightMouseDragged;
+  else if (events.buttons & (1u << 1))
+    msg = kEventOtherMouseDragged;
+  else
+    msg = kEventMouseMoved;
+
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)e->targetX,
     .y = (uint16_t)e->targetY,
-    .message = kEventMouseMoved,
+    .dx = dx,
+    .dy = dy,
+    .message = msg,
   };
   return EM_TRUE;
 }
@@ -70,6 +86,7 @@ on_mousedown(int eventType, const EmscriptenMouseEvent *e, void *userData)
 {
   (void)eventType;
   (void)userData;
+  events.buttons |= (1u << e->button);
   uint32_t msg;
   switch (e->button) {
   case 0:  msg = kEventLeftMouseDown;  break;
@@ -89,11 +106,31 @@ on_mouseup(int eventType, const EmscriptenMouseEvent *e, void *userData)
 {
   (void)eventType;
   (void)userData;
+  events.buttons &= ~(1u << e->button);
   uint32_t msg;
   switch (e->button) {
   case 0:  msg = kEventLeftMouseUp;  break;
   case 2:  msg = kEventRightMouseUp; break;
   default: msg = kEventOtherMouseUp; break;
+  }
+  events.queue[events.write++] = (EVENT){
+    .x = (uint16_t)e->targetX,
+    .y = (uint16_t)e->targetY,
+    .message = msg,
+  };
+  return EM_TRUE;
+}
+
+static EM_BOOL
+on_dblclick(int eventType, const EmscriptenMouseEvent *e, void *userData)
+{
+  (void)eventType;
+  (void)userData;
+  uint32_t msg;
+  switch (e->button) {
+  case 0:  msg = kEventLeftDoubleClick;  break;
+  case 2:  msg = kEventRightDoubleClick; break;
+  default: msg = kEventOtherDoubleClick; break;
   }
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)e->targetX,
@@ -165,6 +202,7 @@ webgl_register_callbacks(void)
   emscripten_set_mousemove_callback("#canvas", NULL, EM_FALSE, on_mousemove);
   emscripten_set_mousedown_callback("#canvas", NULL, EM_FALSE, on_mousedown);
   emscripten_set_mouseup_callback("#canvas", NULL, EM_FALSE, on_mouseup);
+  emscripten_set_dblclick_callback("#canvas", NULL, EM_FALSE, on_dblclick);
   emscripten_set_wheel_callback("#canvas", NULL, EM_FALSE, on_wheel);
   emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keydown);
   emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keyup);

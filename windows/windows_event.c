@@ -9,6 +9,10 @@ static struct
   float    pointer_x, pointer_y;
 } events = { 0 };
 
+/* Previous mouse position for computing drag deltas */
+static int16_t s_last_mouse_x = 0;
+static int16_t s_last_mouse_y = 0;
+
 /* Map a Win32 virtual-key code to a WI_KEY_* constant.
    Extended-key flag (bit 24 of the LPARAM) is passed in ext_key
    so that numpad-Enter can be distinguished from regular Enter. */
@@ -197,15 +201,51 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     };
     break;
 
-  case WM_MOUSEMOVE:
-    events.pointer_x = (float)LOWORD(lparam);
-    events.pointer_y = (float)HIWORD(lparam);
+  case WM_RBUTTONDBLCLK:
     events.queue[events.write++] = (EVENT){
-      .message = kEventMouseMoved,
+      .message = kEventRightDoubleClick,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
     break;
+
+  case WM_MBUTTONDBLCLK:
+    events.queue[events.write++] = (EVENT){
+      .message = kEventOtherDoubleClick,
+      .x = (uint16_t)LOWORD(lparam),
+      .y = (uint16_t)HIWORD(lparam),
+    };
+    break;
+
+  case WM_MOUSEMOVE: {
+    int16_t cur_x = (int16_t)LOWORD(lparam);
+    int16_t cur_y = (int16_t)HIWORD(lparam);
+    int16_t dx = cur_x - s_last_mouse_x;
+    int16_t dy = cur_y - s_last_mouse_y;
+    s_last_mouse_x = cur_x;
+    s_last_mouse_y = cur_y;
+    events.pointer_x = (float)cur_x;
+    events.pointer_y = (float)cur_y;
+
+    uint32_t msg;
+    if (wparam & MK_LBUTTON)
+      msg = kEventLeftMouseDragged;
+    else if (wparam & MK_RBUTTON)
+      msg = kEventRightMouseDragged;
+    else if (wparam & MK_MBUTTON)
+      msg = kEventOtherMouseDragged;
+    else
+      msg = kEventMouseMoved;
+
+    events.queue[events.write++] = (EVENT){
+      .message = msg,
+      .x = (uint16_t)cur_x,
+      .y = (uint16_t)cur_y,
+      .dx = dx,
+      .dy = dy,
+    };
+    break;
+  }
 
   case WM_MOUSEWHEEL: {
     short delta = (short)HIWORD(wparam);

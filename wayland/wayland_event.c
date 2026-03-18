@@ -3,12 +3,17 @@
 #include "wayland_local.h"
 #include <unistd.h>
 #include <poll.h>
+#include <linux/input-event-codes.h>
 
 static struct
 {
   EVENT queue[0x10000];
   WORD write, read;
   VECTOR2D pointer;
+  uint32_t buttons;        /* bitmask of currently pressed buttons */
+  uint32_t mods;           /* current WI_MOD_* modifier flags */
+  uint32_t last_btn;       /* button of last click (for double-click) */
+  uint32_t last_btn_time;  /* timestamp of last click (ms) */
 } events = { 0 };
 
 extern struct xkb_state* xkb_state;
@@ -41,13 +46,29 @@ pointer_motion(void* data,
                wl_fixed_t sx,
                wl_fixed_t sy)
 {
-  events.pointer.x = wl_fixed_to_double(sx);
-  events.pointer.y = wl_fixed_to_double(sy);
-  events.queue[events.write++] = (EVENT){ 
-    .x = events.pointer.x,
-    .y = events.pointer.y,
-//    .lParam = (void*)(intptr_t)(((int16_t)sy)<<16|(int16_t)sx),
-    .message = kEventMouseMoved 
+  float new_x = wl_fixed_to_double(sx);
+  float new_y = wl_fixed_to_double(sy);
+  int16_t dx = (int16_t)(new_x - events.pointer.x);
+  int16_t dy = (int16_t)(new_y - events.pointer.y);
+  events.pointer.x = new_x;
+  events.pointer.y = new_y;
+
+  uint32_t msg;
+  if (events.buttons & 1u)                                   /* BTN_LEFT   */
+    msg = kEventLeftMouseDragged;
+  else if (events.buttons & (1u << (BTN_RIGHT - BTN_LEFT)))  /* BTN_RIGHT  */
+    msg = kEventRightMouseDragged;
+  else if (events.buttons & (1u << (BTN_MIDDLE - BTN_LEFT))) /* BTN_MIDDLE */
+    msg = kEventOtherMouseDragged;
+  else
+    msg = kEventMouseMoved;
+
+  events.queue[events.write++] = (EVENT){
+    .x = (uint16_t)new_x,
+    .y = (uint16_t)new_y,
+    .dx = dx,
+    .dy = dy,
+    .message = msg,
   };
 }
 
@@ -60,21 +81,56 @@ pointer_button(void* data,
                uint32_t state)
 {
   bool_t pressed = state == WL_POINTER_BUTTON_STATE_PRESSED;
+
+  /* Track button bitmask (offset from BTN_LEFT for compact storage) */
+  uint32_t bit = 1u << (button - BTN_LEFT);
+  if (pressed)
+    events.buttons |= bit;
+  else
+    events.buttons &= ~bit;
+
+  /* Determine event type, checking for double-click */
+  uint32_t down_msg, up_msg, dbl_msg;
   switch (button) {
-  case 271:
-    events.queue[events.write++] = (EVENT){ 
-      .x = events.pointer.x,
-      .y = events.pointer.y,
-      .message = pressed ? kEventLeftMouseDown : kEventLeftMouseUp
-    };
+  case BTN_LEFT:
+    down_msg = kEventLeftMouseDown;
+    up_msg   = kEventLeftMouseUp;
+    dbl_msg  = kEventLeftDoubleClick;
     break;
-  case 272:
-    events.queue[events.write++] = (EVENT){ 
-      .x = events.pointer.x,
-      .y = events.pointer.y,
-      .message = pressed ? kEventRightMouseDown : kEventRightMouseUp
-    };
+  case BTN_RIGHT:
+    down_msg = kEventRightMouseDown;
+    up_msg   = kEventRightMouseUp;
+    dbl_msg  = kEventRightDoubleClick;
     break;
+  case BTN_MIDDLE:
+    down_msg = kEventOtherMouseDown;
+    up_msg   = kEventOtherMouseUp;
+    dbl_msg  = kEventOtherDoubleClick;
+    break;
+  default:
+    return;
+  }
+
+  if (pressed) {
+    uint32_t msg = down_msg;
+    if (events.last_btn == button && (time - events.last_btn_time) <= 300) {
+      msg = dbl_msg;
+      events.last_btn_time = 0; /* reset so triple-click doesn't double-fire */
+    } else {
+      events.last_btn_time = time;
+      events.last_btn = button;
+    }
+    events.queue[events.write++] = (EVENT){
+      .x = (uint16_t)events.pointer.x,
+      .y = (uint16_t)events.pointer.y,
+      .message = msg,
+    };
+  } else {
+    events.queue[events.write++] = (EVENT){
+      .x = (uint16_t)events.pointer.x,
+      .y = (uint16_t)events.pointer.y,
+      .message = up_msg,
+    };
   }
 }
 
@@ -121,7 +177,7 @@ keyboard_enter(void* data,
                struct wl_surface* surface,
                struct wl_array* keys)
 {
-  printf("Keyboard focus entered\n");
+  events.queue[events.write++] = (EVENT){ .message = kEventSetFocus };
 }
 
 static void
@@ -130,7 +186,95 @@ keyboard_leave(void* data,
                uint32_t serial,
                struct wl_surface* surface)
 {
-  printf("Keyboard focus left\n");
+  events.queue[events.write++] = (EVENT){ .message = kEventKillFocus };
+}
+
+static uint32_t
+keysym_to_wi_key(xkb_keysym_t sym)
+{
+  /* Printable ASCII: normalise letters to lowercase */
+  if (sym >= 0x20 && sym <= 0x7e)
+    return (uint32_t)tolower((int)sym);
+
+  switch (sym) {
+  case XKB_KEY_Tab:       return WI_KEY_TAB;
+  case XKB_KEY_Return:    return WI_KEY_ENTER;
+  case XKB_KEY_Escape:    return WI_KEY_ESCAPE;
+  case XKB_KEY_space:     return WI_KEY_SPACE;
+  case XKB_KEY_BackSpace: return WI_KEY_BACKSPACE;
+
+  case XKB_KEY_Up:        return WI_KEY_UPARROW;
+  case XKB_KEY_Down:      return WI_KEY_DOWNARROW;
+  case XKB_KEY_Left:      return WI_KEY_LEFTARROW;
+  case XKB_KEY_Right:     return WI_KEY_RIGHTARROW;
+
+  case XKB_KEY_Alt_L:
+  case XKB_KEY_Alt_R:     return WI_KEY_ALT;
+  case XKB_KEY_Control_L:
+  case XKB_KEY_Control_R: return WI_KEY_CTRL;
+  case XKB_KEY_Shift_L:
+  case XKB_KEY_Shift_R:   return WI_KEY_SHIFT;
+  case XKB_KEY_Super_L:
+  case XKB_KEY_Super_R:   return WI_KEY_ALT; /* map Super to Alt for uniformity */
+
+  case XKB_KEY_F1:        return WI_KEY_F1;
+  case XKB_KEY_F2:        return WI_KEY_F2;
+  case XKB_KEY_F3:        return WI_KEY_F3;
+  case XKB_KEY_F4:        return WI_KEY_F4;
+  case XKB_KEY_F5:        return WI_KEY_F5;
+  case XKB_KEY_F6:        return WI_KEY_F6;
+  case XKB_KEY_F7:        return WI_KEY_F7;
+  case XKB_KEY_F8:        return WI_KEY_F8;
+  case XKB_KEY_F9:        return WI_KEY_F9;
+  case XKB_KEY_F10:       return WI_KEY_F10;
+  case XKB_KEY_F11:       return WI_KEY_F11;
+  case XKB_KEY_F12:       return WI_KEY_F12;
+
+  case XKB_KEY_Insert:    return WI_KEY_INS;
+  case XKB_KEY_Delete:    return WI_KEY_DEL;
+  case XKB_KEY_Page_Down: return WI_KEY_PGDN;
+  case XKB_KEY_Page_Up:   return WI_KEY_PGUP;
+  case XKB_KEY_Home:      return WI_KEY_HOME;
+  case XKB_KEY_End:       return WI_KEY_END;
+  case XKB_KEY_Pause:     return WI_KEY_PAUSE;
+
+  case XKB_KEY_KP_Home:     return WI_KEY_KP_HOME;
+  case XKB_KEY_KP_Up:       return WI_KEY_KP_UPARROW;
+  case XKB_KEY_KP_Page_Up:  return WI_KEY_KP_PGUP;
+  case XKB_KEY_KP_Left:     return WI_KEY_KP_LEFTARROW;
+  case XKB_KEY_KP_Begin:    return WI_KEY_KP_5;
+  case XKB_KEY_KP_Right:    return WI_KEY_KP_RIGHTARROW;
+  case XKB_KEY_KP_End:      return WI_KEY_KP_END;
+  case XKB_KEY_KP_Down:     return WI_KEY_KP_DOWNARROW;
+  case XKB_KEY_KP_Page_Down: return WI_KEY_KP_PGDN;
+  case XKB_KEY_KP_Enter:    return WI_KEY_KP_ENTER;
+  case XKB_KEY_KP_Insert:   return WI_KEY_KP_INS;
+  case XKB_KEY_KP_Delete:   return WI_KEY_KP_DEL;
+  case XKB_KEY_KP_Divide:   return WI_KEY_KP_SLASH;
+  case XKB_KEY_KP_Subtract: return WI_KEY_KP_MINUS;
+  case XKB_KEY_KP_Add:      return WI_KEY_KP_PLUS;
+
+  default: return 0;
+  }
+}
+
+static uint32_t
+wayland_modifiers(void)
+{
+  uint32_t mods = 0;
+  if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_SHIFT,
+                                   XKB_STATE_MODS_EFFECTIVE) > 0)
+    mods |= WI_MOD_SHIFT;
+  if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_CTRL,
+                                   XKB_STATE_MODS_EFFECTIVE) > 0)
+    mods |= WI_MOD_CTRL;
+  if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_ALT,
+                                   XKB_STATE_MODS_EFFECTIVE) > 0)
+    mods |= WI_MOD_ALT;
+  if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_LOGO,
+                                   XKB_STATE_MODS_EFFECTIVE) > 0)
+    mods |= WI_MOD_CMD;
+  return mods;
 }
 
 static void
@@ -141,35 +285,28 @@ keyboard_key(void* data,
              uint32_t key,
              uint32_t state)
 {
-  if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-    xkb_keysym_t keysym = xkb_state_key_get_one_sym(xkb_state, key + 8);
-    uint32_t utf32 = xkb_keysym_to_utf32(keysym);
-    if (utf32) {
-      if (utf32 >= 0x21 && utf32 <= 0x7E) {
-        events.queue[events.write++] = (EVENT){
-          .message = kEventKeyDown,
-          .wParam = key,
-          .lParam = (void*)(intptr_t)utf32,
-        };
-        // printf ("the key %c was pressed\n", (char)utf32);
-        // if (utf32 == 'q') running = 0;
-      } else {
-        printf("the key U+%04X was pressed\n", utf32);
-      }
-    } else {
-      char name[64];
-      xkb_keysym_get_name(keysym, name, 64);
-      PEVENT e = &events.queue[events.write++];
-      *e = (EVENT){
-        .message = kEventKeyDown,
-        .wParam = key,
-      };
-      for (int i = 0; i < sizeof(name); i++) {
-        name[i] = tolower(name[i]);
-      }
-      strncpy(e->lParam, name, sizeof(e->lParam));
-      printf("the key %s was pressed\n", name);
-    }
+  xkb_keycode_t keycode = key + 8;
+  xkb_keysym_t keysym = xkb_state_key_get_one_sym(xkb_state, keycode);
+  uint32_t wi_key = keysym_to_wi_key(keysym);
+
+  if (!wi_key)
+    return;
+
+  uint32_t mods = wayland_modifiers();
+  bool_t pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+  uint32_t msg = pressed ? kEventKeyDown : kEventKeyUp;
+
+  PEVENT e = &events.queue[events.write++];
+  *e = (EVENT){
+    .message = msg,
+    .wParam  = wi_key | mods,
+  };
+
+  /* For key-down, also store the UTF-8 character in lParam */
+  if (pressed) {
+    e->lParam = NULL;
+    xkb_state_key_get_utf8(xkb_state, keycode, (char*)&e->lParam,
+                           sizeof(e->lParam));
   }
 }
 
@@ -182,11 +319,9 @@ keyboard_modifiers(void* data,
                    uint32_t mods_locked,
                    uint32_t group)
 {
-  printf("Modifiers changed: depressed=%u, latched=%u, locked=%u, group=%u\n",
-         mods_depressed,
-         mods_latched,
-         mods_locked,
-         group);
+  xkb_state_update_mask(xkb_state,
+                        mods_depressed, mods_latched, mods_locked,
+                        0, 0, group);
 }
 
 // Attach keyboard listener
@@ -204,12 +339,10 @@ seat_capabilities(void* data, struct wl_seat* seat, uint32_t capabilities)
   if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
     pointer = wl_seat_get_pointer(seat);
     wl_pointer_add_listener(pointer, &pointer_listener, &events);
-    printf("Pointer device found!\n");
   }
   if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
     keyboard = wl_seat_get_keyboard(seat);
     wl_keyboard_add_listener(keyboard, &keyboard_listener, &events);
-    printf("Keyboard device found!\n");
   }
 }
 
@@ -229,32 +362,11 @@ xdg_surface_configure(void* data,
                       uint32_t serial)
 {
   xdg_surface_ack_configure(xdg_surface, serial);
-  printf("xdg_surface configured\n");
-}
-
-static void
-xdg_surface_close(void* data, struct xdg_surface* xdg_surface)
-{
-  printf("xdg_surface closed\n");
-}
-
-static void
-xdg_surface_commit(void* data, struct xdg_surface* xdg_surface)
-{
-  printf("xdg_surface committed\n");
-}
-
-static void
-xdg_surface_focus(void* data, struct xdg_surface* xdg_surface)
-{
-  printf("xdg_surface focused\n");
+  events.queue[events.write++] = (EVENT){ .message = kEventWindowPaint };
 }
 
 static struct xdg_surface_listener xdg_surface_listener = {
   xdg_surface_configure,
-  // xdg_surface_close,
-  // xdg_surface_commit,
-  // xdg_surface_focus
 };
 
 struct xdg_surface_listener*
