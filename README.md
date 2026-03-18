@@ -8,7 +8,7 @@ A lightweight, cross-platform C library providing a unified API for window manag
 
 ## Features
 
-- **Cross-platform**: Native support for Linux (Wayland or X11), macOS (AppKit/Cocoa), QNX, and WebGL (browser)
+- **Cross-platform**: Native support for Windows (Win32/WGL via MinGW), Linux (Wayland or X11), macOS (AppKit/Cocoa), QNX, and WebGL (browser)
 - **Window Management**: Create and manage windows with OpenGL/EGL context support
 - **Event System**: Unified event handling for mouse, keyboard, and window events
 - **Input Processing**: Comprehensive keyboard and mouse input with modifier support
@@ -88,6 +88,11 @@ int main(void) {
 ```
 
 ### Compiling the Example
+
+On **Windows (MinGW/MSYS2)**:
+```bash
+gcc -o myapp main.c -L. -lplatform -lopengl32 -lgdi32 -luser32
+```
 
 On **Linux (X11)**:
 ```bash
@@ -194,6 +199,14 @@ Simple Makefile that auto-detects your platform and builds the appropriate dynam
 
 ### Prerequisites
 
+**Windows (MinGW/MSYS2):**
+- MinGW-w64 toolchain (GCC for Windows):
+  ```bash
+  # Install via MSYS2 (https://www.msys2.org/)
+  pacman -S mingw-w64-x86_64-gcc make
+  ```
+- No extra libraries required — uses Win32, WGL, and Winsock2 (all included with Windows)
+
 **WebGL (Emscripten):**
 - Emscripten SDK (`emcc` compiler):
   ```bash
@@ -225,11 +238,12 @@ Simple Makefile that auto-detects your platform and builds the appropriate dynam
 make              # Build the dynamic library
 emmake make       # Build for WebGL (requires Emscripten environment sourced)
 make clean        # Clean build artifacts
-make install      # Install to /usr/local/lib (requires sudo)
+make install      # Install to /usr/local/lib (requires sudo; Linux/macOS only)
 ```
 
 ### Output
 
+- **Windows**: `libplatform.dll` (+ `libplatform.dll.a` import library)
 - **Linux**: `libplatform.so`
 - **macOS**: `libplatform.dylib`
 - **WebGL**: `libplatform.wasm` (Emscripten side module)
@@ -238,6 +252,7 @@ The library exports platform-specific functions for window management, event han
 
 ## Platform Support
 
+- **Windows**: Full support via Win32 API and WGL — window creation, OpenGL rendering, native file dialogs, dark-theme detection, Winsock2 networking; built with MinGW
 - **Linux (Wayland)**: Full support with Wayland, EGL, and OpenGL (preferred when available)
 - **Linux (X11)**: Full support with Xlib, EGL, and OpenGL (fallback when Wayland is unavailable)
 - **macOS**: Full support with AppKit and Cocoa frameworks

@@ -56,11 +56,21 @@
  * @brief Marks a function as part of the public platform API.
  *
  * On GCC/Clang this expands to `__attribute__((visibility("default")))`,
- * ensuring the symbol is exported from a shared library.  Define this macro
- * before including the header to override the default.
+ * ensuring the symbol is exported from a shared library.  On Windows/MinGW
+ * it expands to `__declspec(dllexport)` when building the library
+ * (`PLATFORM_BUILD` defined) or `__declspec(dllimport)` when consuming it.
+ * Define this macro before including the header to override the default.
  */
 #ifndef WI_API
-#define WI_API __attribute__((visibility("default")))
+#  if defined(_WIN32) || defined(__MINGW32__)
+#    ifdef PLATFORM_BUILD
+#      define WI_API __declspec(dllexport)
+#    else
+#      define WI_API __declspec(dllimport)
+#    endif
+#  else
+#    define WI_API __attribute__((visibility("default")))
+#  endif
 #endif
 
 /** @defgroup types Basic types
