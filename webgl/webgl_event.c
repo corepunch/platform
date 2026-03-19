@@ -187,11 +187,28 @@ on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
 {
   (void)eventType;
   (void)userData;
-  /* Report window inner dimensions as a hint; the application should call
-   * WI_SetSize to resize the canvas to the desired dimensions. */
+  (void)e;
+
+  /* Get the canvas element's actual CSS display size */
+  double css_width, css_height;
+  emscripten_get_element_css_size("#canvas", &css_width, &css_height);
+
+  /* Calculate drawing buffer size accounting for device pixel ratio */
+  double dpr = emscripten_get_device_pixel_ratio();
+  int canvas_width = (int)(css_width * dpr);
+  int canvas_height = (int)(css_height * dpr);
+
+  /* Resize the canvas drawing buffer */
+  emscripten_set_canvas_element_size("#canvas", canvas_width, canvas_height);
+
+  /* Update global state */
+  g_canvas_width = canvas_width;
+  g_canvas_height = canvas_height;
+
+  /* Notify the engine with the canvas size (not window size) */
   events.queue[events.write++] = (EVENT){
     .message = kEventWindowResized,
-    .wParam = MAKEDWORD(e->windowInnerWidth, e->windowInnerHeight),
+    .wParam = MAKEDWORD(canvas_width, canvas_height),
   };
   return EM_TRUE;
 }
