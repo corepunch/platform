@@ -20,7 +20,9 @@ WI_CreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
   g_canvas_width  = (int)css_width;
   g_canvas_height = (int)css_height;
 
-  emscripten_set_canvas_element_size("#canvas", g_canvas_width, g_canvas_height);
+  emscripten_set_canvas_element_size("#canvas", 
+    (int)(css_width * WI_GetScaling() + 0.5), 
+    (int)(css_height * WI_GetScaling() + 0.5));
   emscripten_webgl_make_context_current(g_webgl_ctx);
   printf("Created window with size %dx%d\n", g_canvas_width, g_canvas_height);
   WI_PostMessageW(NULL, kEventWindowPaint, MAKEDWORD(g_canvas_width, g_canvas_height), NULL);
@@ -43,7 +45,9 @@ WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
   (void)centered;
   g_canvas_width = (int)width;
   g_canvas_height = (int)height;
-  emscripten_set_canvas_element_size("#canvas", (int)width, (int)height);
+  emscripten_set_canvas_element_size("#canvas", 
+    (int)(width * WI_GetScaling() + 0.5), 
+    (int)(height * WI_GetScaling() + 0.5));
   WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
   return TRUE;
 }

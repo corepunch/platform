@@ -193,21 +193,20 @@ on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
   double css_width, css_height;
   emscripten_get_element_css_size("#canvas", &css_width, &css_height);
 
-  int canvas_width = (int)css_width;
-  int canvas_height = (int)css_height;
-
   /* Resize the canvas drawing buffer */
-  emscripten_set_canvas_element_size("#canvas", canvas_width, canvas_height);
+  emscripten_set_canvas_element_size("#canvas", 
+    (int)(css_width * WI_GetScaling() + 0.5), 
+    (int)(css_height * WI_GetScaling() + 0.5));
 
   /* Update global state */
-  g_canvas_width = canvas_width;
-  g_canvas_height = canvas_height;
+  g_canvas_width  = (int)css_width;
+  g_canvas_height = (int)css_height;
 
   /* Notify the engine with the canvas size (not window size) */
 
   events.queue[events.write++] = (EVENT){
     .message = kEventWindowResized,
-    .wParam = MAKEDWORD(canvas_width, canvas_height),
+    .wParam = MAKEDWORD(g_canvas_width, g_canvas_height),
   };
   return EM_TRUE;
 }
