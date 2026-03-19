@@ -17,9 +17,8 @@ WI_CreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
   double css_width, css_height;
   emscripten_get_element_css_size("#canvas", &css_width, &css_height);
 
-  double dpr = emscripten_get_device_pixel_ratio();
-  g_canvas_width  = (int)(css_width  * dpr + 0.5);
-  g_canvas_height = (int)(css_height * dpr + 0.5);
+  g_canvas_width  = (int)css_width;
+  g_canvas_height = (int)css_height;
 
   emscripten_set_canvas_element_size("#canvas", g_canvas_width, g_canvas_height);
   emscripten_webgl_make_context_current(g_webgl_ctx);
@@ -49,10 +48,11 @@ WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
   return TRUE;
 }
 
+#include <math.h>
 float
 WI_GetScaling(void)
 {
-  return (float)emscripten_get_device_pixel_ratio();
+  return fmaxf((float)emscripten_get_device_pixel_ratio(), 1.0f);
 }
 
 void
