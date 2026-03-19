@@ -195,8 +195,8 @@ on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
 
   /* Calculate drawing buffer size accounting for device pixel ratio */
   double dpr = emscripten_get_device_pixel_ratio();
-  int canvas_width = (int)(css_width * dpr);
-  int canvas_height = (int)(css_height * dpr);
+  int canvas_width = (int)(css_width * dpr + 0.5);
+  int canvas_height = (int)(css_height * dpr + 0.5);
 
   /* Resize the canvas drawing buffer */
   emscripten_set_canvas_element_size("#canvas", canvas_width, canvas_height);
