@@ -46,7 +46,6 @@ WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
   g_canvas_height = (int)height;
   emscripten_set_canvas_element_size("#canvas", (int)width, (int)height);
   WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
-  // WI_PostMessageW(NULL, kEventWindowPaint, MAKEDWORD(width, height), NULL);
   return TRUE;
 }
 
@@ -76,8 +75,6 @@ void
 WI_EndPaint(void)
 {
   // WebGL swapping is handled by the browser automatically
-  // Yield to browser so it can present the frame via requestAnimationFrame
-  emscripten_sleep(0);  // requires -sASYNCIFY=1
 }
 
 void
