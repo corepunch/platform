@@ -211,6 +211,14 @@ on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
   int16_t dy = (int16_t)(t->targetY - (int)events.pointer_y);
   events.pointer_x = (float)t->targetX;
   events.pointer_y = (float)t->targetY;
+  // /* kEventLeftMouseDragged — for drag-responsive UI (tap-to-drag scroll) */
+  // events.queue[events.write++] = (EVENT){
+  //   .x = (uint16_t)t->targetX,
+  //   .y = (uint16_t)t->targetY,
+  //   .dx = dx,
+  //   .dy = dy,
+  //   .message = kEventLeftMouseDragged,
+  // };
   int16_t sdx = (int16_t)(-dx);
   int16_t sdy = (int16_t)(-dy);
   events.queue[events.write++] = (EVENT){
@@ -252,6 +260,14 @@ on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
   /* Get the canvas element's actual CSS display size */
   double css_width, css_height;
   emscripten_get_element_css_size("#canvas", &css_width, &css_height);
+
+  /* Skip transient zero/negative dimensions (e.g. mid-orientation animation) */
+  if (css_width <= 0 || css_height <= 0)
+    return EM_TRUE;
+
+  /* Skip if dimensions are unchanged (deduplicates burst of resize events during rotation) */
+  if ((int)css_width == g_canvas_width && (int)css_height == g_canvas_height)
+    return EM_TRUE;
 
   /* Resize the canvas drawing buffer */
   emscripten_set_canvas_element_size("#canvas", 
