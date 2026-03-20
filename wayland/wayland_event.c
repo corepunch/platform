@@ -141,8 +141,8 @@ pointer_axis(void* data,
              uint32_t axis,
              wl_fixed_t value)
 {
-  int16_t dx = axis == WL_POINTER_AXIS_VERTICAL_SCROLL ? 0 : wl_fixed_to_double(value);
-  int16_t dy = axis == WL_POINTER_AXIS_VERTICAL_SCROLL ? wl_fixed_to_double(value) : 0;
+  int16_t dx = axis == WL_POINTER_AXIS_VERTICAL_SCROLL ? 0 : -wl_fixed_to_double(value);
+  int16_t dy = axis == WL_POINTER_AXIS_VERTICAL_SCROLL ? -wl_fixed_to_double(value) : 0;
   events.queue[events.write++] = (EVENT) {
     .x = events.pointer.x,
     .y = events.pointer.y,
