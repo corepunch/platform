@@ -4,11 +4,23 @@
 void
 WI_Init(void)
 {
+  /* Size the canvas drawing buffer to CSS size × DPR before creating context
+   * so iOS Safari allocates the correct framebuffer on the first frame. */
+  double css_width, css_height;
+  emscripten_get_element_css_size("#canvas", &css_width, &css_height);
+  double dpr = emscripten_get_device_pixel_ratio();
+  if (dpr < 1.0) dpr = 1.0;
+  emscripten_set_canvas_element_size("#canvas",
+    (int)(css_width  * dpr + 0.5),
+    (int)(css_height * dpr + 0.5));
+  g_canvas_width  = (int)css_width;
+  g_canvas_height = (int)css_height;
+
   EmscriptenWebGLContextAttributes attrs;
   emscripten_webgl_init_context_attributes(&attrs);
   attrs.majorVersion = 2;
   attrs.minorVersion = 0;
-  attrs.alpha = EM_TRUE;
+  attrs.alpha = EM_FALSE;
   attrs.depth = EM_TRUE;
   attrs.stencil = EM_TRUE;
   attrs.antialias = EM_FALSE;

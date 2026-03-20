@@ -2,8 +2,8 @@
 #include "webgl_local.h"
 
 EMSCRIPTEN_WEBGL_CONTEXT_HANDLE g_webgl_ctx = 0;
-int g_canvas_width = 640;
-int g_canvas_height = 480;
+int g_canvas_width = 0;
+int g_canvas_height = 0;
 
 bool_t
 WI_CreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
@@ -13,16 +13,17 @@ WI_CreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
   (void)width;
   (void)height;
 
-  /* Set canvas size to the actual browser inner window size at creation */
-  double css_width, css_height;
-  emscripten_get_element_css_size("#canvas", &css_width, &css_height);
+  /* If WI_Init already sized the canvas, skip the fallback resize */
+  if (g_canvas_width == 0 || g_canvas_height == 0) {
+    double css_width, css_height;
+    emscripten_get_element_css_size("#canvas", &css_width, &css_height);
+    g_canvas_width  = (int)css_width;
+    g_canvas_height = (int)css_height;
+    emscripten_set_canvas_element_size("#canvas",
+      (int)(css_width  * WI_GetScaling() + 0.5),
+      (int)(css_height * WI_GetScaling() + 0.5));
+  }
 
-  g_canvas_width  = (int)css_width;
-  g_canvas_height = (int)css_height;
-
-  emscripten_set_canvas_element_size("#canvas", 
-    (int)(css_width * WI_GetScaling() + 0.5), 
-    (int)(css_height * WI_GetScaling() + 0.5));
   emscripten_webgl_make_context_current(g_webgl_ctx);
   printf("Created window with size %dx%d\n", g_canvas_width, g_canvas_height);
   WI_PostMessageW(NULL, kEventWindowPaint, MAKEDWORD(g_canvas_width, g_canvas_height), NULL);
@@ -69,10 +70,6 @@ void
 WI_BeginPaint(void)
 {
   emscripten_webgl_make_context_current(g_webgl_ctx);
-
-  glClearColor(0.0, 1.0, 0.0, 1.0);
-  glColorMask(1,1,1,1);
-  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void
