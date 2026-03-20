@@ -183,6 +183,65 @@ on_keyup(int eventType, const EmscriptenKeyboardEvent *e, void *userData)
 }
 
 static EM_BOOL
+on_touchstart(int eventType, const EmscriptenTouchEvent *e, void *userData)
+{
+  (void)eventType;
+  (void)userData;
+  if (e->numTouches < 1) return EM_TRUE;
+  const EmscriptenTouchPoint *t = &e->touches[0];
+  events.buttons |= (1u << 0);
+  events.pointer_x = (float)t->targetX;
+  events.pointer_y = (float)t->targetY;
+  events.queue[events.write++] = (EVENT){
+    .x = (uint16_t)t->targetX,
+    .y = (uint16_t)t->targetY,
+    .message = kEventLeftMouseDown,
+  };
+  return EM_TRUE;
+}
+
+static EM_BOOL
+on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
+{
+  (void)eventType;
+  (void)userData;
+  if (e->numTouches < 1) return EM_TRUE;
+  const EmscriptenTouchPoint *t = &e->touches[0];
+  int16_t dx = (int16_t)(t->targetX - (int)events.pointer_x);
+  int16_t dy = (int16_t)(t->targetY - (int)events.pointer_y);
+  events.pointer_x = (float)t->targetX;
+  events.pointer_y = (float)t->targetY;
+  events.queue[events.write++] = (EVENT){
+    .x = (uint16_t)t->targetX,
+    .y = (uint16_t)t->targetY,
+    .dx = dx,
+    .dy = dy,
+    .message = kEventLeftMouseDragged,
+  };
+  return EM_TRUE;
+}
+
+static EM_BOOL
+on_touchend(int eventType, const EmscriptenTouchEvent *e, void *userData)
+{
+  (void)eventType;
+  (void)userData;
+  events.buttons &= ~(1u << 0);
+  uint16_t x = (uint16_t)events.pointer_x;
+  uint16_t y = (uint16_t)events.pointer_y;
+  if (e->numTouches >= 1) {
+    x = (uint16_t)e->touches[0].targetX;
+    y = (uint16_t)e->touches[0].targetY;
+  }
+  events.queue[events.write++] = (EVENT){
+    .x = x,
+    .y = y,
+    .message = kEventLeftMouseUp,
+  };
+  return EM_TRUE;
+}
+
+static EM_BOOL
 on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
 {
   (void)eventType;
@@ -222,6 +281,9 @@ webgl_register_callbacks(void)
   emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keydown);
   emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keyup);
   emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_resize);
+  emscripten_set_touchstart_callback("#canvas", NULL, EM_FALSE, on_touchstart);
+  emscripten_set_touchmove_callback("#canvas", NULL, EM_FALSE, on_touchmove);
+  emscripten_set_touchend_callback("#canvas", NULL, EM_FALSE, on_touchend);
 }
 
 int
