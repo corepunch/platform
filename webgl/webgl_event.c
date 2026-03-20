@@ -189,12 +189,14 @@ on_touchstart(int eventType, const EmscriptenTouchEvent *e, void *userData)
   (void)userData;
   if (e->numTouches < 1) return EM_TRUE;
   const EmscriptenTouchPoint *t = &e->touches[0];
+  int tx = (int)t->targetX;
+  int ty = (int)t->targetY;
   events.buttons |= (1u << 0);
-  events.pointer_x = (float)t->targetX;
-  events.pointer_y = (float)t->targetY;
+  events.pointer_x = (float)tx;
+  events.pointer_y = (float)ty;
   events.queue[events.write++] = (EVENT){
-    .x = (uint16_t)t->targetX,
-    .y = (uint16_t)t->targetY,
+    .x = (uint16_t)tx,
+    .y = (uint16_t)ty,
     .message = kEventLeftMouseDown,
   };
   return EM_TRUE;
@@ -207,14 +209,16 @@ on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
   (void)userData;
   if (e->numTouches < 1) return EM_TRUE;
   const EmscriptenTouchPoint *t = &e->touches[0];
-  int16_t dx = (int16_t)(t->targetX - (int)events.pointer_x);
-  int16_t dy = (int16_t)(t->targetY - (int)events.pointer_y);
-  events.pointer_x = (float)t->targetX;
-  events.pointer_y = (float)t->targetY;
+  int tx = (int)t->targetX;
+  int ty = (int)t->targetY;
+  int16_t dx = (int16_t)(tx - (int)events.pointer_x);
+  int16_t dy = (int16_t)(ty - (int)events.pointer_y);
+  events.pointer_x = (float)tx;
+  events.pointer_y = (float)ty;
   // /* kEventLeftMouseDragged — for drag-responsive UI (tap-to-drag scroll) */
   // events.queue[events.write++] = (EVENT){
-  //   .x = (uint16_t)t->targetX,
-  //   .y = (uint16_t)t->targetY,
+  //   .x = (uint16_t)tx,
+  //   .y = (uint16_t)ty,
   //   .dx = dx,
   //   .dy = dy,
   //   .message = kEventLeftMouseDragged,
@@ -222,8 +226,8 @@ on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
   int16_t sdx = (int16_t)(-dx);
   int16_t sdy = (int16_t)(-dy);
   events.queue[events.write++] = (EVENT){
-    .x = (uint16_t)t->targetX,
-    .y = (uint16_t)t->targetY,
+    .x = (uint16_t)tx,
+    .y = (uint16_t)ty,
     .lParam = (void *)(intptr_t)((sdy << 16) | (uint16_t)sdx),
     .message = kEventScrollWheel,
   };
