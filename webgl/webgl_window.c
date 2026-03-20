@@ -20,8 +20,8 @@ WI_CreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
     g_canvas_width  = (int)css_width;
     g_canvas_height = (int)css_height;
     emscripten_set_canvas_element_size("#canvas",
-      (int)(css_width  * WI_GetScaling() + 0.5),
-      (int)(css_height * WI_GetScaling() + 0.5));
+      (int)(g_canvas_width  * WI_GetScaling() + 0.5),
+      (int)(g_canvas_height * WI_GetScaling() + 0.5));
   }
 
   emscripten_webgl_make_context_current(g_webgl_ctx);

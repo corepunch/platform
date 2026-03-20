@@ -10,11 +10,18 @@ WI_Init(void)
   emscripten_get_element_css_size("#canvas", &css_width, &css_height);
   double dpr = emscripten_get_device_pixel_ratio();
   if (dpr < 1.0) dpr = 1.0;
-  emscripten_set_canvas_element_size("#canvas",
-    (int)(css_width  * dpr + 0.5),
-    (int)(css_height * dpr + 0.5));
+  /* Truncate CSS size to integer before multiplying by DPR so that
+   * physical_pixels / dpr is always an integer.  Without this, on devices
+   * with an integer DPR (e.g. DPR=3 on iPhone), a fractional CSS size such
+   * as 349.33px causes Emscripten to set the canvas CSS style to that same
+   * fractional value, which in turn makes touch targetX/targetY non-integers
+   * and triggers a SAFE_HEAP "attempt to write non-integer into integer heap"
+   * error. */
   g_canvas_width  = (int)css_width;
   g_canvas_height = (int)css_height;
+  emscripten_set_canvas_element_size("#canvas",
+    (int)(g_canvas_width  * dpr + 0.5),
+    (int)(g_canvas_height * dpr + 0.5));
 
   EmscriptenWebGLContextAttributes attrs;
   emscripten_webgl_init_context_attributes(&attrs);

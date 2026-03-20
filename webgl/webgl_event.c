@@ -269,14 +269,16 @@ on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
   if ((int)css_width == g_canvas_width && (int)css_height == g_canvas_height)
     return EM_TRUE;
 
-  /* Resize the canvas drawing buffer */
-  emscripten_set_canvas_element_size("#canvas", 
-    (int)(css_width * WI_GetScaling() + 0.5), 
-    (int)(css_height * WI_GetScaling() + 0.5));
-
-  /* Update global state */
+  /* Truncate CSS size to integer before multiplying by DPR so that
+   * physical_pixels / dpr is always an integer, preventing fractional
+   * touch targetX/targetY values on high-DPI devices (e.g. DPR=3 on iPhone). */
   g_canvas_width  = (int)css_width;
   g_canvas_height = (int)css_height;
+
+  /* Resize the canvas drawing buffer */
+  emscripten_set_canvas_element_size("#canvas",
+    (int)(g_canvas_width  * WI_GetScaling() + 0.5),
+    (int)(g_canvas_height * WI_GetScaling() + 0.5));
 
   /* Notify the engine with the canvas size (not window size) */
 
