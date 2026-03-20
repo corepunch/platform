@@ -170,7 +170,7 @@ qnx_process_screen_events(void)
           .message = kEventScrollWheel,
           .x = (uint16_t)pos[0],
           .y = (uint16_t)pos[1],
-          .dy = 1,
+          .dy = -1,
         };
         queue.data[queue.write++] = msg;
         sem_post(&event_sem);
@@ -181,7 +181,7 @@ qnx_process_screen_events(void)
           .message = kEventScrollWheel,
           .x = (uint16_t)pos[0],
           .y = (uint16_t)pos[1],
-          .dy = -1,
+          .dy = 1,
         };
         queue.data[queue.write++] = msg;
         sem_post(&event_sem);

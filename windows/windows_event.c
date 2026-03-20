@@ -249,7 +249,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_MOUSEWHEEL: {
     short delta = (short)HIWORD(wparam);
-    int16_t dy  = (delta > 0) ? 1 : -1;
+    int16_t dy  = (delta > 0) ? -1 : 1;
     /* Convert screen coords to client coords for the position */
     POINT pt = { LOWORD(lparam), HIWORD(lparam) };
     ScreenToClient(hwnd, &pt);

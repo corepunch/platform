@@ -213,7 +213,7 @@ x11_process_events(void)
           events.queue[events.write++] = (EVENT){
             .x = (uint16_t)xev.xbutton.x,
             .y = (uint16_t)xev.xbutton.y,
-            .dy = 1,
+            .dy = -1,
             .message = kEventScrollWheel,
           };
         }
@@ -223,7 +223,7 @@ x11_process_events(void)
           events.queue[events.write++] = (EVENT){
             .x = (uint16_t)xev.xbutton.x,
             .y = (uint16_t)xev.xbutton.y,
-            .dy = -1,
+            .dy = 1,
             .message = kEventScrollWheel,
           };
         }

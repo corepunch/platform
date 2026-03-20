@@ -145,8 +145,8 @@ on_wheel(int eventType, const EmscriptenWheelEvent *e, void *userData)
 {
   (void)eventType;
   (void)userData;
-  int16_t dx = (int16_t)e->deltaX;
-  int16_t dy = (int16_t)e->deltaY;
+  int16_t dx = -(int16_t)e->deltaX;
+  int16_t dy = -(int16_t)e->deltaY;
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)events.pointer_x,
     .y = (uint16_t)events.pointer_y,
@@ -223,8 +223,8 @@ on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
   //   .dy = dy,
   //   .message = kEventLeftMouseDragged,
   // };
-  int16_t sdx = (int16_t)(-dx);
-  int16_t sdy = (int16_t)(-dy);
+  int16_t sdx = (int16_t)(dx);
+  int16_t sdy = (int16_t)(dy);
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)tx,
     .y = (uint16_t)ty,
