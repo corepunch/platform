@@ -211,12 +211,13 @@ on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
   int16_t dy = (int16_t)(t->targetY - (int)events.pointer_y);
   events.pointer_x = (float)t->targetX;
   events.pointer_y = (float)t->targetY;
+  int16_t sdx = (int16_t)(-dx);
+  int16_t sdy = (int16_t)(-dy);
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)t->targetX,
     .y = (uint16_t)t->targetY,
-    .dx = dx,
-    .dy = dy,
-    .message = kEventLeftMouseDragged,
+    .lParam = (void *)(intptr_t)((sdy << 16) | (uint16_t)sdx),
+    .message = kEventScrollWheel,
   };
   return EM_TRUE;
 }
