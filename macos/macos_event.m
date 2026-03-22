@@ -186,8 +186,8 @@ start_over:
 	
 	switch([event type]) {
 	case NSEventTypeScrollWheel:
-		e->lParam = (void*)(intptr_t)MAKEDWORD(-(int)event.scrollingDeltaX,
-                                           -(int)event.scrollingDeltaY);
+		e->lParam = (void*)(intptr_t)MAKEDWORD((int)event.scrollingDeltaX,
+                                           (int)event.scrollingDeltaY);
 		break;
 	case NSEventTypeLeftMouseDragged:
 	case NSEventTypeRightMouseDragged:
