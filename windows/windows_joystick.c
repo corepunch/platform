@@ -18,10 +18,6 @@
 
 #include <xinput.h>
 
-/* Axis dead-zone threshold (same as XINPUT_GAMEPAD_*_THUMB_DEADZONE) */
-#define DEADZONE_THUMB 8689
-#define DEADZONE_TRIGGER 30
-
 static BOOL g_joy_available = FALSE;
 static DWORD g_joy_user_index = 0;
 
@@ -117,29 +113,23 @@ joy_poll(void)
   XINPUT_GAMEPAD *p = &g_prev_state.Gamepad;
   XINPUT_GAMEPAD *c = &cur.Gamepad;
 
-  /* --- Axis events --- */
-  static const struct {
-    int16_t *prev_val;
-    int16_t  cur_val;
-    uint32_t axis;
-    int      is_thumb;
-  } axes[] = {
-    /* filled dynamically below */
-  };
-  (void)axes;
-
-  struct axis_check { int16_t prev; int16_t cur; uint32_t idx; int thumb; };
+  /* --- Axis events ---
+   * Triggers (bLeftTrigger / bRightTrigger) are 8-bit unsigned [0, 255].
+   * Duplicate the byte into both halves of an int16_t so that the range
+   * maps to roughly [0, 65535] and the full 16-bit field can be compared
+   * and reported consistently with the thumb-stick axes. */
+  struct axis_check { int16_t prev; int16_t cur; uint32_t idx; };
   struct axis_check ax[] = {
-    { p->sThumbLX,  c->sThumbLX,  JOY_AXIS_LX, 1 },
-    { p->sThumbLY,  c->sThumbLY,  JOY_AXIS_LY, 1 },
-    { p->sThumbRX,  c->sThumbRX,  JOY_AXIS_RX, 1 },
-    { p->sThumbRY,  c->sThumbRY,  JOY_AXIS_RY, 1 },
+    { p->sThumbLX,  c->sThumbLX,  JOY_AXIS_LX },
+    { p->sThumbLY,  c->sThumbLY,  JOY_AXIS_LY },
+    { p->sThumbRX,  c->sThumbRX,  JOY_AXIS_RX },
+    { p->sThumbRY,  c->sThumbRY,  JOY_AXIS_RY },
     { (int16_t)((p->bLeftTrigger  << 8) | p->bLeftTrigger),
       (int16_t)((c->bLeftTrigger  << 8) | c->bLeftTrigger),
-      JOY_AXIS_LT, 0 },
+      JOY_AXIS_LT },
     { (int16_t)((p->bRightTrigger << 8) | p->bRightTrigger),
       (int16_t)((c->bRightTrigger << 8) | c->bRightTrigger),
-      JOY_AXIS_RT, 0 },
+      JOY_AXIS_RT },
   };
 
   for (int i = 0; i < 6; i++) {

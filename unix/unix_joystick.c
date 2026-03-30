@@ -33,8 +33,8 @@ WI_JoystickInit(void)
     if (fd >= 0) {
       g_joy_fd = fd;
       g_joy_name[0] = '\0';
-      ioctl(fd, JSIOCGNAME(sizeof(g_joy_name) - 1), g_joy_name);
-      if (g_joy_name[0] == '\0') {
+      if (ioctl(fd, JSIOCGNAME(sizeof(g_joy_name) - 1), g_joy_name) < 0 ||
+          g_joy_name[0] == '\0') {
         snprintf(g_joy_name, sizeof(g_joy_name), "Joystick %d", i);
       }
       return TRUE;
