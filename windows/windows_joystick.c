@@ -89,6 +89,14 @@ WI_JoystickGetName(void)
   return g_joy_available ? "XInput Controller" : NULL;
 }
 
+/* Map an 8-bit unsigned trigger value [0, 255] to a non-negative signed
+ * 16-bit range [0, 32767] so it is consistent with thumb-stick axes. */
+static int16_t
+wi_trigger_to_axis(BYTE trigger)
+{
+  return (int16_t)(((int)trigger * 32767 + 127) / 255);
+}
+
 /* Called from WI_PollEvent() in windows_event.c */
 void
 joy_poll(void)
@@ -117,11 +125,6 @@ joy_poll(void)
    * Triggers (bLeftTrigger / bRightTrigger) are 8-bit unsigned [0, 255].
    * Map them into [0, 32767] so they stay non-negative and occupy the same
    * signed 16-bit space as the thumb-stick axes. */
-  static int16_t
-  wi_trigger_to_axis(BYTE trigger)
-  {
-    return (int16_t)(((int)trigger * 32767 + 127) / 255);
-  }
   struct axis_check { int16_t prev; int16_t cur; uint32_t idx; };
   struct axis_check ax[] = {
     { p->sThumbLX,  c->sThumbLX,  JOY_AXIS_LX },
