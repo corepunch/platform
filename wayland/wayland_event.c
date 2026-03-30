@@ -5,6 +5,9 @@
 #include <poll.h>
 #include <linux/input-event-codes.h>
 
+/* Defined in unix/unix_joystick.c */
+extern void joy_poll(void);
+
 static struct
 {
   EVENT queue[0x10000];
@@ -405,6 +408,7 @@ WI_WaitEvent(TIME time)
 int
 WI_PollEvent(PEVENT pEvent)
 {
+  joy_poll();
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];
     return 1;

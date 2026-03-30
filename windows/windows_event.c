@@ -327,6 +327,9 @@ win32_process_messages(void)
   }
 }
 
+/* Defined in windows_joystick.c */
+extern void joy_poll(void);
+
 int
 WI_WaitEvent(longTime_t timeout_ms)
 {
@@ -345,6 +348,7 @@ WI_WaitEvent(longTime_t timeout_ms)
 int
 WI_PollEvent(PEVENT pEvent)
 {
+  joy_poll();
   win32_process_messages();
 
   if (events.read != events.write) {

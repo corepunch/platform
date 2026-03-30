@@ -3,6 +3,9 @@
 
 #include <poll.h>
 
+/* Defined in unix/unix_joystick.c */
+extern void joy_poll(void);
+
 static struct
 {
   EVENT queue[0x10000];
@@ -347,6 +350,7 @@ WI_WaitEvent(TIME timeout_ms)
 int
 WI_PollEvent(PEVENT pEvent)
 {
+  joy_poll();
   x11_process_events();
 
   if (events.read != events.write) {
