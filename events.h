@@ -68,4 +68,13 @@ typedef void* KillFocusEventPtr;
 #define kEventSetFocus 0xc399d265
 typedef void* SetFocusEventPtr;
 
+#define kEventJoyAxisMotion 0x93e5a71b
+typedef struct WI_Message* JoyAxisMotionEventPtr;
+
+#define kEventJoyButtonDown 0x6d4f8e2a
+typedef struct WI_Message* JoyButtonDownEventPtr;
+
+#define kEventJoyButtonUp 0x8b1c5f3d
+typedef struct WI_Message* JoyButtonUpEventPtr;
+
 #endif

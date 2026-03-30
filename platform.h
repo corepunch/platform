@@ -630,4 +630,72 @@ WI_KeynumToString(uint32_t keynum);
 
 /** @} */
 
+/**
+ * @defgroup joystick Joystick / gamepad support
+ * @brief Functions for enumerating and reading joystick / gamepad devices.
+ *
+ * Joystick events are delivered through the standard event queue via
+ * #WI_PollEvent.  The event fields carry the device data as follows:
+ *
+ * - #kEventJoyAxisMotion:  @p wParam = axis index (0-based),
+ *                          @p lParam = axis value as @c int16_t cast to @c void*.
+ * - #kEventJoyButtonDown / #kEventJoyButtonUp:
+ *                          @p wParam = button index (0-based).
+ * @{
+ */
+
+/**
+ * @brief Initialise the joystick subsystem and open the first available device.
+ *
+ * @return `TRUE` if a joystick was found and opened, `FALSE` otherwise.
+ *         Returning `FALSE` is not fatal; the application can continue without
+ *         joystick input.
+ */
+WI_API bool_t
+WI_JoystickInit(void);
+
+/**
+ * @brief Shut down the joystick subsystem and close any open device.
+ */
+WI_API void
+WI_JoystickShutdown(void);
+
+/**
+ * @brief Check whether a joystick is currently connected and open.
+ *
+ * @return `TRUE` if a device is available, `FALSE` otherwise.
+ */
+WI_API bool_t
+WI_JoystickAvailable(void);
+
+/**
+ * @brief Return the name of the connected joystick.
+ *
+ * @return Null-terminated UTF-8 device name, or `NULL` if no device is open.
+ *         The pointer is valid until the next call to #WI_JoystickShutdown.
+ */
+WI_API char const *
+WI_JoystickGetName(void);
+
+/** @} */
+
+/**
+ * @defgroup swap Swap interval
+ * @brief VSync / swap-interval control.
+ * @{
+ */
+
+/**
+ * @brief Set the OpenGL swap interval (VSync control).
+ *
+ * @param interval  0 = presentation is not synchronised to the display
+ *                  refresh (no VSync); 1 = synchronise to every refresh.
+ * @return `TRUE` on success, `FALSE` if the operation is unsupported on the
+ *         current platform.
+ */
+WI_API bool_t
+WI_SetSwapInterval(int interval);
+
+/** @} */
+
 #endif

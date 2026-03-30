@@ -55,7 +55,7 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	LDFLAGS = -shared \
 	          -Wl,--out-implib,$(OUTDIR)/libplatform.dll.a \
 	          -lopengl32 -lgdi32 -luser32 -lcomdlg32 \
-	          -lole32 -lshell32 -ladvapi32 -lws2_32
+	          -lole32 -lshell32 -ladvapi32 -lws2_32 -lxinput1_4
 	LIB_EXT = dll
 	FIND_SOURCES = find windows -name "*.c"
 	LANG = c

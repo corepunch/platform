@@ -1,4 +1,5 @@
 #include "../platform.h"
+#include "wayland_local.h"
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>

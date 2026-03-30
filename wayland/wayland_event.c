@@ -5,6 +5,10 @@
 #include <poll.h>
 #include <linux/input-event-codes.h>
 
+/* Defined in unix/unix_joystick.c */
+extern void joy_poll(void);
+extern int  joy_get_fd(void);
+
 static struct
 {
   EVENT queue[0x10000];
@@ -384,27 +388,41 @@ WI_WaitEvent(TIME time)
     return 0;
 
   if (time > 0) {
-    // Use poll or epoll to wait with timeout
-    struct pollfd fds[1];
-    fds[0].fd = wl_display_get_fd(display);
-    fds[0].events = POLLIN;
-    
-    int ret = poll(fds, 1, time);
+    /* Include the joystick fd in the poll set so joystick activity can
+     * wake the wait even when no Wayland events are pending. */
+    struct pollfd fds[2];
+    int nfds = 0;
+    fds[nfds].fd     = wl_display_get_fd(display);
+    fds[nfds].events = POLLIN;
+    nfds++;
+    int joy_fd = joy_get_fd();
+    if (joy_fd >= 0) {
+      fds[nfds].fd     = joy_fd;
+      fds[nfds].events = POLLIN;
+      nfds++;
+    }
+
+    int ret = poll(fds, nfds, (int)time);
     if (ret > 0) {
-      wl_display_dispatch(display);
+      if (fds[0].revents & POLLIN) {
+        wl_display_dispatch(display);
+      }
+      joy_poll();
       return 1;
     }
     return 0;
   }
-  
+
   // No timeout, just dispatch pending events
   wl_display_dispatch_pending(display);
+  joy_poll();
   return 0;
 }
 
 int
 WI_PollEvent(PEVENT pEvent)
 {
+  joy_poll();
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];
     return 1;

@@ -65,6 +65,13 @@ WI_CreateSurface(uint32_t width, uint32_t height)
   return FALSE;
 }
 
+bool_t
+WI_SetSwapInterval(int interval)
+{
+  EGLBoolean ok = eglSwapInterval(egl_display, interval);
+  return ok == EGL_TRUE ? TRUE : FALSE;
+}
+
 float
 WI_GetScaling(void)
 {
