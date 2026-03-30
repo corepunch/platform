@@ -334,15 +334,26 @@ int
 WI_WaitEvent(longTime_t timeout_ms)
 {
   if (timeout_ms == 0) {
-    /* Block indefinitely until a message arrives */
-    WaitMessage();
-    win32_process_messages();
-    return 1;
+    /* Block indefinitely, but wake on joystick input too.  Poll joystick
+     * at ~60 Hz so a controller-only application doesn't spin at 100% CPU
+     * yet still responds promptly. */
+    for (;;) {
+      DWORD ret = MsgWaitForMultipleObjects(0, NULL, FALSE, 16 /* ms */, QS_ALLINPUT);
+      win32_process_messages();
+      joy_poll();
+      if (events.read != events.write) {
+        return 1;
+      }
+      if (ret == WAIT_OBJECT_0) {
+        return 1;
+      }
+    }
   }
   DWORD ret = MsgWaitForMultipleObjects(0, NULL, FALSE,
                                          (DWORD)timeout_ms, QS_ALLINPUT);
   win32_process_messages();
-  return (ret == WAIT_OBJECT_0) ? 1 : 0;
+  joy_poll();
+  return (ret == WAIT_OBJECT_0 || events.read != events.write) ? 1 : 0;
 }
 
 int

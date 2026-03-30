@@ -115,20 +115,24 @@ joy_poll(void)
 
   /* --- Axis events ---
    * Triggers (bLeftTrigger / bRightTrigger) are 8-bit unsigned [0, 255].
-   * Duplicate the byte into both halves of an int16_t so that the range
-   * maps to roughly [0, 65535] and the full 16-bit field can be compared
-   * and reported consistently with the thumb-stick axes. */
+   * Map them into [0, 32767] so they stay non-negative and occupy the same
+   * signed 16-bit space as the thumb-stick axes. */
+  static int16_t
+  wi_trigger_to_axis(BYTE trigger)
+  {
+    return (int16_t)(((int)trigger * 32767 + 127) / 255);
+  }
   struct axis_check { int16_t prev; int16_t cur; uint32_t idx; };
   struct axis_check ax[] = {
     { p->sThumbLX,  c->sThumbLX,  JOY_AXIS_LX },
     { p->sThumbLY,  c->sThumbLY,  JOY_AXIS_LY },
     { p->sThumbRX,  c->sThumbRX,  JOY_AXIS_RX },
     { p->sThumbRY,  c->sThumbRY,  JOY_AXIS_RY },
-    { (int16_t)((p->bLeftTrigger  << 8) | p->bLeftTrigger),
-      (int16_t)((c->bLeftTrigger  << 8) | c->bLeftTrigger),
+    { wi_trigger_to_axis(p->bLeftTrigger),
+      wi_trigger_to_axis(c->bLeftTrigger),
       JOY_AXIS_LT },
-    { (int16_t)((p->bRightTrigger << 8) | p->bRightTrigger),
-      (int16_t)((c->bRightTrigger << 8) | c->bRightTrigger),
+    { wi_trigger_to_axis(p->bRightTrigger),
+      wi_trigger_to_axis(c->bRightTrigger),
       JOY_AXIS_RT },
   };
 
@@ -160,10 +164,11 @@ bool_t
 WI_SetSwapInterval(int interval)
 {
   static PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = NULL;
-  static BOOL loaded = FALSE;
 
-  if (!loaded) {
-    loaded = TRUE;
+  /* Retry the lookup each call until it succeeds, because
+   * wglGetProcAddress requires a current WGL context and may be called
+   * before the context is made current for the first time. */
+  if (!wglSwapIntervalEXT) {
     wglSwapIntervalEXT =
       (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
   }

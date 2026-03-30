@@ -1,18 +1,28 @@
 /*
  * unix_joystick.c – Linux joystick support via /dev/input/js*.
  *
- * Events are read from the first available joystick device in non-blocking
- * mode.  joy_poll() should be called from WI_PollEvent() in the platform
- * backend (wayland_event.c / x11_event.c) so that joystick events are mixed
- * into the same queue as keyboard and mouse events.
+ * This file is compiled on both Linux and macOS (the macOS Makefile includes
+ * unix/*.c).  All Linux-specific code is guarded by #ifdef __linux__ so that
+ * the file compiles to nothing on macOS, where macos_joystick.m provides the
+ * joystick API stubs instead.
+ *
+ * On Linux, events are read from the first available joystick device in
+ * non-blocking mode.  joy_poll() should be called from WI_PollEvent() and
+ * WI_WaitEvent() in the platform backend (wayland_event.c / x11_event.c) so
+ * that joystick events are mixed into the same queue as keyboard/mouse events.
+ * joy_get_fd() exposes the open device fd so it can be added to poll() sets in
+ * WI_WaitEvent(), allowing joystick activity to wake an otherwise-blocked loop.
  *
  * Encoding in WI_Message:
  *   kEventJoyAxisMotion : wParam = axis index, lParam = (void*)(intptr_t)value
  *   kEventJoyButtonDown / kEventJoyButtonUp : wParam = button index
  */
 
+#ifdef __linux__
+
 #include "../platform.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -64,7 +74,16 @@ WI_JoystickGetName(void)
   return g_joy_fd >= 0 ? g_joy_name : NULL;
 }
 
-/* Called from WI_PollEvent() in each Linux backend to drain joystick events. */
+/* Return the raw joystick file descriptor so callers can include it in
+ * poll() sets (e.g. WI_WaitEvent).  Returns -1 when no device is open. */
+int
+joy_get_fd(void)
+{
+  return g_joy_fd;
+}
+
+/* Called from WI_PollEvent() and WI_WaitEvent() in each Linux backend to
+ * drain pending joystick events.  Detects device disconnection via errno. */
 void
 joy_poll(void)
 {
@@ -73,7 +92,8 @@ joy_poll(void)
   }
 
   struct js_event je;
-  while (read(g_joy_fd, &je, sizeof(je)) == (ssize_t)sizeof(je)) {
+  ssize_t n;
+  while ((n = read(g_joy_fd, &je, sizeof(je))) == (ssize_t)sizeof(je)) {
     uint8_t type = je.type & ~(uint8_t)JS_EVENT_INIT;
     if (type == JS_EVENT_AXIS) {
       WI_PostMessageW(NULL, kEventJoyAxisMotion,
@@ -84,4 +104,12 @@ joy_poll(void)
       WI_PostMessageW(NULL, msg, (uint32_t)je.number, NULL);
     }
   }
+
+  /* A hard error (not EAGAIN/EWOULDBLOCK) means the device is gone. */
+  if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+    close(g_joy_fd);
+    g_joy_fd = -1;
+  }
 }
+
+#endif /* __linux__ */

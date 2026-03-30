@@ -5,6 +5,7 @@
 
 /* Defined in unix/unix_joystick.c */
 extern void joy_poll(void);
+extern int  joy_get_fd(void);
 
 static struct
 {
@@ -316,6 +317,24 @@ x11_process_events(void)
   }
 }
 
+/* Build a poll set that includes the X11 connection fd and, optionally, the
+ * joystick fd.  Returns the number of fds populated. */
+static int
+x11_build_poll_fds(struct pollfd fds[2])
+{
+  int nfds = 0;
+  fds[nfds].fd     = ConnectionNumber(x_display);
+  fds[nfds].events = POLLIN;
+  nfds++;
+  int joy_fd = joy_get_fd();
+  if (joy_fd >= 0) {
+    fds[nfds].fd     = joy_fd;
+    fds[nfds].events = POLLIN;
+    nfds++;
+  }
+  return nfds;
+}
+
 int
 WI_WaitEvent(TIME timeout_ms)
 {
@@ -329,22 +348,34 @@ WI_WaitEvent(TIME timeout_ms)
   }
 
   if (timeout_ms > 0) {
-    struct pollfd fds[1];
-    fds[0].fd     = ConnectionNumber(x_display);
-    fds[0].events = POLLIN;
-    int ret = poll(fds, 1, (int)timeout_ms);
+    /* Include the joystick fd in the poll set so joystick activity can
+     * wake the wait even when no X11 events are pending. */
+    struct pollfd fds[2];
+    int nfds = x11_build_poll_fds(fds);
+    int ret = poll(fds, nfds, (int)timeout_ms);
     if (ret > 0) {
       x11_process_events();
+      joy_poll();
       return 1;
     }
     return 0;
   }
 
-  /* Block indefinitely */
-  XEvent xev;
-  XPeekEvent(x_display, &xev);
-  x11_process_events();
-  return 1;
+  /* Block indefinitely, but wake on joystick input too.  Use a short
+   * internal timeout so we can poll the joystick fd regularly without
+   * waiting for an X11 event that may never arrive. */
+  for (;;) {
+    struct pollfd fds[2];
+    int nfds = x11_build_poll_fds(fds);
+    int ret = poll(fds, nfds, 16 /* ms */);
+    if (ret > 0) {
+      x11_process_events();
+      joy_poll();
+      return 1;
+    }
+    /* Timed out with no input — poll joystick anyway, then loop. */
+    joy_poll();
+  }
 }
 
 int
