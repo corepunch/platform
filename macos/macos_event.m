@@ -176,11 +176,20 @@ start_over:
     [event release];
     goto start_over;
   }
-  
-	int x = event.locationInWindow.x;
-	int y = event.window.contentView.frame.size.height - event.locationInWindow.y;
 
-	e->target = (void *)event.window;
+  NSWindow *window = event.window;
+  if (!window && event.windowNumber > 0) {
+    window = [NSApp windowWithWindowNumber:event.windowNumber];
+  }
+  if (!window) {
+    [event release];
+    goto start_over;
+  }
+
+	int x = event.locationInWindow.x;
+	int y = window.contentView.frame.size.height - event.locationInWindow.y;
+
+	e->target = (void *)window;
 	e->message = GetEventType(event);
 	e->wParam = MAKEDWORD(x, y);
 	
