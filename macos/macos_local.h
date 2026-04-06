@@ -13,5 +13,6 @@
 //@end
 
 struct tracking_area *FindTrackingArea(float x, float y);
+NSWindow *WI_MainWindow(void);
 
 #endif

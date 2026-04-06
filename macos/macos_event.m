@@ -182,6 +182,9 @@ start_over:
     window = [NSApp windowWithWindowNumber:event.windowNumber];
   }
   if (!window) {
+    window = WI_MainWindow();
+  }
+  if (!window) {
     [event release];
     goto start_over;
   }

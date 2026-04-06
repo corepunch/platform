@@ -213,6 +213,12 @@ void WI_Shutdown(void) {
 #endif
 }
 
+NSWindow *
+WI_MainWindow(void)
+{
+  return wstate.Window;
+}
+
 float
 WI_GetScaling(void)
 {
