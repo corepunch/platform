@@ -250,15 +250,12 @@ WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
   s_timers[slot].id       = tid;
   s_timers[slot].userdata = userdata;
 
-  uint32_t captured_id    = tid;
-  void*    captured_data  = userdata;
-
   NSTimer* t = [NSTimer scheduledTimerWithTimeInterval:(double)interval_ms / 1000.0
                                                repeats:(BOOL)repeat
                                                  block:^(NSTimer* __unused timer) {
-    WI_PostMessageW(NULL, kEventTimer, captured_id, captured_data);
+    WI_PostMessageW(NULL, kEventTimer, tid, userdata);
   }];
-  s_timers[slot].timer = [t retain];
+  s_timers[slot].timer = t;
 
   return tid;
 }
@@ -269,7 +266,6 @@ WI_CancelTimer(uint32_t timer_id)
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {
       [s_timers[i].timer invalidate];
-      [s_timers[i].timer release];
       s_timers[i].id       = 0;
       s_timers[i].timer    = nil;
       s_timers[i].userdata = NULL;

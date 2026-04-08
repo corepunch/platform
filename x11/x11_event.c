@@ -543,8 +543,10 @@ WI_CancelTimer(uint32_t timer_id)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {
+#ifdef __linux__
       close(s_timers[i].fd);
-      s_timers[i].fd       = -1;
+      s_timers[i].fd = -1;
+#endif
       s_timers[i].id       = 0;
       s_timers[i].userdata = NULL;
       s_timers[i].repeat   = FALSE;
