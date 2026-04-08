@@ -365,3 +365,79 @@ NotifyFileDropEvent(char const *filename, float x, float y)
   (void)x;
   (void)y;
 }
+
+/* Timer table */
+#define MAX_TIMERS 64
+static struct {
+  uint32_t id;
+  int      js_id;    /* JavaScript timer handle; valid only when id != 0 */
+  void*    userdata;
+  bool_t   repeat;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
+
+/* Called from JavaScript when a timer fires */
+EMSCRIPTEN_KEEPALIVE
+void
+timer_fired(uint32_t timer_id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      events.queue[events.write++] = (EVENT){
+        .message = kEventTimer,
+        .wParam  = timer_id,
+        .lParam  = s_timers[i].userdata,
+      };
+      if (!s_timers[i].repeat) {
+        s_timers[i].js_id    = 0;
+        s_timers[i].id       = 0;
+        s_timers[i].userdata = NULL;
+      }
+      return;
+    }
+  }
+}
+
+uint32_t
+WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
+{
+  /* Find a free slot */
+  int slot = -1;
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == 0) {
+      slot = i;
+      break;
+    }
+  }
+  if (slot < 0)
+    return 0;
+
+  uint32_t tid = s_next_timer_id++;
+  int js_id = EM_ASM_INT({
+    var fn = function() { _timer_fired($0); };
+    return $2 ? setInterval(fn, $1) : setTimeout(fn, $1);
+  }, tid, (int)interval_ms, (int)repeat);
+
+  s_timers[slot].id       = tid;
+  s_timers[slot].js_id    = js_id;
+  s_timers[slot].userdata = userdata;
+  s_timers[slot].repeat   = repeat;
+  return tid;
+}
+
+void
+WI_CancelTimer(uint32_t timer_id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      EM_ASM({
+        if ($1) clearInterval($0); else clearTimeout($0);
+      }, s_timers[i].js_id, (int)s_timers[i].repeat);
+      s_timers[i].js_id    = 0;
+      s_timers[i].id       = 0;
+      s_timers[i].userdata = NULL;
+      s_timers[i].repeat   = FALSE;
+      return;
+    }
+  }
+}

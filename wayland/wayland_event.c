@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <poll.h>
 #include <linux/input-event-codes.h>
+#include <sys/timerfd.h>
 
 /* Defined in unix/unix_joystick.c */
 extern void joy_poll(void);
@@ -19,6 +20,43 @@ static struct
   uint32_t last_btn;       /* button of last click (for double-click) */
   uint32_t last_btn_time;  /* timestamp of last click (ms) */
 } events = { 0 };
+
+/* Timer table */
+#define MAX_TIMERS 64
+static struct {
+  uint32_t id;
+  int      fd;       /* timerfd descriptor; valid only when id != 0 */
+  void*    userdata;
+  bool_t   repeat;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
+
+/* Check all timerfd descriptors for readability and post kEventTimer */
+static void
+timers_poll(void)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == 0)
+      continue;
+    uint64_t expirations = 0;
+    ssize_t n = read(s_timers[i].fd, &expirations, sizeof(expirations));
+    if (n == (ssize_t)sizeof(expirations) && expirations > 0) {
+      uint32_t tid      = s_timers[i].id;
+      void*    userdata = s_timers[i].userdata;
+      events.queue[events.write++] = (EVENT){
+        .message = kEventTimer,
+        .wParam  = tid,
+        .lParam  = userdata,
+      };
+      if (!s_timers[i].repeat) {
+        close(s_timers[i].fd);
+        s_timers[i].fd       = -1;
+        s_timers[i].id       = 0;
+        s_timers[i].userdata = NULL;
+      }
+    }
+  }
+}
 
 extern struct xkb_state* xkb_state;
 
@@ -388,9 +426,8 @@ WI_WaitEvent(TIME time)
     return 0;
 
   if (time > 0) {
-    /* Include the joystick fd in the poll set so joystick activity can
-     * wake the wait even when no Wayland events are pending. */
-    struct pollfd fds[2];
+    /* Include the joystick fd and timerfd descriptors in the poll set. */
+    struct pollfd fds[2 + MAX_TIMERS];
     int nfds = 0;
     fds[nfds].fd     = wl_display_get_fd(display);
     fds[nfds].events = POLLIN;
@@ -401,6 +438,13 @@ WI_WaitEvent(TIME time)
       fds[nfds].events = POLLIN;
       nfds++;
     }
+    for (int i = 0; i < MAX_TIMERS; i++) {
+      if (s_timers[i].id != 0) {
+        fds[nfds].fd     = s_timers[i].fd;
+        fds[nfds].events = POLLIN;
+        nfds++;
+      }
+    }
 
     int ret = poll(fds, nfds, (int)time);
     if (ret > 0) {
@@ -408,6 +452,7 @@ WI_WaitEvent(TIME time)
         wl_display_dispatch(display);
       }
       joy_poll();
+      timers_poll();
       return 1;
     }
     return 0;
@@ -416,6 +461,7 @@ WI_WaitEvent(TIME time)
   // No timeout, just dispatch pending events
   wl_display_dispatch_pending(display);
   joy_poll();
+  timers_poll();
   return 0;
 }
 
@@ -423,6 +469,7 @@ int
 WI_PollEvent(PEVENT pEvent)
 {
   joy_poll();
+  timers_poll();
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];
     return 1;
@@ -480,4 +527,57 @@ NotifyFileDropEvent(char const* filename, float x, float y)
   (void)filename;
   (void)x;
   (void)y;
+}
+
+uint32_t
+WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
+{
+  /* Find a free slot */
+  int slot = -1;
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == 0) {
+      slot = i;
+      break;
+    }
+  }
+  if (slot < 0)
+    return 0;
+
+  int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+  if (fd < 0)
+    return 0;
+
+  long sec  = (long)(interval_ms / 1000);
+  long nsec = (long)(interval_ms % 1000) * 1000000L;
+  struct itimerspec its = {
+    .it_value    = { .tv_sec = sec, .tv_nsec = nsec },
+    .it_interval = repeat ? (struct timespec){ .tv_sec = sec, .tv_nsec = nsec }
+                          : (struct timespec){ .tv_sec = 0, .tv_nsec = 0 },
+  };
+  if (timerfd_settime(fd, 0, &its, NULL) < 0) {
+    close(fd);
+    return 0;
+  }
+
+  uint32_t tid          = s_next_timer_id++;
+  s_timers[slot].id       = tid;
+  s_timers[slot].fd       = fd;
+  s_timers[slot].userdata = userdata;
+  s_timers[slot].repeat   = repeat;
+  return tid;
+}
+
+void
+WI_CancelTimer(uint32_t timer_id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      close(s_timers[i].fd);
+      s_timers[i].fd       = -1;
+      s_timers[i].id       = 0;
+      s_timers[i].userdata = NULL;
+      s_timers[i].repeat   = FALSE;
+      return;
+    }
+  }
 }

@@ -13,6 +13,48 @@ static struct
 static int16_t s_last_mouse_x = 0;
 static int16_t s_last_mouse_y = 0;
 
+/* Timer table: maps Win32 timer IDs to userdata pointers */
+#define MAX_TIMERS 64
+static struct {
+  UINT_PTR id;
+  void*    userdata;
+  bool_t   repeat;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
+
+static void*
+timer_get_userdata(UINT_PTR id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == id)
+      return s_timers[i].userdata;
+  }
+  return NULL;
+}
+
+static bool_t
+timer_is_repeat(UINT_PTR id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == id)
+      return s_timers[i].repeat;
+  }
+  return FALSE;
+}
+
+static void
+timer_remove(UINT_PTR id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == id) {
+      s_timers[i].id       = 0;
+      s_timers[i].userdata = NULL;
+      s_timers[i].repeat   = FALSE;
+      return;
+    }
+  }
+}
+
 /* Map a Win32 virtual-key code to a WI_KEY_* constant.
    Extended-key flag (bit 24 of the LPARAM) is passed in ext_key
    so that numpad-Enter can be distinguished from regular Enter. */
@@ -309,6 +351,20 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     PostQuitMessage(0);
     return 0;
 
+  case WM_TIMER: {
+    void* userdata = timer_get_userdata((UINT_PTR)wparam);
+    if (!timer_is_repeat((UINT_PTR)wparam)) {
+      KillTimer(hwnd, (UINT_PTR)wparam);
+      timer_remove((UINT_PTR)wparam);
+    }
+    events.queue[events.write++] = (EVENT){
+      .message = kEventTimer,
+      .wParam  = (uint32_t)wparam,
+      .lParam  = userdata,
+    };
+    break;
+  }
+
   default:
     break;
   }
@@ -406,4 +462,29 @@ NotifyFileDropEvent(char const *filename, float x, float y)
   (void)filename;
   (void)x;
   (void)y;
+}
+
+uint32_t
+WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
+{
+  /* Find a free slot */
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == 0) {
+      UINT_PTR id = SetTimer(g_hwnd, (UINT_PTR)s_next_timer_id++, interval_ms, NULL);
+      if (id == 0)
+        return 0;
+      s_timers[i].id       = id;
+      s_timers[i].userdata = userdata;
+      s_timers[i].repeat   = repeat;
+      return (uint32_t)id;
+    }
+  }
+  return 0;
+}
+
+void
+WI_CancelTimer(uint32_t timer_id)
+{
+  KillTimer(g_hwnd, (UINT_PTR)timer_id);
+  timer_remove((UINT_PTR)timer_id);
 }

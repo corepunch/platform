@@ -77,4 +77,7 @@ typedef struct WI_Message* JoyButtonDownEventPtr;
 #define kEventJoyButtonUp 0x8b1c5f3d
 typedef struct WI_Message* JoyButtonUpEventPtr;
 
+#define kEventTimer 0xa8f3b521
+typedef struct WI_Message* TimerEventPtr;
+
 #endif
