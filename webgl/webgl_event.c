@@ -9,6 +9,16 @@ static struct
   uint32_t buttons; /* bitmask of currently pressed mouse buttons */
 } events = { 0 };
 
+#define MAX_TIMERS 64
+static struct {
+  uint32_t id;
+  int      js_id;
+  void*    obj;
+  void*    userdata;
+  bool_t   repeat;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
+
 static uint32_t
 map_keycode(unsigned long keyCode)
 {
@@ -349,13 +359,14 @@ WI_RemoveFromQueue(void *hobj)
   WORD new_write = events.read;
 
   while (read_idx != write_idx) {
-    if (events.queue[read_idx].target != hobj) {
+    if (events.queue[read_idx].target != hobj)
       events.queue[new_write++] = events.queue[read_idx];
-    }
     read_idx++;
   }
-
   events.write = new_write;
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
+      WI_CancelTimer(s_timers[i].id);
 }
 
 void
@@ -364,4 +375,63 @@ NotifyFileDropEvent(char const *filename, float x, float y)
   (void)filename;
   (void)x;
   (void)y;
+}
+
+/* Called from JavaScript when a timer fires */
+EMSCRIPTEN_KEEPALIVE
+void
+timer_fired(uint32_t timer_id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      events.queue[events.write++] = (EVENT){
+        .target  = s_timers[i].obj,
+        .message = kEventTimer,
+        .wParam  = timer_id,
+        .lParam  = s_timers[i].userdata,
+      };
+      if (!s_timers[i].repeat)
+        WI_CancelTimer(timer_id);
+      return;
+    }
+  }
+}
+
+uint32_t
+WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+{
+  int slot = -1;
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id == 0) { slot = i; break; }
+  if (slot < 0)
+    return 0;
+  uint32_t tid = s_next_timer_id++;
+  int js_id = EM_ASM_INT({
+    var fn = function() { _timer_fired($0); };
+    return $2 ? setInterval(fn, $1) : setTimeout(fn, $1);
+  }, tid, (int)interval_ms, (int)repeat);
+  s_timers[slot].id       = tid;
+  s_timers[slot].js_id    = js_id;
+  s_timers[slot].obj      = obj;
+  s_timers[slot].userdata = userdata;
+  s_timers[slot].repeat   = repeat;
+  return tid;
+}
+
+void
+WI_CancelTimer(uint32_t timer_id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      EM_ASM({
+        if ($1) clearInterval($0); else clearTimeout($0);
+      }, s_timers[i].js_id, (int)s_timers[i].repeat);
+      s_timers[i].id       = 0;
+      s_timers[i].js_id    = 0;
+      s_timers[i].obj      = NULL;
+      s_timers[i].userdata = NULL;
+      s_timers[i].repeat   = FALSE;
+      return;
+    }
+  }
 }

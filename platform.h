@@ -698,4 +698,40 @@ WI_SetSwapInterval(int interval);
 
 /** @} */
 
+/**
+ * @defgroup timer Timer support
+ * @brief Recurring and one-shot timer events delivered via the event queue.
+ *
+ * Timers post a #kEventTimer event when they fire.  The event fields carry:
+ * - @p wParam = timer ID (the value returned by #WI_SetTimer).
+ * - @p lParam = the @p userdata pointer passed to #WI_SetTimer.
+ * @{
+ */
+
+/**
+ * @brief Create a timer that posts #kEventTimer when it fires.
+ *
+ * The timer event is posted to @p obj, matching the target used by
+ * #WI_PostMessageW.  Calling #WI_RemoveFromQueue with the same @p obj will
+ * both flush queued events *and* cancel all timers registered for that object.
+ *
+ * @param obj          Target object; passed as #WI_Message::target on fire.
+ * @param interval_ms  Timer interval in milliseconds.
+ * @param userdata     Passed back in #WI_Message::lParam when the timer fires.
+ * @param repeat       `TRUE` for a recurring timer, `FALSE` for a one-shot.
+ * @return Timer ID (> 0) on success, 0 on failure.
+ */
+WI_API uint32_t
+WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat);
+
+/**
+ * @brief Cancel an active timer.
+ *
+ * @param timer_id  ID returned by #WI_SetTimer.
+ */
+WI_API void
+WI_CancelTimer(uint32_t timer_id);
+
+/** @} */
+
 #endif

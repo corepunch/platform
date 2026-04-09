@@ -4,6 +4,15 @@
 #include "macos_keymap.h"
 #include "macos_local.h"
 
+#define MAX_TIMERS 64
+static struct {
+  uint32_t  id;
+  void*     obj;
+  NSTimer*  timer;
+  void*     userdata;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
+
 uint32_t KEY_GetKeyName(uint32_t keycode) {
 	for (struct keymap const *km = darwin_scancode_table; km->keyname; km++) {
 		if (keycode == km->keycode)
@@ -26,6 +35,9 @@ WI_RemoveFromQueue(void* target)
   for (uint16_t r = queue.read; r != queue.write; r++)
     if (queue.data[r].target == target)
       memset(&queue.data[r], 0, sizeof(queue.data[r]));
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id != 0 && s_timers[i].obj == target)
+      WI_CancelTimer(s_timers[i].id);
 }
 
 void
@@ -220,5 +232,46 @@ WI_WaitEvent(longTime_t msec)
                                           inMode:NSDefaultRunLoopMode
                                          dequeue:NO];
     return event ? 1 : 0;
+  }
+}
+
+uint32_t
+WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+{
+  int slot = -1;
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id == 0) { slot = i; break; }
+  if (slot < 0)
+    return 0;
+  uint32_t tid = s_next_timer_id++;
+  s_timers[slot].id       = tid;
+  s_timers[slot].obj      = obj;
+  s_timers[slot].userdata = userdata;
+  s_timers[slot].timer = [NSTimer scheduledTimerWithTimeInterval:(double)interval_ms / 1000.0
+                                                         repeats:(BOOL)repeat
+                                                           block:^(NSTimer* __unused t) {
+    WI_PostMessageW(obj, kEventTimer, tid, userdata);
+    if (!repeat && s_timers[slot].id == tid) {
+      s_timers[slot].id       = 0;
+      s_timers[slot].timer    = nil;
+      s_timers[slot].obj      = NULL;
+      s_timers[slot].userdata = NULL;
+    }
+  }];
+  return tid;
+}
+
+void
+WI_CancelTimer(uint32_t timer_id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      [s_timers[i].timer invalidate];
+      s_timers[i].id       = 0;
+      s_timers[i].timer    = nil;
+      s_timers[i].obj      = NULL;
+      s_timers[i].userdata = NULL;
+      return;
+    }
   }
 }

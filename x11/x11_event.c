@@ -2,6 +2,10 @@
 #include "x11_local.h"
 
 #include <poll.h>
+#ifdef __linux__
+#include <sys/timerfd.h>
+#endif
+#include <unistd.h>
 
 /* Defined in unix/unix_joystick.c */
 extern void joy_poll(void);
@@ -13,6 +17,40 @@ static struct
   WORD  write, read;
   float pointer_x, pointer_y;
 } events = { 0 };
+
+#define MAX_TIMERS 64
+static struct {
+  uint32_t id;
+  int      fd;
+  void*    obj;
+  void*    userdata;
+  bool_t   repeat;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
+
+/* Check all timerfd descriptors for readability and post kEventTimer */
+static void
+timers_poll(void)
+{
+#ifdef __linux__
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == 0)
+      continue;
+    uint64_t expirations = 0;
+    ssize_t n = read(s_timers[i].fd, &expirations, sizeof(expirations));
+    if (n == (ssize_t)sizeof(expirations) && expirations > 0) {
+      events.queue[events.write++] = (EVENT){
+        .target  = s_timers[i].obj,
+        .message = kEventTimer,
+        .wParam  = s_timers[i].id,
+        .lParam  = s_timers[i].userdata,
+      };
+      if (!s_timers[i].repeat)
+        WI_CancelTimer(s_timers[i].id);
+    }
+  }
+#endif
+}
 
 /* Map an X11 KeySym to a WI_KEY_* value */
 static uint32_t
@@ -317,10 +355,11 @@ x11_process_events(void)
   }
 }
 
-/* Build a poll set that includes the X11 connection fd and, optionally, the
- * joystick fd.  Returns the number of fds populated. */
+/* Build a poll set that includes the X11 connection fd, optionally the
+ * joystick fd, and any active timerfd descriptors.
+ * fds must have room for at least 2 + MAX_TIMERS entries. */
 static int
-x11_build_poll_fds(struct pollfd fds[2])
+x11_build_poll_fds(struct pollfd fds[2 + MAX_TIMERS])
 {
   int nfds = 0;
   fds[nfds].fd     = ConnectionNumber(x_display);
@@ -332,6 +371,15 @@ x11_build_poll_fds(struct pollfd fds[2])
     fds[nfds].events = POLLIN;
     nfds++;
   }
+#ifdef __linux__
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id != 0) {
+      fds[nfds].fd     = s_timers[i].fd;
+      fds[nfds].events = POLLIN;
+      nfds++;
+    }
+  }
+#endif
   return nfds;
 }
 
@@ -348,29 +396,28 @@ WI_WaitEvent(TIME timeout_ms)
   }
 
   if (timeout_ms > 0) {
-    /* Include the joystick fd in the poll set so joystick activity can
-     * wake the wait even when no X11 events are pending. */
-    struct pollfd fds[2];
+    /* Include the joystick fd and timerfd descriptors in the poll set. */
+    struct pollfd fds[2 + MAX_TIMERS];
     int nfds = x11_build_poll_fds(fds);
     int ret = poll(fds, nfds, (int)timeout_ms);
     if (ret > 0) {
       x11_process_events();
       joy_poll();
+      timers_poll();
       return 1;
     }
     return 0;
   }
 
-  /* Block indefinitely, but wake on joystick input too.  Use a short
-   * internal timeout so we can poll the joystick fd regularly without
-   * waiting for an X11 event that may never arrive. */
+  /* Block indefinitely, but wake on joystick and timer input too. */
   for (;;) {
-    struct pollfd fds[2];
+    struct pollfd fds[2 + MAX_TIMERS];
     int nfds = x11_build_poll_fds(fds);
     int ret = poll(fds, nfds, 16 /* ms */);
     if (ret > 0) {
       x11_process_events();
       joy_poll();
+      timers_poll();
       return 1;
     }
     /* Timed out with no input — poll joystick anyway, then loop. */
@@ -383,6 +430,7 @@ WI_PollEvent(PEVENT pEvent)
 {
   joy_poll();
   x11_process_events();
+  timers_poll();
 
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];
@@ -424,12 +472,16 @@ WI_RemoveFromQueue(void* hobj)
   WORD new_write = events.read;
 
   while (read_idx != write_idx) {
-    if (events.queue[read_idx].target != hobj) {
+    if (events.queue[read_idx].target != hobj)
       events.queue[new_write++] = events.queue[read_idx];
-    }
     read_idx++;
   }
   events.write = new_write;
+#ifdef __linux__
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
+      WI_CancelTimer(s_timers[i].id);
+#endif
 }
 
 void
@@ -438,4 +490,57 @@ NotifyFileDropEvent(char const* filename, float x, float y)
   (void)filename;
   (void)x;
   (void)y;
+}
+
+uint32_t
+WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+{
+#ifdef __linux__
+  int slot = -1;
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id == 0) { slot = i; break; }
+  if (slot < 0)
+    return 0;
+  int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+  if (fd < 0)
+    return 0;
+  long sec  = (long)(interval_ms / 1000);
+  long nsec = (long)(interval_ms % 1000) * 1000000L;
+  struct itimerspec its = {
+    .it_value    = { .tv_sec = sec, .tv_nsec = nsec },
+    .it_interval = repeat ? (struct timespec){ .tv_sec = sec, .tv_nsec = nsec }
+                          : (struct timespec){ .tv_sec = 0, .tv_nsec = 0 },
+  };
+  if (timerfd_settime(fd, 0, &its, NULL) < 0) {
+    close(fd);
+    return 0;
+  }
+  uint32_t tid          = s_next_timer_id++;
+  s_timers[slot].id       = tid;
+  s_timers[slot].fd       = fd;
+  s_timers[slot].obj      = obj;
+  s_timers[slot].userdata = userdata;
+  s_timers[slot].repeat   = repeat;
+  return tid;
+#else
+  (void)obj; (void)interval_ms; (void)userdata; (void)repeat;
+  return 0;
+#endif
+}
+
+void
+WI_CancelTimer(uint32_t timer_id)
+{
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+#ifdef __linux__
+      close(s_timers[i].fd);
+#endif
+      s_timers[i].id       = 0;
+      s_timers[i].obj      = NULL;
+      s_timers[i].userdata = NULL;
+      s_timers[i].repeat   = FALSE;
+      return;
+    }
+  }
 }
