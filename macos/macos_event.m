@@ -4,13 +4,7 @@
 #include "macos_keymap.h"
 #include "macos_local.h"
 
-/* Timer table: maps timer IDs to NSTimer instances and userdata */
-#define MAX_TIMERS 64
-static struct {
-  uint32_t  id;
-  NSTimer*  timer;
-  void*     userdata;
-} s_timers[MAX_TIMERS];
+static NSMutableDictionary* s_timer_map;
 static uint32_t s_next_timer_id = 1;
 
 uint32_t KEY_GetKeyName(uint32_t keycode) {
@@ -235,41 +229,22 @@ WI_WaitEvent(longTime_t msec)
 uint32_t
 WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
 {
-  /* Find a free slot */
-  int slot = -1;
-  for (int i = 0; i < MAX_TIMERS; i++) {
-    if (s_timers[i].id == 0) {
-      slot = i;
-      break;
-    }
-  }
-  if (slot < 0)
-    return 0;
-
+  if (!s_timer_map)
+    s_timer_map = [NSMutableDictionary new];
   uint32_t tid = s_next_timer_id++;
-  s_timers[slot].id       = tid;
-  s_timers[slot].userdata = userdata;
-
-  NSTimer* t = [NSTimer scheduledTimerWithTimeInterval:(double)interval_ms / 1000.0
-                                               repeats:(BOOL)repeat
-                                                 block:^(NSTimer* __unused timer) {
+  s_timer_map[@(tid)] = [NSTimer scheduledTimerWithTimeInterval:(double)interval_ms / 1000.0
+                                                        repeats:(BOOL)repeat
+                                                          block:^(NSTimer* __unused t) {
     WI_PostMessageW(NULL, kEventTimer, tid, userdata);
+    if (!repeat)
+      [s_timer_map removeObjectForKey:@(tid)];
   }];
-  s_timers[slot].timer = t;
-
   return tid;
 }
 
 void
 WI_CancelTimer(uint32_t timer_id)
 {
-  for (int i = 0; i < MAX_TIMERS; i++) {
-    if (s_timers[i].id == timer_id) {
-      [s_timers[i].timer invalidate];
-      s_timers[i].id       = 0;
-      s_timers[i].timer    = nil;
-      s_timers[i].userdata = NULL;
-      return;
-    }
-  }
+  [s_timer_map[@(timer_id)] invalidate];
+  [s_timer_map removeObjectForKey:@(timer_id)];
 }
