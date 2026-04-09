@@ -22,6 +22,9 @@ static struct
   uint32_t last_btn_time;  /* timestamp of last click (ms) */
 } events = { 0 };
 
+/* Maximum number of fds for poll(): Wayland/joystick + one per active timer */
+#define MAX_POLL_FDS 128
+
 /* Per-timer context — one malloc'd node per active timer.
  * The timerfd fd is returned directly as the timer_id. */
 typedef struct TimerNode {
@@ -423,7 +426,7 @@ WI_WaitEvent(TIME time)
 
   if (time > 0) {
     /* Include the joystick fd and timerfd descriptors in the poll set. */
-    struct pollfd fds[128];
+    struct pollfd fds[MAX_POLL_FDS];
     int nfds = 0;
     fds[nfds].fd     = wl_display_get_fd(display);
     fds[nfds].events = POLLIN;

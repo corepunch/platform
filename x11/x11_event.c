@@ -19,7 +19,8 @@ static struct
   float pointer_x, pointer_y;
 } events = { 0 };
 
-/* Per-timer context — one malloc'd node per active timer.
+/* Maximum number of fds for poll(): X11/joystick + one per active timer */
+#define MAX_POLL_FDS 128
  * The timerfd fd is returned directly as the timer_id. */
 #ifdef __linux__
 typedef struct TimerNode {
@@ -398,7 +399,7 @@ WI_WaitEvent(TIME timeout_ms)
 
   if (timeout_ms > 0) {
     /* Include the joystick fd and timerfd descriptors in the poll set. */
-    struct pollfd fds[128];
+    struct pollfd fds[MAX_POLL_FDS];
     int nfds = x11_build_poll_fds(fds);
     int ret = poll(fds, nfds, (int)timeout_ms);
     if (ret > 0) {
@@ -412,7 +413,7 @@ WI_WaitEvent(TIME timeout_ms)
 
   /* Block indefinitely, but wake on joystick and timer input too. */
   for (;;) {
-    struct pollfd fds[128];
+    struct pollfd fds[MAX_POLL_FDS];
     int nfds = x11_build_poll_fds(fds);
     int ret = poll(fds, nfds, 16 /* ms */);
     if (ret > 0) {

@@ -387,7 +387,7 @@ WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
     var ud = $0, ms = $1, rep = $2;
     var fn = rep
       ? function() { _timer_fired(id, ud); }
-      : function() { _timer_fired(id, ud); (Module._wtm || new Map()).delete(id); };
+      : function() { _timer_fired(id, ud); Module._wtm.delete(id); };
     (Module._wtm = Module._wtm || new Map()).set(id, rep ? setInterval(fn, ms) : setTimeout(fn, ms));
     return id;
   }, (int32_t)(intptr_t)userdata, (int)interval_ms, (int)repeat);
