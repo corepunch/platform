@@ -1,7 +1,6 @@
 #include "../platform.h"
 
 #include "wayland_local.h"
-#include <stdlib.h>
 #include <unistd.h>
 #include <poll.h>
 #include <linux/input-event-codes.h>
@@ -22,38 +21,35 @@ static struct
   uint32_t last_btn_time;  /* timestamp of last click (ms) */
 } events = { 0 };
 
-/* Maximum number of fds for poll(): Wayland/joystick + one per active timer */
-#define MAX_POLL_FDS 128
-
-/* Per-timer context — one malloc'd node per active timer.
- * The timerfd fd is returned directly as the timer_id. */
-typedef struct TimerNode {
-  int               fd;
-  void*             userdata;
-  bool_t            repeat;
-  struct TimerNode* next;
-} TimerNode;
-static TimerNode* s_timers = NULL;
+#define MAX_TIMERS 64
+static struct {
+  uint32_t id;
+  int      fd;
+  void*    obj;
+  void*    userdata;
+  bool_t   repeat;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
 
 /* Check all timerfd descriptors for readability and post kEventTimer */
 static void
 timers_poll(void)
 {
-  TimerNode* n = s_timers;
-  while (n) {
-    TimerNode* next = n->next;
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == 0)
+      continue;
     uint64_t expirations = 0;
-    ssize_t r = read(n->fd, &expirations, sizeof(expirations));
-    if (r == (ssize_t)sizeof(expirations) && expirations > 0) {
+    ssize_t n = read(s_timers[i].fd, &expirations, sizeof(expirations));
+    if (n == (ssize_t)sizeof(expirations) && expirations > 0) {
       events.queue[events.write++] = (EVENT){
+        .target  = s_timers[i].obj,
         .message = kEventTimer,
-        .wParam  = (uint32_t)n->fd,
-        .lParam  = n->userdata,
+        .wParam  = s_timers[i].id,
+        .lParam  = s_timers[i].userdata,
       };
-      if (!n->repeat)
-        WI_CancelTimer((uint32_t)n->fd);
+      if (!s_timers[i].repeat)
+        WI_CancelTimer(s_timers[i].id);
     }
-    n = next;
   }
 }
 
@@ -426,7 +422,7 @@ WI_WaitEvent(TIME time)
 
   if (time > 0) {
     /* Include the joystick fd and timerfd descriptors in the poll set. */
-    struct pollfd fds[MAX_POLL_FDS];
+    struct pollfd fds[2 + MAX_TIMERS];
     int nfds = 0;
     fds[nfds].fd     = wl_display_get_fd(display);
     fds[nfds].events = POLLIN;
@@ -437,10 +433,12 @@ WI_WaitEvent(TIME time)
       fds[nfds].events = POLLIN;
       nfds++;
     }
-    for (TimerNode* n = s_timers; n; n = n->next) {
-      fds[nfds].fd     = n->fd;
-      fds[nfds].events = POLLIN;
-      nfds++;
+    for (int i = 0; i < MAX_TIMERS; i++) {
+      if (s_timers[i].id != 0) {
+        fds[nfds].fd     = s_timers[i].fd;
+        fds[nfds].events = POLLIN;
+        nfds++;
+      }
     }
 
     int ret = poll(fds, nfds, (int)time);
@@ -504,16 +502,16 @@ WI_RemoveFromQueue(void* hobj)
   WORD read_idx = events.read;
   WORD write_idx = events.write;
   WORD new_write = events.read;
-  
-  // Scan through the queue and keep events not matching hobj
+
   while (read_idx != write_idx) {
-    if (events.queue[read_idx].target != hobj) {
+    if (events.queue[read_idx].target != hobj)
       events.queue[new_write++] = events.queue[read_idx];
-    }
     read_idx++;
   }
-  
   events.write = new_write;
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
+      WI_CancelTimer(s_timers[i].id);
 }
 
 void
@@ -527,8 +525,13 @@ NotifyFileDropEvent(char const* filename, float x, float y)
 }
 
 uint32_t
-WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
+WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 {
+  int slot = -1;
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id == 0) { slot = i; break; }
+  if (slot < 0)
+    return 0;
   int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
   if (fd < 0)
     return 0;
@@ -537,28 +540,32 @@ WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
   struct itimerspec its = {
     .it_value    = { .tv_sec = sec, .tv_nsec = nsec },
     .it_interval = repeat ? (struct timespec){ .tv_sec = sec, .tv_nsec = nsec }
-                          : (struct timespec){ 0 },
+                          : (struct timespec){ .tv_sec = 0, .tv_nsec = 0 },
   };
-  if (timerfd_settime(fd, 0, &its, NULL) < 0) { close(fd); return 0; }
-  TimerNode* n = malloc(sizeof(TimerNode));
-  if (!n) { close(fd); return 0; }
-  *n = (TimerNode){ .fd = fd, .userdata = userdata, .repeat = repeat, .next = s_timers };
-  s_timers = n;
-  return (uint32_t)fd;
+  if (timerfd_settime(fd, 0, &its, NULL) < 0) {
+    close(fd);
+    return 0;
+  }
+  uint32_t tid          = s_next_timer_id++;
+  s_timers[slot].id       = tid;
+  s_timers[slot].fd       = fd;
+  s_timers[slot].obj      = obj;
+  s_timers[slot].userdata = userdata;
+  s_timers[slot].repeat   = repeat;
+  return tid;
 }
 
 void
 WI_CancelTimer(uint32_t timer_id)
 {
-  TimerNode** pp = &s_timers;
-  while (*pp) {
-    if ((uint32_t)(*pp)->fd == timer_id) {
-      TimerNode* n = *pp;
-      *pp = n->next;
-      close(n->fd);
-      free(n);
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      close(s_timers[i].fd);
+      s_timers[i].id       = 0;
+      s_timers[i].obj      = NULL;
+      s_timers[i].userdata = NULL;
+      s_timers[i].repeat   = FALSE;
       return;
     }
-    pp = &(*pp)->next;
   }
 }

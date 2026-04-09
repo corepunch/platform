@@ -1,6 +1,5 @@
 #include "windows_local.h"
 #include "../platform.h"
-#include <stdlib.h>
 
 /* Internal event ring-buffer (power-of-two size so index wrap is a mask) */
 static struct
@@ -14,30 +13,30 @@ static struct
 static int16_t s_last_mouse_x = 0;
 static int16_t s_last_mouse_y = 0;
 
-/* Per-timer context — one malloc'd node per active timer */
-typedef struct WTimerNode {
-  uint32_t           id;
-  UINT_PTR           win_id;
-  void*              userdata;
-  bool_t             repeat;
-  struct WTimerNode* next;
-} WTimerNode;
-static WTimerNode*  s_timers   = NULL;
-static uint32_t     s_next_id  = 1;
+#define MAX_TIMERS 64
+static struct {
+  uint32_t id;
+  UINT_PTR win_id;
+  void*    obj;
+  void*    userdata;
+  bool_t   repeat;
+} s_timers[MAX_TIMERS];
+static uint32_t s_next_timer_id = 1;
 
 static void CALLBACK
 timer_proc(HWND h, UINT m, UINT_PTR nid, DWORD t)
 {
   (void)h; (void)m; (void)t;
-  for (WTimerNode* n = s_timers; n; n = n->next) {
-    if (n->win_id == nid) {
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].win_id == nid) {
       events.queue[events.write++] = (EVENT){
+        .target  = s_timers[i].obj,
         .message = kEventTimer,
-        .wParam  = n->id,
-        .lParam  = n->userdata,
+        .wParam  = s_timers[i].id,
+        .lParam  = s_timers[i].userdata,
       };
-      if (!n->repeat)
-        WI_CancelTimer(n->id);
+      if (!s_timers[i].repeat)
+        WI_CancelTimer(s_timers[i].id);
       return;
     }
   }
@@ -422,12 +421,14 @@ WI_RemoveFromQueue(void *hobj)
   uint16_t nw = events.read;
 
   while (r != w) {
-    if (events.queue[r].target != hobj) {
+    if (events.queue[r].target != hobj)
       events.queue[nw++] = events.queue[r];
-    }
     r++;
   }
   events.write = nw;
+  for (int i = 0; i < MAX_TIMERS; i++)
+    if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
+      WI_CancelTimer(s_timers[i].id);
 }
 
 void
@@ -439,31 +440,36 @@ NotifyFileDropEvent(char const *filename, float x, float y)
 }
 
 uint32_t
-WI_SetTimer(uint32_t interval_ms, void* userdata, bool_t repeat)
+WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 {
-  WTimerNode* n = malloc(sizeof(WTimerNode));
-  if (!n) return 0;
-  n->id       = s_next_id++;
-  n->userdata = userdata;
-  n->repeat   = repeat;
-  n->win_id   = SetTimer(g_hwnd, (UINT_PTR)n, interval_ms, timer_proc);
-  n->next     = s_timers;
-  s_timers    = n;
-  return n->id;
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == 0) {
+      uint32_t tid = s_next_timer_id++;
+      UINT_PTR wid = SetTimer(g_hwnd, (UINT_PTR)tid, interval_ms, timer_proc);
+      if (wid == 0) return 0;
+      s_timers[i].id       = tid;
+      s_timers[i].win_id   = wid;
+      s_timers[i].obj      = obj;
+      s_timers[i].userdata = userdata;
+      s_timers[i].repeat   = repeat;
+      return tid;
+    }
+  }
+  return 0;
 }
 
 void
 WI_CancelTimer(uint32_t timer_id)
 {
-  WTimerNode** pp = &s_timers;
-  while (*pp) {
-    if ((*pp)->id == timer_id) {
-      WTimerNode* n = *pp;
-      *pp = n->next;
-      KillTimer(g_hwnd, n->win_id);
-      free(n);
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (s_timers[i].id == timer_id) {
+      KillTimer(g_hwnd, s_timers[i].win_id);
+      s_timers[i].id       = 0;
+      s_timers[i].win_id   = 0;
+      s_timers[i].obj      = NULL;
+      s_timers[i].userdata = NULL;
+      s_timers[i].repeat   = FALSE;
       return;
     }
-    pp = &(*pp)->next;
   }
 }
