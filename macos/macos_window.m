@@ -18,17 +18,51 @@ WI_API uint32_t _IOSurface = -1;
 // @"NSWindowWillStartDraggingNotification"; static NSString* const
 // NSWindowDidEndDraggingNotification = @"NSWindowDidEndDraggingNotification";
 
-NSOpenGLPixelFormatAttribute attributes [] = {
-	NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
-	NSOpenGLPFADepthSize, 24,
-	NSOpenGLPFAStencilSize, 8,
-	NSOpenGLPFAColorSize, 24,
-	NSOpenGLPFAAlphaSize, 8,
-	NSOpenGLPFADoubleBuffer,
-	NSOpenGLPFAAccelerated,
-	NSOpenGLPFANoRecovery,
-	0
+/* Pixel-format attributes – rebuilt from flags each time WI_CreateWindow is
+ * called.  Shared with WI_CreateSurface.
+ *
+ * Keep a safe default initializer so callers that create an off-screen surface
+ * before creating a window still pass a valid, terminated attribute list to
+ * CGLChoosePixelFormat.  These defaults match BuildPixelFormatAttributes(0). */
+static NSOpenGLPixelFormatAttribute attributes[16] = {
+  NSOpenGLPFAOpenGLProfile,
+  NSOpenGLProfileVersion3_2Core,
+  NSOpenGLPFADepthSize,
+  24,
+  NSOpenGLPFAStencilSize,
+  8,
+  NSOpenGLPFAColorSize,
+  24,
+  NSOpenGLPFAAlphaSize,
+  8,
+  NSOpenGLPFADoubleBuffer,
+  NSOpenGLPFAAccelerated,
+  NSOpenGLPFANoRecovery,
+  0
 };
+
+static void
+BuildPixelFormatAttributes(uint32_t flags)
+{
+  int i = 0;
+  attributes[i++] = NSOpenGLPFAOpenGLProfile;
+  attributes[i++] = NSOpenGLProfileVersion3_2Core;
+  attributes[i++] = NSOpenGLPFADepthSize;
+  attributes[i++] = 24;
+  attributes[i++] = NSOpenGLPFAStencilSize;
+  attributes[i++] = 8;
+  attributes[i++] = NSOpenGLPFAColorSize;
+  attributes[i++] = 24;
+  attributes[i++] = NSOpenGLPFAAlphaSize;
+  attributes[i++] = 8;
+  /* Double buffer is the default; include unless the user explicitly omits the
+   * flag.  Since no single-buffer flag exists yet, always include it. */
+  (void)flags;
+  attributes[i++] = NSOpenGLPFADoubleBuffer;
+  attributes[i++] = NSOpenGLPFAAccelerated;
+  attributes[i++] = NSOpenGLPFANoRecovery;
+  attributes[i] = 0;
+}
 
 struct wstate {
   NSWindow *Window;
@@ -97,8 +131,18 @@ static void ListenForDarkModeChanges(NSWindow *window) {
   }];
 }
 
-static NSWindow *MakeWindow(NSRect windowRect) {
-  int mask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+static NSWindow *MakeWindow(NSRect windowRect, uint32_t flags) {
+  int mask;
+  if (flags & WI_WINDOW_BORDERLESS) {
+    mask = NSWindowStyleMaskBorderless;
+  } else {
+    mask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+           NSWindowStyleMaskMiniaturizable;
+    /* Resizable by default (backward compat); RESIZABLE flag makes it explicit. */
+    if ((flags == 0) || (flags & WI_WINDOW_RESIZABLE)) {
+      mask |= NSWindowStyleMaskResizable;
+    }
+  }
   return [[NSWindow alloc] initWithContentRect:windowRect
                                      styleMask:mask
                                        backing:NSBackingStoreBuffered
@@ -118,6 +162,8 @@ static void ConfigureOpenGLView(NSOpenGLView *openglView) {
 
   [openglView setOpenGLContext:context];
   [openglView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+  /* HiDPI is on by default (backward-compatible).  WI_WINDOW_HIGHDPI makes
+   * the request explicit; it is honoured either way. */
   [openglView setWantsBestResolutionOpenGLSurface:YES];
   
   [context makeCurrentContext];
@@ -157,11 +203,14 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
     [[view openGLContext] makeCurrentContext];
     return TRUE;
   }
+
+  BuildPixelFormatAttributes(flags);
+
 	NSRect           windowRect  = CenterOnScreen(width, height);
 	NSRect           viewRect    = CGRectMake(0, 0, width, height);
 	NSOpenGLView    *openGLView  = [[NSOpenGLView alloc] initWithFrame:viewRect];
 	NSString        *windowTitle = [[NSString alloc] initWithUTF8String:title];
-	NSWindow        *window      = MakeWindow(windowRect);
+	NSWindow        *window      = MakeWindow(windowRect, flags);
 	WindowDelegate  *delegate    = [[WindowDelegate alloc] init];
 
   [delegate setWindow:window];
@@ -177,8 +226,15 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
 	[window orderOut:nil];
 	[window display];
 	[window setFrameOrigin:CenterOnScreen(width, height).origin];
-	[window makeKeyAndOrderFront:nil];      // Bring window to the front and give it focus
 	[window registerForDraggedTypes:[NSArray arrayWithObject:NSPasteboardTypeFileURL]];
+
+  if (!(flags & WI_WINDOW_HIDDEN)) {
+    [window makeKeyAndOrderFront:nil];
+  }
+
+  if (flags & WI_WINDOW_FULLSCREEN) {
+    [window toggleFullScreen:nil];
+  }
 
   ConfigureOpenGLView(openGLView);
   ListenForDarkModeChanges(window);

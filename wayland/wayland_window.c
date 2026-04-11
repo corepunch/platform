@@ -37,7 +37,6 @@ bool_t
 WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flags)
 {
   extern struct _WND window;
-  (void)flags;
   if (width > 0 && height > 0) {
     ResizeWindow(&window, width, height);
     WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
@@ -45,7 +44,28 @@ WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flag
   if (name && window.xdg_toplevel) {
     xdg_toplevel_set_title(window.xdg_toplevel, name);
   }
-  WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
+
+  if (window.xdg_toplevel) {
+    if (flags & WI_WINDOW_FULLSCREEN) {
+      xdg_toplevel_set_fullscreen(window.xdg_toplevel, NULL);
+    }
+
+    /* Lock window size when RESIZABLE is not set and other flags are active.
+     * When flags == 0, preserve default resizable behaviour for compatibility. */
+    if (!(flags & WI_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
+      xdg_toplevel_set_min_size(window.xdg_toplevel, (int32_t)width, (int32_t)height);
+      xdg_toplevel_set_max_size(window.xdg_toplevel, (int32_t)width, (int32_t)height);
+    }
+  }
+
+  /* On Wayland, the initial paint/commit is what effectively maps the window.
+   * Honor WI_WINDOW_HIDDEN by deferring that first paint until the window is
+   * explicitly shown later.
+   * Note: WI_WINDOW_BORDERLESS has no direct xdg-shell equivalent and is not
+   * implemented on Wayland. */
+  if (!(flags & WI_WINDOW_HIDDEN)) {
+    WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
+  }
   return TRUE;
 }
 

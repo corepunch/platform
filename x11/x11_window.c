@@ -1,11 +1,20 @@
 #include "x11_local.h"
 #include "../platform.h"
+#include <X11/Xatom.h>
+
+/* Motif window-manager hints structure (subset used to control decorations). */
+typedef struct {
+  unsigned long flags;
+  unsigned long functions;
+  unsigned long decorations;
+  long          inputMode;
+  unsigned long status;
+} MWMHints;
 
 bool_t
 WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flags)
 {
   extern struct _WND window;
-  (void)flags;
 
   if (!x_display || !x_window) {
     return FALSE;
@@ -18,6 +27,50 @@ WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t fla
     XResizeWindow(x_display, x_window, width, height);
     window.width  = (int)width;
     window.height = (int)height;
+  }
+
+  /* Fullscreen via _NET_WM_STATE */
+  if (flags & WI_WINDOW_FULLSCREEN) {
+    Atom wm_state   = XInternAtom(x_display, "_NET_WM_STATE", False);
+    Atom fullscreen = XInternAtom(x_display, "_NET_WM_STATE_FULLSCREEN", False);
+    XEvent xev;
+    memset(&xev, 0, sizeof(xev));
+    xev.type                 = ClientMessage;
+    xev.xclient.window       = x_window;
+    xev.xclient.message_type = wm_state;
+    xev.xclient.format       = 32;
+    xev.xclient.data.l[0]   = 1; /* _NET_WM_STATE_ADD */
+    xev.xclient.data.l[1]   = (long)fullscreen;
+    xev.xclient.data.l[2]   = 0;
+    XSendEvent(x_display, DefaultRootWindow(x_display), False,
+               SubstructureNotifyMask | SubstructureRedirectMask, &xev);
+  }
+
+  /* Remove window decorations via Motif WM hints */
+  if (flags & WI_WINDOW_BORDERLESS) {
+    Atom mwm_atom = XInternAtom(x_display, "_MOTIF_WM_HINTS", False);
+    MWMHints hints = { 2, 0, 0, 0, 0 }; /* flags=MWM_HINTS_DECORATIONS, decorations=0 */
+    XChangeProperty(x_display, x_window, mwm_atom, mwm_atom, 32,
+                    PropModeReplace, (unsigned char*)&hints, 5);
+  }
+
+  /* Lock size to prevent user resizing when any non-zero window flags are
+   * supplied without WI_WINDOW_RESIZABLE. With flags == 0, the window keeps
+   * the default window-manager behavior, which is typically resizable. */
+  if (!(flags & WI_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
+    XSizeHints *hints = XAllocSizeHints();
+    if (hints) {
+      hints->flags      = PMinSize | PMaxSize;
+      hints->min_width  = hints->max_width  = (int)width;
+      hints->min_height = hints->max_height = (int)height;
+      XSetWMNormalHints(x_display, x_window, hints);
+      XFree(hints);
+    }
+  }
+
+  /* Hide the window if requested */
+  if (flags & WI_WINDOW_HIDDEN) {
+    XUnmapWindow(x_display, x_window);
   }
 
   XFlush(x_display);
