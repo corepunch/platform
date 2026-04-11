@@ -29,58 +29,7 @@ WI_Init(void)
 
   if (!RegisterClassExA(&wc)) {
     fprintf(stderr, "Failed to register window class\n");
-    return;
   }
-
-  /* Compute window rect that gives the desired client area */
-  RECT rect = { 0, 0, DEFAULT_WIDTH, DEFAULT_HEIGHT };
-  AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_APPWINDOW);
-  int w = rect.right  - rect.left;
-  int h = rect.bottom - rect.top;
-
-  g_hwnd = CreateWindowExA(
-    WS_EX_APPWINDOW, PLATFORM_WNDCLASS, "",
-    WS_OVERLAPPEDWINDOW,
-    CW_USEDEFAULT, CW_USEDEFAULT, w, h,
-    NULL, NULL, g_hinstance, NULL);
-
-  if (!g_hwnd) {
-    fprintf(stderr, "Failed to create window\n");
-    return;
-  }
-
-  g_hdc = GetDC(g_hwnd);
-
-  /* Choose and set a pixel format that supports OpenGL */
-  PIXELFORMATDESCRIPTOR pfd;
-  ZeroMemory(&pfd, sizeof(pfd));
-  pfd.nSize      = sizeof(pfd);
-  pfd.nVersion   = 1;
-  pfd.dwFlags    = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-  pfd.iPixelType = PFD_TYPE_RGBA;
-  pfd.cColorBits = 32;
-  pfd.cDepthBits = 24;
-  pfd.cStencilBits = 8;
-  pfd.iLayerType = PFD_MAIN_PLANE;
-
-  int fmt = ChoosePixelFormat(g_hdc, &pfd);
-  if (!fmt || !SetPixelFormat(g_hdc, fmt, &pfd)) {
-    fprintf(stderr, "Failed to set pixel format\n");
-    return;
-  }
-
-  g_hrc = wglCreateContext(g_hdc);
-  if (!g_hrc) {
-    fprintf(stderr, "Failed to create WGL context\n");
-    return;
-  }
-
-  wglMakeCurrent(g_hdc, g_hrc);
-
-  ShowWindow(g_hwnd, SW_SHOW);
-  UpdateWindow(g_hwnd);
-
-  printf("Windows window created (%dx%d)\n", DEFAULT_WIDTH, DEFAULT_HEIGHT);
 }
 
 void
@@ -108,24 +57,104 @@ WI_Shutdown(void)
 bool_t
 WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
 {
-  (void)flags;
+  if (width == 0)  width  = DEFAULT_WIDTH;
+  if (height == 0) height = DEFAULT_HEIGHT;
+
+  if (g_hwnd) {
+    /* Window already exists – update title and size only. */
+    if (title) {
+      SetWindowTextA(g_hwnd, title);
+    }
+    if ((int)width != g_win_width || (int)height != g_win_height) {
+      RECT rect = { 0, 0, (LONG)width, (LONG)height };
+      AdjustWindowRectEx(&rect, (DWORD)GetWindowLongA(g_hwnd, GWL_STYLE),
+                         FALSE, (DWORD)GetWindowLongA(g_hwnd, GWL_EXSTYLE));
+      SetWindowPos(g_hwnd, NULL, 0, 0,
+                   rect.right - rect.left, rect.bottom - rect.top,
+                   SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
+      g_win_width  = (int)width;
+      g_win_height = (int)height;
+    }
+    return TRUE;
+  }
+
+  /* Build window style from flags. */
+  DWORD style   = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+  DWORD exstyle = WS_EX_APPWINDOW;
+  int   x = CW_USEDEFAULT, y = CW_USEDEFAULT;
+
+  if (flags & WI_WINDOW_BORDERLESS) {
+    style = WS_POPUP;
+  } else if (flags & WI_WINDOW_RESIZABLE) {
+    style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+  }
+
+  if (flags & WI_WINDOW_FULLSCREEN) {
+    style   = WS_POPUP;
+    exstyle = WS_EX_APPWINDOW;
+    width   = (uint32_t)GetSystemMetrics(SM_CXSCREEN);
+    height  = (uint32_t)GetSystemMetrics(SM_CYSCREEN);
+    x = 0;
+    y = 0;
+  }
+
+  /* Compute window rect that gives the desired client area. */
+  RECT rect = { 0, 0, (LONG)width, (LONG)height };
+  AdjustWindowRectEx(&rect, style, FALSE, exstyle);
+  int w = rect.right  - rect.left;
+  int h = rect.bottom - rect.top;
+
+  g_hwnd = CreateWindowExA(
+    exstyle, PLATFORM_WNDCLASS, title ? title : "",
+    style,
+    x, y, w, h,
+    NULL, NULL, g_hinstance, NULL);
+
   if (!g_hwnd) {
+    fprintf(stderr, "Failed to create window\n");
     return FALSE;
   }
-  if (title) {
-    SetWindowTextA(g_hwnd, title);
+
+  g_hdc = GetDC(g_hwnd);
+
+  /* Choose and set a pixel format that supports OpenGL. */
+  PIXELFORMATDESCRIPTOR pfd;
+  ZeroMemory(&pfd, sizeof(pfd));
+  pfd.nSize        = sizeof(pfd);
+  pfd.nVersion     = 1;
+  pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
+  /* Double buffer is the default; include unless user has not requested it.
+   * Since no single-buffer flag exists yet, always include it. */
+  pfd.dwFlags     |= PFD_DOUBLEBUFFER;
+  pfd.iPixelType   = PFD_TYPE_RGBA;
+  pfd.cColorBits   = 32;
+  pfd.cDepthBits   = 24;
+  pfd.cStencilBits = 8;
+  pfd.iLayerType   = PFD_MAIN_PLANE;
+
+  int fmt = ChoosePixelFormat(g_hdc, &pfd);
+  if (!fmt || !SetPixelFormat(g_hdc, fmt, &pfd)) {
+    fprintf(stderr, "Failed to set pixel format\n");
+    return FALSE;
   }
-  if (width > 0 && height > 0 &&
-      ((int)width != g_win_width || (int)height != g_win_height)) {
-    RECT rect = { 0, 0, (LONG)width, (LONG)height };
-    AdjustWindowRectEx(&rect, (DWORD)GetWindowLongA(g_hwnd, GWL_STYLE),
-                       FALSE, (DWORD)GetWindowLongA(g_hwnd, GWL_EXSTYLE));
-    SetWindowPos(g_hwnd, NULL, 0, 0,
-                 rect.right - rect.left, rect.bottom - rect.top,
-                 SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
-    g_win_width  = (int)width;
-    g_win_height = (int)height;
+
+  g_hrc = wglCreateContext(g_hdc);
+  if (!g_hrc) {
+    fprintf(stderr, "Failed to create WGL context\n");
+    return FALSE;
   }
+
+  wglMakeCurrent(g_hdc, g_hrc);
+
+  g_win_width  = (int)width;
+  g_win_height = (int)height;
+
+  if (!(flags & WI_WINDOW_HIDDEN)) {
+    ShowWindow(g_hwnd, SW_SHOW);
+    UpdateWindow(g_hwnd);
+  }
+
+  printf("Windows window created (%dx%d)\n", g_win_width, g_win_height);
   return TRUE;
 }
 

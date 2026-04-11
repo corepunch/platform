@@ -9,9 +9,13 @@ bool_t
 WI_CreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
 {
   (void)title;
-  (void)flags;
   (void)width;
   (void)height;
+  /* Most WI_WINDOW_* flags have no meaningful equivalent in a browser canvas.
+   * WI_WINDOW_FULLSCREEN could be requested via the Fullscreen API but
+   * requires a user gesture; it is left to the caller's JS code.
+   * WI_WINDOW_HIGHDPI is always active (handled by WI_Init / WI_GetScaling). */
+  (void)flags;
 
   /* If WI_Init already sized the canvas, skip the fallback resize */
   if (g_canvas_width == 0 || g_canvas_height == 0) {

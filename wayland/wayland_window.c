@@ -37,7 +37,6 @@ bool_t
 WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flags)
 {
   extern struct _WND window;
-  (void)flags;
   if (width > 0 && height > 0) {
     ResizeWindow(&window, width, height);
     WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
@@ -45,6 +44,19 @@ WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flag
   if (name && window.xdg_toplevel) {
     xdg_toplevel_set_title(window.xdg_toplevel, name);
   }
+
+  if (window.xdg_toplevel) {
+    if (flags & WI_WINDOW_FULLSCREEN) {
+      xdg_toplevel_set_fullscreen(window.xdg_toplevel, NULL);
+    }
+
+    /* Lock window size when resizing is not requested. */
+    if (!(flags & WI_WINDOW_RESIZABLE) && width > 0 && height > 0) {
+      xdg_toplevel_set_min_size(window.xdg_toplevel, (int32_t)width, (int32_t)height);
+      xdg_toplevel_set_max_size(window.xdg_toplevel, (int32_t)width, (int32_t)height);
+    }
+  }
+
   WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
   return TRUE;
 }

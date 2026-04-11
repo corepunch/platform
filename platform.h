@@ -496,6 +496,40 @@ WI_LibDirectory(void);
  */
 
 /**
+ * @defgroup windowflags Window creation flags
+ * @brief Bit flags passed to #WI_CreateWindow to control window and rendering
+ *        context behaviour.
+ *
+ * Pass 0 for the default behaviour (double-buffered, decorated, resizable,
+ * visible, windowed).
+ * @{
+ */
+enum
+{
+  /** Enable double buffering.  Already the default; specify explicitly for
+   *  clarity or to pair with a future single-buffer flag. */
+  WI_WINDOW_DOUBLEBUFFER = 1 << 0,
+
+  /** Create the window in fullscreen mode. */
+  WI_WINDOW_FULLSCREEN   = 1 << 1,
+
+  /** Create the window without title bar or OS decorations. */
+  WI_WINDOW_BORDERLESS   = 1 << 2,
+
+  /** Allow the window to be resized by the user.  Already the default on
+   *  most platforms; specify explicitly when desired. */
+  WI_WINDOW_RESIZABLE    = 1 << 3,
+
+  /** Create the window in a hidden state.  Call the platform show/focus API
+   *  later to make it visible. */
+  WI_WINDOW_HIDDEN       = 1 << 4,
+
+  /** Request a high-DPI / Retina-resolution surface where available. */
+  WI_WINDOW_HIGHDPI      = 1 << 5,
+};
+/** @} */
+
+/**
  * @brief Create the main application window.
  *
  * Only one window is supported at a time.  Call #WI_Init before this
@@ -504,7 +538,9 @@ WI_LibDirectory(void);
  * @param title   Null-terminated UTF-8 window title string.
  * @param width   Initial client-area width in logical pixels.
  * @param height  Initial client-area height in logical pixels.
- * @param flags   Reserved; pass 0.
+ * @param flags   Combination of #WI_WINDOW_DOUBLEBUFFER, #WI_WINDOW_FULLSCREEN,
+ *                #WI_WINDOW_BORDERLESS, #WI_WINDOW_RESIZABLE, #WI_WINDOW_HIDDEN,
+ *                and #WI_WINDOW_HIGHDPI, or 0 for defaults.
  * @return `TRUE` on success, `FALSE` if window creation failed.
  */
 WI_API bool_t
