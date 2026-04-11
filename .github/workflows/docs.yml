@@ -18,16 +18,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-docs:
+  deploy:
     runs-on: ubuntu-latest
+    # Deploy on pushes to the default branch and manual triggers, not on PRs.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Doxygen
-        run: sudo apt-get update && sudo apt-get install -y doxygen
-
-      - name: Generate HTML documentation
-        run: doxygen Doxyfile
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -35,17 +34,8 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/html
+          path: docs
 
-  deploy:
-    needs: build-docs
-    # Only deploy on pushes to the default branch, not on pull requests.
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
