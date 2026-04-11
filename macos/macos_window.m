@@ -199,7 +199,7 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
   
   //    [NSApp activateIgnoringOtherApps:YES];
   
-	return FALSE;
+	return TRUE;
 }
 
 void WI_Shutdown(void) {
