@@ -516,8 +516,11 @@ enum
   /** Create the window without title bar or OS decorations. */
   WI_WINDOW_BORDERLESS   = 1 << 2,
 
-  /** Allow the window to be resized by the user.  Already the default on
-   *  most platforms; specify explicitly when desired. */
+  /** Allow the window to be resized by the user.  When passing any nonzero
+   *  @p flags to #WI_CreateWindow, include this flag explicitly to keep the
+   *  window resizable; omitting it while using other flags will produce a
+   *  fixed-size window on most platforms.  With @p flags == 0 the window
+   *  remains resizable for backward compatibility. */
   WI_WINDOW_RESIZABLE    = 1 << 3,
 
   /** Create the window in a hidden state.  Call the platform show/focus API

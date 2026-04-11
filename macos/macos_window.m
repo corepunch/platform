@@ -19,8 +19,27 @@ WI_API uint32_t _IOSurface = -1;
 // NSWindowDidEndDraggingNotification = @"NSWindowDidEndDraggingNotification";
 
 /* Pixel-format attributes – rebuilt from flags each time WI_CreateWindow is
- * called.  Shared with WI_CreateSurface. */
-static NSOpenGLPixelFormatAttribute attributes[16];
+ * called.  Shared with WI_CreateSurface.
+ *
+ * Keep a safe default initializer so callers that create an off-screen surface
+ * before creating a window still pass a valid, terminated attribute list to
+ * CGLChoosePixelFormat.  These defaults match BuildPixelFormatAttributes(0). */
+static NSOpenGLPixelFormatAttribute attributes[16] = {
+  NSOpenGLPFAOpenGLProfile,
+  NSOpenGLProfileVersion3_2Core,
+  NSOpenGLPFADepthSize,
+  24,
+  NSOpenGLPFAStencilSize,
+  8,
+  NSOpenGLPFAColorSize,
+  24,
+  NSOpenGLPFAAlphaSize,
+  8,
+  NSOpenGLPFADoubleBuffer,
+  NSOpenGLPFAAccelerated,
+  NSOpenGLPFANoRecovery,
+  0
+};
 
 static void
 BuildPixelFormatAttributes(uint32_t flags)

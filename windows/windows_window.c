@@ -139,12 +139,20 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
   int fmt = ChoosePixelFormat(g_hdc, &pfd);
   if (!fmt || !SetPixelFormat(g_hdc, fmt, &pfd)) {
     fprintf(stderr, "Failed to set pixel format\n");
+    ReleaseDC(g_hwnd, g_hdc);
+    g_hdc = NULL;
+    DestroyWindow(g_hwnd);
+    g_hwnd = NULL;
     return FALSE;
   }
 
   g_hrc = wglCreateContext(g_hdc);
   if (!g_hrc) {
     fprintf(stderr, "Failed to create WGL context\n");
+    ReleaseDC(g_hwnd, g_hdc);
+    g_hdc = NULL;
+    DestroyWindow(g_hwnd);
+    g_hwnd = NULL;
     return FALSE;
   }
 

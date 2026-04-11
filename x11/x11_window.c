@@ -54,10 +54,9 @@ WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t fla
                     PropModeReplace, (unsigned char*)&hints, 5);
   }
 
-  /* Lock size to prevent user resizing only when RESIZABLE is not set.
-   * Note: since windows are resizable by default, RESIZABLE merely documents
-   * the intent.  In a future API version a WI_WINDOW_FIXED flag could be
-   * added to explicitly disable resize. */
+  /* Lock size to prevent user resizing when any non-zero window flags are
+   * supplied without WI_WINDOW_RESIZABLE. With flags == 0, the window keeps
+   * the default window-manager behavior, which is typically resizable. */
   if (!(flags & WI_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
     XSizeHints *hints = XAllocSizeHints();
     if (hints) {
