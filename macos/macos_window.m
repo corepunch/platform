@@ -119,7 +119,8 @@ static NSWindow *MakeWindow(NSRect windowRect, uint32_t flags) {
   } else {
     mask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
            NSWindowStyleMaskMiniaturizable;
-    if (flags & WI_WINDOW_RESIZABLE) {
+    /* Resizable by default (backward compat); RESIZABLE flag makes it explicit. */
+    if ((flags == 0) || (flags & WI_WINDOW_RESIZABLE)) {
       mask |= NSWindowStyleMaskResizable;
     }
   }

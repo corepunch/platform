@@ -78,15 +78,19 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
     return TRUE;
   }
 
-  /* Build window style from flags. */
+  /* Build window style from flags.
+   * Default (flags == 0) preserves previous behaviour: decorated + resizable. */
   DWORD style   = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
   DWORD exstyle = WS_EX_APPWINDOW;
   int   x = CW_USEDEFAULT, y = CW_USEDEFAULT;
 
   if (flags & WI_WINDOW_BORDERLESS) {
     style = WS_POPUP;
-  } else if (flags & WI_WINDOW_RESIZABLE) {
-    style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+  } else {
+    /* Resizable by default (backward compat); RESIZABLE flag makes it explicit. */
+    if ((flags == 0) || (flags & WI_WINDOW_RESIZABLE)) {
+      style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+    }
   }
 
   if (flags & WI_WINDOW_FULLSCREEN) {

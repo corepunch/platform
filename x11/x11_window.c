@@ -15,7 +15,6 @@ bool_t
 WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flags)
 {
   extern struct _WND window;
-  (void)flags;
 
   if (!x_display || !x_window) {
     return FALSE;
@@ -55,12 +54,15 @@ WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t fla
                     PropModeReplace, (unsigned char*)&hints, 5);
   }
 
-  /* Lock size to prevent user resizing (only when RESIZABLE is not requested) */
-  if (!(flags & WI_WINDOW_RESIZABLE) && width > 0 && height > 0) {
+  /* Lock size to prevent user resizing only when RESIZABLE is not set.
+   * Note: since windows are resizable by default, RESIZABLE merely documents
+   * the intent.  In a future API version a WI_WINDOW_FIXED flag could be
+   * added to explicitly disable resize. */
+  if (!(flags & WI_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
     XSizeHints *hints = XAllocSizeHints();
     if (hints) {
-      hints->flags     = PMinSize | PMaxSize;
-      hints->min_width = hints->max_width  = (int)width;
+      hints->flags      = PMinSize | PMaxSize;
+      hints->min_width  = hints->max_width  = (int)width;
       hints->min_height = hints->max_height = (int)height;
       XSetWMNormalHints(x_display, x_window, hints);
       XFree(hints);
