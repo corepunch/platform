@@ -55,10 +55,11 @@ BuildPixelFormatAttributes(uint32_t flags)
   attributes[i++] = 24;
   attributes[i++] = NSOpenGLPFAAlphaSize;
   attributes[i++] = 8;
-  /* Double buffer is the default; include unless the user explicitly omits the
-   * flag.  Since no single-buffer flag exists yet, always include it. */
-  (void)flags;
-  attributes[i++] = NSOpenGLPFADoubleBuffer;
+  
+  if (flags & WI_WINDOW_DOUBLEBUFFER) {
+    attributes[i++] = NSOpenGLPFADoubleBuffer;
+  }
+  
   attributes[i++] = NSOpenGLPFAAccelerated;
   attributes[i++] = NSOpenGLPFANoRecovery;
   attributes[i] = 0;
@@ -71,6 +72,7 @@ struct wstate {
   GLuint texnum, framebuffer;
   GLuint width, height;
   GLfloat backingScale;
+  uint32_t flags;
 } wstate = {0};
 
 void
@@ -204,6 +206,8 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
     return TRUE;
   }
 
+  wstate.flags = flags;
+
   BuildPixelFormatAttributes(flags);
 
 	NSRect           windowRect  = CenterOnScreen(width, height);
@@ -321,8 +325,11 @@ void WI_BeginPaint(void) {
 
 void WI_EndPaint(void) {
   if (wstate.Window) {
-    NSOpenGLView *view = [wstate.Window contentView];
-    [[view openGLContext] flushBuffer];
+    if (!(wstate.flags & WI_WINDOW_DOUBLEBUFFER)) {
+      glFlush();
+    } else {
+      [[[wstate.Window contentView] openGLContext] flushBuffer];
+    }
   }
 }
 
