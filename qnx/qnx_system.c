@@ -41,7 +41,7 @@ static int qnx_buttons = 0;
 
 /* Map a QNX key symbol to a AX_KEY_* constant */
 static uint32_t
-qnx_keysym_to_wi(int sym)
+qnx_keysym_to_ax(int sym)
 {
   /* Printable ASCII: normalise letters to lowercase */
   if (sym >= 0x20 && sym <= 0x7e)
@@ -107,7 +107,7 @@ qnx_keysym_to_wi(int sym)
   }
 }
 
-/* Collect WI modifier flags from a QNX key modifier bitmask */
+/* Collect AX modifier flags from a QNX key modifier bitmask */
 static uint32_t
 qnx_key_modifiers(int mods)
 {
@@ -118,7 +118,7 @@ qnx_key_modifiers(int mods)
   return AX_MODs;
 }
 
-/* Drain pending QNX Screen events into the WI queue */
+/* Drain pending QNX Screen events into the AX queue */
 static void
 qnx_process_screen_events(void)
 {
@@ -265,7 +265,7 @@ qnx_process_screen_events(void)
       screen_get_event_property_iv(screen_ev, SCREEN_PROPERTY_KEY_SYM,       &sym);
       screen_get_event_property_iv(screen_ev, SCREEN_PROPERTY_KEY_MODIFIERS, &mods);
 
-      uint32_t axkey = qnx_keysym_to_wi(sym);
+      uint32_t axkey = qnx_keysym_to_ax(sym);
       if (axkey) {
         uint32_t AX_MODs = qnx_key_modifiers(mods);
         bool_t pressed = (flags & KEY_DOWN) != 0;

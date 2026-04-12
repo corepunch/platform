@@ -129,7 +129,7 @@ win32_modifiers(void)
   return mods;
 }
 
-/* Win32 window procedure — translates native messages into WI events */
+/* Win32 window procedure — translates native messages into AX events */
 LRESULT CALLBACK
 WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
