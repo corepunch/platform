@@ -215,6 +215,17 @@ qnx_process_screen_events(void)
             last_btn_x = pos[0];
             last_btn_y = pos[1];
           }
+          /* For double-click: also emit MouseDown first so that handlers
+           * which only listen for MouseDown still process the second click. */
+          if (msg_type == btns[i].dbl) {
+            struct AXmessage down_ev = {
+              .message = btns[i].down,
+              .x = (uint16_t)pos[0],
+              .y = (uint16_t)pos[1],
+            };
+            queue.data[queue.write++] = down_ev;
+            sem_post(&event_sem);
+          }
           struct AXmessage ev = {
             .message = msg_type,
             .x = (uint16_t)pos[0],

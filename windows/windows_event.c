@@ -192,6 +192,11 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_LBUTTONDBLCLK:
     events.queue[events.write++] = (EVENT){
+      .message = kEventLeftMouseDown,
+      .x = (uint16_t)LOWORD(lparam),
+      .y = (uint16_t)HIWORD(lparam),
+    };
+    events.queue[events.write++] = (EVENT){
       .message = kEventLeftDoubleClick,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
@@ -232,6 +237,11 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_RBUTTONDBLCLK:
     events.queue[events.write++] = (EVENT){
+      .message = kEventRightMouseDown,
+      .x = (uint16_t)LOWORD(lparam),
+      .y = (uint16_t)HIWORD(lparam),
+    };
+    events.queue[events.write++] = (EVENT){
       .message = kEventRightDoubleClick,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
@@ -239,6 +249,11 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     break;
 
   case WM_MBUTTONDBLCLK:
+    events.queue[events.write++] = (EVENT){
+      .message = kEventOtherMouseDown,
+      .x = (uint16_t)LOWORD(lparam),
+      .y = (uint16_t)HIWORD(lparam),
+    };
     events.queue[events.write++] = (EVENT){
       .message = kEventOtherDoubleClick,
       .x = (uint16_t)LOWORD(lparam),
