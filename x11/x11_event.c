@@ -272,6 +272,19 @@ x11_process_events(void)
         break;
       }
       if (msg) {
+        /* For double-click events, also emit a preceding MouseDown so that
+         * handlers which only listen for MouseDown still process the second
+         * click (matches SDL and WinAPI behaviour). */
+        uint32_t down_msg = 0;
+        if      (msg == kEventLeftDoubleClick)  down_msg = kEventLeftMouseDown;
+        else if (msg == kEventRightDoubleClick) down_msg = kEventRightMouseDown;
+        else if (msg == kEventOtherDoubleClick) down_msg = kEventOtherMouseDown;
+        if (down_msg)
+          events.queue[events.write++] = (EVENT){
+            .x = (uint16_t)xev.xbutton.x,
+            .y = (uint16_t)xev.xbutton.y,
+            .message = down_msg,
+          };
         events.queue[events.write++] = (EVENT){
           .x = (uint16_t)xev.xbutton.x,
           .y = (uint16_t)xev.xbutton.y,

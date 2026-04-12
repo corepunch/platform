@@ -156,6 +156,36 @@ static void test_lparam_roundtrip(void)
   drain_queue();
 }
 
+/* -------------------------------------------------------------------
+ * test_double_click_sequence
+ *   On every platform, a double-click emits kEventLeftMouseDown followed
+ *   by kEventLeftDoubleClick for the second click.  Both events must be
+ *   delivered in that order so that handlers which only watch for
+ *   kEventLeftMouseDown still see the second click (SDL / WinAPI parity).
+ * ------------------------------------------------------------------- */
+static void test_double_click_sequence(void)
+{
+  struct AXmessage msg;
+  void *handle = (void *)0xF00D;
+
+  drain_queue();
+
+  /* Simulate what the platform backends now emit on the second click of a
+   * double-click: MouseDown followed immediately by DoubleClick. */
+  axPostMessageW(handle, kEventLeftMouseDown,  0x0064005A, NULL);
+  axPostMessageW(handle, kEventLeftDoubleClick, 0x0064005A, NULL);
+
+  assert(axPollEvent(&msg) == 1);
+  assert(msg.message == kEventLeftMouseDown);
+  assert(msg.wParam  == 0x0064005A);
+
+  assert(axPollEvent(&msg) == 1);
+  assert(msg.message == kEventLeftDoubleClick);
+  assert(msg.wParam  == 0x0064005A);
+
+  assert(axPollEvent(&msg) == 0);
+}
+
 int main(void)
 {
 #ifdef __APPLE__
@@ -180,6 +210,7 @@ int main(void)
   test_remove_from_queue();
   test_remove_nonexistent_target();
   test_lparam_roundtrip();
+  test_double_click_sequence();
 
   printf("All message queue tests passed.\n");
   return 0;

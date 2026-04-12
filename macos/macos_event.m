@@ -195,6 +195,16 @@ start_over:
 	e->target = (void *)event.window;
 	e->message = GetEventType(event);
 	e->wParam = MAKEDWORD(x, y);
+
+	/* For double-click events, queue the DoubleClick notification and return
+	 * MouseDown for this call so that handlers which only listen for MouseDown
+	 * still process the second click (matches SDL and WinAPI behaviour). */
+	uint32_t dbl_followup = 0;
+	if      (e->message == kEventLeftDoubleClick)  { dbl_followup = kEventLeftDoubleClick;  e->message = kEventLeftMouseDown;  }
+	else if (e->message == kEventRightDoubleClick) { dbl_followup = kEventRightDoubleClick; e->message = kEventRightMouseDown; }
+	else if (e->message == kEventOtherDoubleClick) { dbl_followup = kEventOtherDoubleClick; e->message = kEventOtherMouseDown; }
+	if (dbl_followup)
+	  axPostMessageW(e->target, dbl_followup, e->wParam, NULL);
 	
 	switch([event type]) {
 	case NSEventTypeScrollWheel:

@@ -157,6 +157,14 @@ pointer_button(void* data,
       events.last_btn_time = time;
       events.last_btn = button;
     }
+    /* For double-click: also emit MouseDown first so that handlers which
+     * only listen for MouseDown still process the second click. */
+    if (msg == dbl_msg)
+      events.queue[events.write++] = (EVENT){
+        .x = (uint16_t)events.pointer.x,
+        .y = (uint16_t)events.pointer.y,
+        .message = down_msg,
+      };
     events.queue[events.write++] = (EVENT){
       .x = (uint16_t)events.pointer.x,
       .y = (uint16_t)events.pointer.y,
