@@ -21,19 +21,19 @@ bool_t __openFile = FALSE;
 char const *__openFileType = NULL;
 void (*__openProjectFile)(char const *);
 
-void WI_OpenFile(char const *ext, void (*callback)(char const *)) {
+void axOpenFile(char const *ext, void (*callback)(char const *)) {
 	__openFile = TRUE;
 	__openFileType = ext;
 	__openProjectFile = callback;
 }
 
-void WI_OpenFolder(void (*callback)(char const *)) {
+void axOpenFolder(void (*callback)(char const *)) {
 	__openFile = TRUE;
 	__openFileType = NULL;
 	__openProjectFile = callback;
 }
 
-char const *WI_DocumentsDirectory(void) {
+char const *axDocumentsDirectory(void) {
     if (documents[0] == 0) {
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray<NSURL*>* urls = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
@@ -43,7 +43,7 @@ char const *WI_DocumentsDirectory(void) {
 	return documents;
 }
 
-char const *WI_SettingsDirectory(void) {
+char const *axSettingsDirectory(void) {
     if (local[0] == 0) {
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray<NSURL*>* urls = [fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
@@ -62,7 +62,7 @@ char const *WI_SettingsDirectory(void) {
 }
 
 
-char const *WI_ShareDirectory(void) {
+char const *axShareDirectory(void) {
     if (share[0] == 0) {
         unsigned size = sizeof(share);
         _NSGetExecutablePath(share, &size);
@@ -87,18 +87,18 @@ char const *WI_ShareDirectory(void) {
     return share;
 }
 
-char const *WI_LibDirectory(void) {
-    return WI_ShareDirectory();
+char const *axLibDirectory(void) {
+    return axShareDirectory();
 }
 
-void WI_SetDragContents(char const *contents) {
+void axSetDragContents(char const *contents) {
 }
 
-char const *WI_GetPlatform(void) {
+char const *axGetPlatform(void) {
     return "macos";
 }
 
-//void WI_GetOpenFileName(void (*callback)(char const *)) {
+//void axGetOpenFileName(void (*callback)(char const *)) {
 //    // Create and configure the open panel
 //    NSOpenPanel *panel = [NSOpenPanel openPanel];
 //    [panel setCanChooseFiles:NO];
@@ -125,7 +125,7 @@ char const *WI_GetPlatform(void) {
 //    }];
 //}
 
-bool_t WI_GetOpenFileName(struct _WI_OpenFileName const *ofn) {
+bool_t axGetOpenFileName(struct _AXopenfilename const *ofn) {
   @autoreleasepool {
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.canChooseFiles = YES;
@@ -142,7 +142,7 @@ bool_t WI_GetOpenFileName(struct _WI_OpenFileName const *ofn) {
   }
 }
 
-bool_t WI_GetSaveFileName(struct _WI_OpenFileName const *ofn) {
+bool_t axGetSaveFileName(struct _AXopenfilename const *ofn) {
   @autoreleasepool {
     NSSavePanel *panel = [NSSavePanel savePanel];
     NSInteger result = [panel runModal];
@@ -156,7 +156,7 @@ bool_t WI_GetSaveFileName(struct _WI_OpenFileName const *ofn) {
   }
 }
 
-bool_t WI_GetFolderName(struct _WI_OpenFileName const *ofn) {
+bool_t axGetFolderName(struct _AXopenfilename const *ofn) {
   @autoreleasepool {
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.canChooseFiles = NO;
@@ -173,7 +173,7 @@ bool_t WI_GetFolderName(struct _WI_OpenFileName const *ofn) {
   }
 }
 
-bool_t WI_IsDarkTheme(void) {
+bool_t axIsDarkTheme(void) {
   NSAppearance *appearance = [NSApp effectiveAppearance];
   NSAppearanceName bestMatch = [appearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameDarkAqua, NSAppearanceNameAqua]];
   return [bestMatch isEqualToString:NSAppearanceNameDarkAqua] ? TRUE : FALSE;
@@ -184,7 +184,7 @@ bool_t WI_IsDarkTheme(void) {
 #include <unistd.h>
 #include <sys/wait.h>
 
-int WI_ExecuteProcess(char const *process) {
+int axExecuteProcess(char const *process) {
 #if 0
     pid_t pid;
     
@@ -225,7 +225,7 @@ int WI_ExecuteProcess(char const *process) {
 	return 0;
 }
 
-void WI_Init(void) {
+void axInit(void) {
   //    id menubar     = [[NSMenu new] autorelease];
   //    id appMenuItem = [[NSMenuItem new] autorelease];
   //    [menubar addItem:appMenuItem];

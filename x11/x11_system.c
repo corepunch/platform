@@ -12,13 +12,13 @@ static PATHSTR g_local = { 0 };
 static PATHSTR g_lib   = { 0 };
 
 char const*
-WI_GetPlatform(void)
+axGetPlatform(void)
 {
   return "linux (x11)";
 }
 
 char const*
-WI_SettingsDirectory(void)
+axSettingsDirectory(void)
 {
   if (g_local[0] == 0) {
     snprintf(g_local, sizeof(g_local), "%s/." APPNAME, getenv("HOME"));
@@ -27,7 +27,7 @@ WI_SettingsDirectory(void)
 }
 
 static void
-WI_BundleDirectory(char* buf, int sz, char const* dir)
+axBundleDirectory(char* buf, int sz, char const* dir)
 {
   char path[512];
   snprintf(path, sizeof(path), "/proc/%d/exe", getpid());
@@ -51,25 +51,25 @@ WI_BundleDirectory(char* buf, int sz, char const* dir)
 }
 
 char const*
-WI_ShareDirectory(void)
+axShareDirectory(void)
 {
   if (g_share[0] == 0) {
-    WI_BundleDirectory(g_share, sizeof(g_share), "/share/" APPNAME);
+    axBundleDirectory(g_share, sizeof(g_share), "/share/" APPNAME);
   }
   return g_share;
 }
 
 char const*
-WI_LibDirectory(void)
+axLibDirectory(void)
 {
   if (g_lib[0] == 0) {
-    WI_BundleDirectory(g_lib, sizeof(g_lib), "/lib/" APPNAME);
+    axBundleDirectory(g_lib, sizeof(g_lib), "/lib/" APPNAME);
   }
   return g_lib;
 }
 
 char const*
-WI_DocumentsDirectory(void)
+axDocumentsDirectory(void)
 {
   if (documents[0] == 0) {
     char const* home = getenv("HOME");
@@ -81,7 +81,7 @@ WI_DocumentsDirectory(void)
 }
 
 bool_t
-WI_IsDarkTheme(void)
+axIsDarkTheme(void)
 {
   char const* gtk_theme = getenv("GTK_THEME");
   if (gtk_theme && strstr(gtk_theme, "dark")) {
@@ -95,21 +95,21 @@ WI_IsDarkTheme(void)
 }
 
 bool_t
-WI_GetOpenFileName(struct _WI_OpenFileName const* ofn)
+axGetOpenFileName(struct _AXopenfilename const* ofn)
 {
   (void)ofn;
   return FALSE;
 }
 
 bool_t
-WI_GetSaveFileName(struct _WI_OpenFileName const* ofn)
+axGetSaveFileName(struct _AXopenfilename const* ofn)
 {
   (void)ofn;
   return FALSE;
 }
 
 bool_t
-WI_GetFolderName(struct _WI_OpenFileName const* ofn)
+axGetFolderName(struct _AXopenfilename const* ofn)
 {
   (void)ofn;
   return FALSE;

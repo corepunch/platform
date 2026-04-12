@@ -34,25 +34,25 @@ ResizeWindow(PWND win, DWORD width, DWORD height)
 }
 
 bool_t
-WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flags)
+axCreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flags)
 {
   extern struct _WND window;
   if (width > 0 && height > 0) {
     ResizeWindow(&window, width, height);
-    WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
+    axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
   }
   if (name && window.xdg_toplevel) {
     xdg_toplevel_set_title(window.xdg_toplevel, name);
   }
 
   if (window.xdg_toplevel) {
-    if (flags & WI_WINDOW_FULLSCREEN) {
+    if (flags & AX_WINDOW_FULLSCREEN) {
       xdg_toplevel_set_fullscreen(window.xdg_toplevel, NULL);
     }
 
     /* Lock window size when RESIZABLE is not set and other flags are active.
      * When flags == 0, preserve default resizable behaviour for compatibility. */
-    if (!(flags & WI_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
+    if (!(flags & AX_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
       xdg_toplevel_set_min_size(window.xdg_toplevel, (int32_t)width, (int32_t)height);
       xdg_toplevel_set_max_size(window.xdg_toplevel, (int32_t)width, (int32_t)height);
     }
@@ -63,8 +63,8 @@ WI_CreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flag
    * explicitly shown later.
    * Note: WI_WINDOW_BORDERLESS has no direct xdg-shell equivalent and is not
    * implemented on Wayland. */
-  if (!(flags & WI_WINDOW_HIDDEN)) {
-    WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
+  if (!(flags & AX_WINDOW_HIDDEN)) {
+    axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
   }
   return TRUE;
 }
@@ -106,7 +106,7 @@ DestroyWindow(PWND hwnd)
 }
 
 void
-WI_MakeCurrentContext(void)
+axMakeCurrentContext(void)
 {
   extern struct _WND window;
   eglMakeCurrent(egl_display, window.egl_surface, window.egl_surface, window.egl_context);
@@ -116,7 +116,7 @@ WI_MakeCurrentContext(void)
 void
 BeginPaint(PWND self)
 {
-  WI_MakeCurrentContext();
+  axMakeCurrentContext();
   wl_display_dispatch(display);
 }
 
@@ -161,7 +161,7 @@ SetWindowPosition(PWND win, PCSIZE2 pSize)
 // API wrapper functions for compatibility with macOS interface
 
 uint32_t
-WI_GetSize(struct WI_Size* size)
+axGetSize(struct AXsize* size)
 {
   extern struct _WND window;
   if (size) {
@@ -172,17 +172,17 @@ WI_GetSize(struct WI_Size* size)
 }
 
 bool_t
-WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
+axSetSize(uint32_t width, uint32_t height, bool_t centered)
 {
   extern struct _WND window;
   (void)centered; // Wayland doesn't support window positioning
   ResizeWindow(&window, width, height);
-  WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
+  axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
   return TRUE;
 }
 
 float
-WI_GetScaling(void)
+axGetScaling(void)
 {
   // Wayland uses per-output scaling, but for simplicity we return 1.0
   // A full implementation would track which output the window is on
@@ -190,28 +190,28 @@ WI_GetScaling(void)
 }
 
 void
-WI_BeginPaint(void)
+axBeginPaint(void)
 {
   extern struct _WND window;
   BeginPaint(&window);
 }
 
 void
-WI_EndPaint(void)
+axEndPaint(void)
 {
   extern struct _WND window;
   EndPaint(&window);
 }
 
 void
-WI_BindFramebuffer(void)
+axBindFramebuffer(void)
 {
   // EGL doesn't need explicit framebuffer binding like macOS IOSurface
   // The default framebuffer is always active
 }
 
 bool_t
-WI_CreateSurface(uint32_t width, uint32_t height)
+axCreateSurface(uint32_t width, uint32_t height)
 {
   // Offscreen surfaces are not implemented in Wayland
   // This would require EGL pbuffer surfaces
@@ -221,7 +221,7 @@ WI_CreateSurface(uint32_t width, uint32_t height)
 }
 
 bool_t
-WI_SetSwapInterval(int interval)
+axSetSwapInterval(int interval)
 {
   EGLBoolean ok = eglSwapInterval(egl_display, interval);
   return ok == EGL_TRUE ? TRUE : FALSE;

@@ -36,79 +36,79 @@ timer_proc(HWND h, UINT m, UINT_PTR nid, DWORD t)
         .lParam  = s_timers[i].userdata,
       };
       if (!s_timers[i].repeat)
-        WI_CancelTimer(s_timers[i].id);
+        axCancelTimer(s_timers[i].id);
       return;
     }
   }
 }
 
-/* Map a Win32 virtual-key code to a WI_KEY_* constant.
+/* Map a Win32 virtual-key code to a AX_KEY_* constant.
    Extended-key flag (bit 24 of the LPARAM) is passed in ext_key
    so that numpad-Enter can be distinguished from regular Enter. */
 static uint32_t
 vk_to_wi_key(WPARAM vk, int ext_key)
 {
   switch (vk) {
-  case VK_TAB:      return WI_KEY_TAB;
-  case VK_RETURN:   return ext_key ? WI_KEY_KP_ENTER : WI_KEY_ENTER;
-  case VK_ESCAPE:   return WI_KEY_ESCAPE;
-  case VK_SPACE:    return WI_KEY_SPACE;
-  case VK_BACK:     return WI_KEY_BACKSPACE;
+  case VK_TAB:      return AX_KEY_TAB;
+  case VK_RETURN:   return ext_key ? AX_KEY_KP_ENTER : AX_KEY_ENTER;
+  case VK_ESCAPE:   return AX_KEY_ESCAPE;
+  case VK_SPACE:    return AX_KEY_SPACE;
+  case VK_BACK:     return AX_KEY_BACKSPACE;
 
-  case VK_UP:       return WI_KEY_UPARROW;
-  case VK_DOWN:     return WI_KEY_DOWNARROW;
-  case VK_LEFT:     return WI_KEY_LEFTARROW;
-  case VK_RIGHT:    return WI_KEY_RIGHTARROW;
+  case VK_UP:       return AX_KEY_UPARROW;
+  case VK_DOWN:     return AX_KEY_DOWNARROW;
+  case VK_LEFT:     return AX_KEY_LEFTARROW;
+  case VK_RIGHT:    return AX_KEY_RIGHTARROW;
 
   case VK_SHIFT:
   case VK_LSHIFT:
-  case VK_RSHIFT:   return WI_KEY_SHIFT;
+  case VK_RSHIFT:   return AX_KEY_SHIFT;
   case VK_CONTROL:
   case VK_LCONTROL:
-  case VK_RCONTROL: return WI_KEY_CTRL;
+  case VK_RCONTROL: return AX_KEY_CTRL;
   case VK_MENU:
   case VK_LMENU:
-  case VK_RMENU:    return WI_KEY_ALT;
+  case VK_RMENU:    return AX_KEY_ALT;
 
-  case VK_F1:       return WI_KEY_F1;
-  case VK_F2:       return WI_KEY_F2;
-  case VK_F3:       return WI_KEY_F3;
-  case VK_F4:       return WI_KEY_F4;
-  case VK_F5:       return WI_KEY_F5;
-  case VK_F6:       return WI_KEY_F6;
-  case VK_F7:       return WI_KEY_F7;
-  case VK_F8:       return WI_KEY_F8;
-  case VK_F9:       return WI_KEY_F9;
-  case VK_F10:      return WI_KEY_F10;
-  case VK_F11:      return WI_KEY_F11;
-  case VK_F12:      return WI_KEY_F12;
+  case VK_F1:       return AX_KEY_F1;
+  case VK_F2:       return AX_KEY_F2;
+  case VK_F3:       return AX_KEY_F3;
+  case VK_F4:       return AX_KEY_F4;
+  case VK_F5:       return AX_KEY_F5;
+  case VK_F6:       return AX_KEY_F6;
+  case VK_F7:       return AX_KEY_F7;
+  case VK_F8:       return AX_KEY_F8;
+  case VK_F9:       return AX_KEY_F9;
+  case VK_F10:      return AX_KEY_F10;
+  case VK_F11:      return AX_KEY_F11;
+  case VK_F12:      return AX_KEY_F12;
 
-  case VK_INSERT:   return WI_KEY_INS;
-  case VK_DELETE:   return WI_KEY_DEL;
-  case VK_PRIOR:    return WI_KEY_PGUP;
-  case VK_NEXT:     return WI_KEY_PGDN;
-  case VK_HOME:     return WI_KEY_HOME;
-  case VK_END:      return WI_KEY_END;
-  case VK_PAUSE:    return WI_KEY_PAUSE;
+  case VK_INSERT:   return AX_KEY_INS;
+  case VK_DELETE:   return AX_KEY_DEL;
+  case VK_PRIOR:    return AX_KEY_PGUP;
+  case VK_NEXT:     return AX_KEY_PGDN;
+  case VK_HOME:     return AX_KEY_HOME;
+  case VK_END:      return AX_KEY_END;
+  case VK_PAUSE:    return AX_KEY_PAUSE;
 
   /* Numpad (num-lock off — cursor keys)  */
-  case VK_NUMPAD7:  return WI_KEY_KP_HOME;
-  case VK_NUMPAD8:  return WI_KEY_KP_UPARROW;
-  case VK_NUMPAD9:  return WI_KEY_KP_PGUP;
-  case VK_NUMPAD4:  return WI_KEY_KP_LEFTARROW;
-  case VK_NUMPAD5:  return WI_KEY_KP_5;
-  case VK_NUMPAD6:  return WI_KEY_KP_RIGHTARROW;
-  case VK_NUMPAD1:  return WI_KEY_KP_END;
-  case VK_NUMPAD2:  return WI_KEY_KP_DOWNARROW;
-  case VK_NUMPAD3:  return WI_KEY_KP_PGDN;
-  case VK_NUMPAD0:  return WI_KEY_KP_INS;
-  case VK_DECIMAL:  return WI_KEY_KP_DEL;
-  case VK_DIVIDE:   return WI_KEY_KP_SLASH;
-  case VK_SUBTRACT: return WI_KEY_KP_MINUS;
-  case VK_ADD:      return WI_KEY_KP_PLUS;
+  case VK_NUMPAD7:  return AX_KEY_KP_HOME;
+  case VK_NUMPAD8:  return AX_KEY_KP_UPARROW;
+  case VK_NUMPAD9:  return AX_KEY_KP_PGUP;
+  case VK_NUMPAD4:  return AX_KEY_KP_LEFTARROW;
+  case VK_NUMPAD5:  return AX_KEY_KP_5;
+  case VK_NUMPAD6:  return AX_KEY_KP_RIGHTARROW;
+  case VK_NUMPAD1:  return AX_KEY_KP_END;
+  case VK_NUMPAD2:  return AX_KEY_KP_DOWNARROW;
+  case VK_NUMPAD3:  return AX_KEY_KP_PGDN;
+  case VK_NUMPAD0:  return AX_KEY_KP_INS;
+  case VK_DECIMAL:  return AX_KEY_KP_DEL;
+  case VK_DIVIDE:   return AX_KEY_KP_SLASH;
+  case VK_SUBTRACT: return AX_KEY_KP_MINUS;
+  case VK_ADD:      return AX_KEY_KP_PLUS;
 
   default:
-    /* Letters and digits share their WI_KEY value with ASCII */
+    /* Letters and digits share their AX_KEY value with ASCII */
     if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9')) {
       return (uint32_t)vk;
     }
@@ -121,11 +121,11 @@ static uint32_t
 win32_modifiers(void)
 {
   uint32_t mods = 0;
-  if (GetKeyState(VK_SHIFT)   & 0x8000) mods |= WI_MOD_SHIFT;
-  if (GetKeyState(VK_CONTROL) & 0x8000) mods |= WI_MOD_CTRL;
-  if (GetKeyState(VK_MENU)    & 0x8000) mods |= WI_MOD_ALT;
-  if (GetKeyState(VK_LWIN)    & 0x8000) mods |= WI_MOD_CMD;
-  if (GetKeyState(VK_RWIN)    & 0x8000) mods |= WI_MOD_CMD;
+  if (GetKeyState(VK_SHIFT)   & 0x8000) mods |= AX_MOD_SHIFT;
+  if (GetKeyState(VK_CONTROL) & 0x8000) mods |= AX_MOD_CTRL;
+  if (GetKeyState(VK_MENU)    & 0x8000) mods |= AX_MOD_ALT;
+  if (GetKeyState(VK_LWIN)    & 0x8000) mods |= AX_MOD_CMD;
+  if (GetKeyState(VK_RWIN)    & 0x8000) mods |= AX_MOD_CMD;
   return mods;
 }
 
@@ -360,7 +360,7 @@ win32_process_messages(void)
 extern void joy_poll(void);
 
 int
-WI_WaitEvent(longTime_t timeout_ms)
+axWaitEvent(longTime_t timeout_ms)
 {
   if (timeout_ms == 0) {
     /* Block indefinitely, but wake on joystick input too.  Poll joystick
@@ -386,7 +386,7 @@ WI_WaitEvent(longTime_t timeout_ms)
 }
 
 int
-WI_PollEvent(PEVENT pEvent)
+axPollEvent(PEVENT pEvent)
 {
   joy_poll();
   win32_process_messages();
@@ -399,7 +399,7 @@ WI_PollEvent(PEVENT pEvent)
 }
 
 void
-WI_PostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 {
   if (events.write - events.read >=
       (int)(sizeof(events.queue) / sizeof(events.queue[0]))) {
@@ -414,7 +414,7 @@ WI_PostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 }
 
 void
-WI_RemoveFromQueue(void *hobj)
+axRemoveFromQueue(void *hobj)
 {
   uint16_t r = events.read;
   uint16_t w = events.write;
@@ -428,7 +428,7 @@ WI_RemoveFromQueue(void *hobj)
   events.write = nw;
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
-      WI_CancelTimer(s_timers[i].id);
+      axCancelTimer(s_timers[i].id);
 }
 
 void
@@ -440,7 +440,7 @@ NotifyFileDropEvent(char const *filename, float x, float y)
 }
 
 uint32_t
-WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+axSetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == 0) {
@@ -459,7 +459,7 @@ WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 }
 
 void
-WI_CancelTimer(uint32_t timer_id)
+axCancelTimer(uint32_t timer_id)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {

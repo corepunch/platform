@@ -14,7 +14,7 @@ int g_win_height = DEFAULT_HEIGHT;
 static HINSTANCE g_hinstance = NULL;
 
 void
-WI_Init(void)
+axInit(void)
 {
   g_hinstance = GetModuleHandleA(NULL);
 
@@ -33,7 +33,7 @@ WI_Init(void)
 }
 
 void
-WI_Shutdown(void)
+axShutdown(void)
 {
   if (g_hrc) {
     wglMakeCurrent(NULL, NULL);
@@ -55,7 +55,7 @@ WI_Shutdown(void)
 }
 
 bool_t
-WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
+axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
 {
   if (width == 0)  width  = DEFAULT_WIDTH;
   if (height == 0) height = DEFAULT_HEIGHT;
@@ -171,7 +171,7 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
 }
 
 void
-WI_MakeCurrentContext(void)
+axMakeCurrentContext(void)
 {
   if (g_hdc && g_hrc) {
     wglMakeCurrent(g_hdc, g_hrc);
@@ -179,13 +179,13 @@ WI_MakeCurrentContext(void)
 }
 
 void
-WI_BeginPaint(void)
+axBeginPaint(void)
 {
-  WI_MakeCurrentContext();
+  axMakeCurrentContext();
 }
 
 void
-WI_EndPaint(void)
+axEndPaint(void)
 {
   /* Ensure alpha is fully opaque before presenting */
   glColorMask(0, 0, 0, 1);
@@ -199,13 +199,13 @@ WI_EndPaint(void)
 }
 
 void
-WI_BindFramebuffer(void)
+axBindFramebuffer(void)
 {
   /* WGL uses the default framebuffer; nothing to bind */
 }
 
 bool_t
-WI_CreateSurface(uint32_t width, uint32_t height)
+axCreateSurface(uint32_t width, uint32_t height)
 {
   /* Off-screen surfaces are not implemented */
   (void)width;
@@ -214,7 +214,7 @@ WI_CreateSurface(uint32_t width, uint32_t height)
 }
 
 float
-WI_GetScaling(void)
+axGetScaling(void)
 {
   if (!g_hdc) {
     return 1.0f;
@@ -224,7 +224,7 @@ WI_GetScaling(void)
 }
 
 uint32_t
-WI_GetSize(struct WI_Size *size)
+axGetSize(struct AXsize *size)
 {
   if (size) {
     size->width  = (uint32_t)g_win_width;
@@ -234,7 +234,7 @@ WI_GetSize(struct WI_Size *size)
 }
 
 bool_t
-WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
+axSetSize(uint32_t width, uint32_t height, bool_t centered)
 {
   if (!g_hwnd) {
     return FALSE;

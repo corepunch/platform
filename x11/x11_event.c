@@ -46,13 +46,13 @@ timers_poll(void)
         .lParam  = s_timers[i].userdata,
       };
       if (!s_timers[i].repeat)
-        WI_CancelTimer(s_timers[i].id);
+        axCancelTimer(s_timers[i].id);
     }
   }
 #endif
 }
 
-/* Map an X11 KeySym to a WI_KEY_* value */
+/* Map an X11 KeySym to a AX_KEY_* value */
 static uint32_t
 keysym_to_wi_key(KeySym sym)
 {
@@ -62,60 +62,60 @@ keysym_to_wi_key(KeySym sym)
   }
 
   switch (sym) {
-  case XK_Tab:        return WI_KEY_TAB;
-  case XK_Return:     return WI_KEY_ENTER;
-  case XK_Escape:     return WI_KEY_ESCAPE;
-  case XK_space:      return WI_KEY_SPACE;
-  case XK_BackSpace:  return WI_KEY_BACKSPACE;
+  case XK_Tab:        return AX_KEY_TAB;
+  case XK_Return:     return AX_KEY_ENTER;
+  case XK_Escape:     return AX_KEY_ESCAPE;
+  case XK_space:      return AX_KEY_SPACE;
+  case XK_BackSpace:  return AX_KEY_BACKSPACE;
 
-  case XK_Up:         return WI_KEY_UPARROW;
-  case XK_Down:       return WI_KEY_DOWNARROW;
-  case XK_Left:       return WI_KEY_LEFTARROW;
-  case XK_Right:      return WI_KEY_RIGHTARROW;
+  case XK_Up:         return AX_KEY_UPARROW;
+  case XK_Down:       return AX_KEY_DOWNARROW;
+  case XK_Left:       return AX_KEY_LEFTARROW;
+  case XK_Right:      return AX_KEY_RIGHTARROW;
 
   case XK_Alt_L:
-  case XK_Alt_R:      return WI_KEY_ALT;
+  case XK_Alt_R:      return AX_KEY_ALT;
   case XK_Control_L:
-  case XK_Control_R:  return WI_KEY_CTRL;
+  case XK_Control_R:  return AX_KEY_CTRL;
   case XK_Shift_L:
-  case XK_Shift_R:    return WI_KEY_SHIFT;
+  case XK_Shift_R:    return AX_KEY_SHIFT;
 
-  case XK_F1:         return WI_KEY_F1;
-  case XK_F2:         return WI_KEY_F2;
-  case XK_F3:         return WI_KEY_F3;
-  case XK_F4:         return WI_KEY_F4;
-  case XK_F5:         return WI_KEY_F5;
-  case XK_F6:         return WI_KEY_F6;
-  case XK_F7:         return WI_KEY_F7;
-  case XK_F8:         return WI_KEY_F8;
-  case XK_F9:         return WI_KEY_F9;
-  case XK_F10:        return WI_KEY_F10;
-  case XK_F11:        return WI_KEY_F11;
-  case XK_F12:        return WI_KEY_F12;
+  case XK_F1:         return AX_KEY_F1;
+  case XK_F2:         return AX_KEY_F2;
+  case XK_F3:         return AX_KEY_F3;
+  case XK_F4:         return AX_KEY_F4;
+  case XK_F5:         return AX_KEY_F5;
+  case XK_F6:         return AX_KEY_F6;
+  case XK_F7:         return AX_KEY_F7;
+  case XK_F8:         return AX_KEY_F8;
+  case XK_F9:         return AX_KEY_F9;
+  case XK_F10:        return AX_KEY_F10;
+  case XK_F11:        return AX_KEY_F11;
+  case XK_F12:        return AX_KEY_F12;
 
-  case XK_Insert:     return WI_KEY_INS;
-  case XK_Delete:     return WI_KEY_DEL;
-  case XK_Page_Down:  return WI_KEY_PGDN;
-  case XK_Page_Up:    return WI_KEY_PGUP;
-  case XK_Home:       return WI_KEY_HOME;
-  case XK_End:        return WI_KEY_END;
-  case XK_Pause:      return WI_KEY_PAUSE;
+  case XK_Insert:     return AX_KEY_INS;
+  case XK_Delete:     return AX_KEY_DEL;
+  case XK_Page_Down:  return AX_KEY_PGDN;
+  case XK_Page_Up:    return AX_KEY_PGUP;
+  case XK_Home:       return AX_KEY_HOME;
+  case XK_End:        return AX_KEY_END;
+  case XK_Pause:      return AX_KEY_PAUSE;
 
-  case XK_KP_Home:    return WI_KEY_KP_HOME;
-  case XK_KP_Up:      return WI_KEY_KP_UPARROW;
-  case XK_KP_Page_Up: return WI_KEY_KP_PGUP;
-  case XK_KP_Left:    return WI_KEY_KP_LEFTARROW;
-  case XK_KP_Begin:   return WI_KEY_KP_5;
-  case XK_KP_Right:   return WI_KEY_KP_RIGHTARROW;
-  case XK_KP_End:     return WI_KEY_KP_END;
-  case XK_KP_Down:    return WI_KEY_KP_DOWNARROW;
-  case XK_KP_Page_Down: return WI_KEY_KP_PGDN;
-  case XK_KP_Enter:   return WI_KEY_KP_ENTER;
-  case XK_KP_Insert:  return WI_KEY_KP_INS;
-  case XK_KP_Delete:  return WI_KEY_KP_DEL;
-  case XK_KP_Divide:  return WI_KEY_KP_SLASH;
-  case XK_KP_Subtract: return WI_KEY_KP_MINUS;
-  case XK_KP_Add:     return WI_KEY_KP_PLUS;
+  case XK_KP_Home:    return AX_KEY_KP_HOME;
+  case XK_KP_Up:      return AX_KEY_KP_UPARROW;
+  case XK_KP_Page_Up: return AX_KEY_KP_PGUP;
+  case XK_KP_Left:    return AX_KEY_KP_LEFTARROW;
+  case XK_KP_Begin:   return AX_KEY_KP_5;
+  case XK_KP_Right:   return AX_KEY_KP_RIGHTARROW;
+  case XK_KP_End:     return AX_KEY_KP_END;
+  case XK_KP_Down:    return AX_KEY_KP_DOWNARROW;
+  case XK_KP_Page_Down: return AX_KEY_KP_PGDN;
+  case XK_KP_Enter:   return AX_KEY_KP_ENTER;
+  case XK_KP_Insert:  return AX_KEY_KP_INS;
+  case XK_KP_Delete:  return AX_KEY_KP_DEL;
+  case XK_KP_Divide:  return AX_KEY_KP_SLASH;
+  case XK_KP_Subtract: return AX_KEY_KP_MINUS;
+  case XK_KP_Add:     return AX_KEY_KP_PLUS;
 
   default:            return 0;
   }
@@ -126,10 +126,10 @@ static uint32_t
 x11_modifiers(unsigned int state)
 {
   uint32_t mods = 0;
-  if (state & ShiftMask)   mods |= WI_MOD_SHIFT;
-  if (state & ControlMask) mods |= WI_MOD_CTRL;
-  if (state & Mod1Mask)    mods |= WI_MOD_ALT;  /* Alt */
-  if (state & Mod4Mask)    mods |= WI_MOD_CMD;  /* Super/Meta */
+  if (state & ShiftMask)   mods |= AX_MOD_SHIFT;
+  if (state & ControlMask) mods |= AX_MOD_CTRL;
+  if (state & Mod1Mask)    mods |= AX_MOD_ALT;  /* Alt */
+  if (state & Mod4Mask)    mods |= AX_MOD_CMD;  /* Super/Meta */
   return mods;
 }
 
@@ -384,7 +384,7 @@ x11_build_poll_fds(struct pollfd fds[2 + MAX_TIMERS])
 }
 
 int
-WI_WaitEvent(TIME timeout_ms)
+axWaitEvent(TIME timeout_ms)
 {
   if (!x_display) {
     return 0;
@@ -426,7 +426,7 @@ WI_WaitEvent(TIME timeout_ms)
 }
 
 int
-WI_PollEvent(PEVENT pEvent)
+axPollEvent(PEVENT pEvent)
 {
   joy_poll();
   x11_process_events();
@@ -450,7 +450,7 @@ NotifyWindowEvent(void* window, uint32_t eventType, uint32_t wparam)
 }
 
 void
-WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
+axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
 {
   if (events.write - events.read >=
       (int)(sizeof(events.queue) / sizeof(events.queue[0]))) {
@@ -465,7 +465,7 @@ WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
 }
 
 void
-WI_RemoveFromQueue(void* hobj)
+axRemoveFromQueue(void* hobj)
 {
   WORD read_idx  = events.read;
   WORD write_idx = events.write;
@@ -480,7 +480,7 @@ WI_RemoveFromQueue(void* hobj)
 #ifdef __linux__
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
-      WI_CancelTimer(s_timers[i].id);
+      axCancelTimer(s_timers[i].id);
 #endif
 }
 
@@ -493,7 +493,7 @@ NotifyFileDropEvent(char const* filename, float x, float y)
 }
 
 uint32_t
-WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+axSetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 {
 #ifdef __linux__
   int slot = -1;
@@ -529,7 +529,7 @@ WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 }
 
 void
-WI_CancelTimer(uint32_t timer_id)
+axCancelTimer(uint32_t timer_id)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {

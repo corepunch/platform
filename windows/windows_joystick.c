@@ -2,13 +2,13 @@
  * windows_joystick.c – Joystick support and swap interval for Windows.
  *
  * Joystick input is implemented using XInput, which supports Xbox-compatible
- * controllers.  State is polled each time WI_PollEvent() is called and
+ * controllers.  State is polled each time axPollEvent() is called and
  * compared against the previous snapshot; changes generate kEventJoyAxisMotion
  * and kEventJoyButton* events that are pushed to the event queue.
  *
  * Swap interval uses wglSwapIntervalEXT when available.
  *
- * Encoding in WI_Message:
+ * Encoding in AX_Message:
  *   kEventJoyAxisMotion : wParam = axis index, lParam = (void*)(intptr_t)value
  *   kEventJoyButtonDown / kEventJoyButtonUp : wParam = button index
  */
@@ -54,7 +54,7 @@ static const struct { WORD bit; uint32_t idx; } k_buttons[] = {
 #define NUM_BUTTONS ((int)(sizeof(k_buttons)/sizeof(k_buttons[0])))
 
 bool_t
-WI_JoystickInit(void)
+axJoystickInit(void)
 {
   for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
     XINPUT_STATE state;
@@ -71,20 +71,20 @@ WI_JoystickInit(void)
 }
 
 void
-WI_JoystickShutdown(void)
+axJoystickShutdown(void)
 {
   g_joy_available = FALSE;
   g_has_prev      = FALSE;
 }
 
 bool_t
-WI_JoystickAvailable(void)
+axJoystickAvailable(void)
 {
   return g_joy_available ? TRUE : FALSE;
 }
 
 char const *
-WI_JoystickGetName(void)
+axJoystickGetName(void)
 {
   return g_joy_available ? "XInput Controller" : NULL;
 }
@@ -97,7 +97,7 @@ wi_trigger_to_axis(BYTE trigger)
   return (int16_t)(((int)trigger * 32767 + 127) / 255);
 }
 
-/* Called from WI_PollEvent() in windows_event.c */
+/* Called from axPollEvent() in windows_event.c */
 void
 joy_poll(void)
 {
@@ -141,7 +141,7 @@ joy_poll(void)
 
   for (int i = 0; i < 6; i++) {
     if (ax[i].prev != ax[i].cur) {
-      WI_PostMessageW(NULL, kEventJoyAxisMotion, ax[i].idx,
+      axPostMessageW(NULL, kEventJoyAxisMotion, ax[i].idx,
                       (void *)(intptr_t)ax[i].cur);
     }
   }
@@ -152,7 +152,7 @@ joy_poll(void)
     BOOL is_down  = (c->wButtons & k_buttons[i].bit) != 0;
     if (was_down != is_down) {
       uint32_t msg = is_down ? kEventJoyButtonDown : kEventJoyButtonUp;
-      WI_PostMessageW(NULL, msg, k_buttons[i].idx, NULL);
+      axPostMessageW(NULL, msg, k_buttons[i].idx, NULL);
     }
   }
 
@@ -164,7 +164,7 @@ joy_poll(void)
 typedef BOOL (WINAPI *PFNWGLSWAPINTERVALEXTPROC)(int interval);
 
 bool_t
-WI_SetSwapInterval(int interval)
+axSetSwapInterval(int interval)
 {
   static PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = NULL;
 

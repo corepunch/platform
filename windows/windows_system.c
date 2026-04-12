@@ -9,13 +9,13 @@ static PATHSTR g_local = { 0 };
 static PATHSTR g_lib   = { 0 };
 
 char const *
-WI_GetPlatform(void)
+axGetPlatform(void)
 {
   return "windows";
 }
 
 char const *
-WI_SettingsDirectory(void)
+axSettingsDirectory(void)
 {
   if (g_local[0] == 0) {
     char appdata[MAX_PATH] = { 0 };
@@ -37,7 +37,7 @@ get_exe_dir(char *buf, int sz)
 }
 
 char const *
-WI_ShareDirectory(void)
+axShareDirectory(void)
 {
   if (g_share[0] == 0) {
     get_exe_dir(g_share, sizeof(g_share));
@@ -46,7 +46,7 @@ WI_ShareDirectory(void)
 }
 
 char const *
-WI_LibDirectory(void)
+axLibDirectory(void)
 {
   if (g_lib[0] == 0) {
     get_exe_dir(g_lib, sizeof(g_lib));
@@ -55,7 +55,7 @@ WI_LibDirectory(void)
 }
 
 char const *
-WI_DocumentsDirectory(void)
+axDocumentsDirectory(void)
 {
   if (g_documents[0] == 0) {
     SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, g_documents);
@@ -64,7 +64,7 @@ WI_DocumentsDirectory(void)
 }
 
 bool_t
-WI_IsDarkTheme(void)
+axIsDarkTheme(void)
 {
   HKEY hkey;
   DWORD value = 1; /* default: light theme */
@@ -81,7 +81,7 @@ WI_IsDarkTheme(void)
 }
 
 bool_t
-WI_GetOpenFileName(struct _WI_OpenFileName const *ofn)
+axGetOpenFileName(struct _AXopenfilename const *ofn)
 {
   OPENFILENAMEA fn;
   ZeroMemory(&fn, sizeof(fn));
@@ -99,7 +99,7 @@ WI_GetOpenFileName(struct _WI_OpenFileName const *ofn)
 }
 
 bool_t
-WI_GetSaveFileName(struct _WI_OpenFileName const *ofn)
+axGetSaveFileName(struct _AXopenfilename const *ofn)
 {
   OPENFILENAMEA fn;
   ZeroMemory(&fn, sizeof(fn));
@@ -115,7 +115,7 @@ WI_GetSaveFileName(struct _WI_OpenFileName const *ofn)
 }
 
 bool_t
-WI_GetFolderName(struct _WI_OpenFileName const *ofn)
+axGetFolderName(struct _AXopenfilename const *ofn)
 {
   BROWSEINFOA bi;
   ZeroMemory(&bi, sizeof(bi));

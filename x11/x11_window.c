@@ -12,7 +12,7 @@ typedef struct {
 } MWMHints;
 
 bool_t
-WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flags)
+axCreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flags)
 {
   extern struct _WND window;
 
@@ -74,12 +74,12 @@ WI_CreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t fla
   }
 
   XFlush(x_display);
-  WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
+  axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
   return TRUE;
 }
 
 void
-WI_MakeCurrentContext(void)
+axMakeCurrentContext(void)
 {
   extern struct _WND window;
   eglMakeCurrent(egl_display, window.egl_surface,
@@ -87,13 +87,13 @@ WI_MakeCurrentContext(void)
 }
 
 void
-WI_BeginPaint(void)
+axBeginPaint(void)
 {
-  WI_MakeCurrentContext();
+  axMakeCurrentContext();
 }
 
 void
-WI_EndPaint(void)
+axEndPaint(void)
 {
   extern struct _WND window;
   glColorMask(0, 0, 0, 1);
@@ -104,13 +104,13 @@ WI_EndPaint(void)
 }
 
 void
-WI_BindFramebuffer(void)
+axBindFramebuffer(void)
 {
   /* EGL uses the default framebuffer; nothing to bind */
 }
 
 bool_t
-WI_CreateSurface(uint32_t width, uint32_t height)
+axCreateSurface(uint32_t width, uint32_t height)
 {
   /* Off-screen surfaces are not implemented */
   (void)width;
@@ -119,20 +119,20 @@ WI_CreateSurface(uint32_t width, uint32_t height)
 }
 
 bool_t
-WI_SetSwapInterval(int interval)
+axSetSwapInterval(int interval)
 {
   EGLBoolean ok = eglSwapInterval(egl_display, interval);
   return ok == EGL_TRUE ? TRUE : FALSE;
 }
 
 float
-WI_GetScaling(void)
+axGetScaling(void)
 {
   return 1.0f;
 }
 
 uint32_t
-WI_GetSize(struct WI_Size* size)
+axGetSize(struct AXsize* size)
 {
   extern struct _WND window;
   if (size) {
@@ -143,7 +143,7 @@ WI_GetSize(struct WI_Size* size)
 }
 
 bool_t
-WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
+axSetSize(uint32_t width, uint32_t height, bool_t centered)
 {
   extern struct _WND window;
   (void)centered;

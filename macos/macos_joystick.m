@@ -18,24 +18,24 @@
 /* --------------------------------------------------------------------- */
 
 bool_t
-WI_JoystickInit(void)
+axJoystickInit(void)
 {
   return FALSE;
 }
 
 void
-WI_JoystickShutdown(void)
+axJoystickShutdown(void)
 {
 }
 
 bool_t
-WI_JoystickAvailable(void)
+axJoystickAvailable(void)
 {
   return FALSE;
 }
 
 char const *
-WI_JoystickGetName(void)
+axJoystickGetName(void)
 {
   return NULL;
 }
@@ -45,7 +45,7 @@ WI_JoystickGetName(void)
 /* --------------------------------------------------------------------- */
 
 bool_t
-WI_SetSwapInterval(int interval)
+axSetSwapInterval(int interval)
 {
   CGLContextObj ctx = CGLGetCurrentContext();
   if (!ctx) {

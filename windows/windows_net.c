@@ -105,7 +105,7 @@ net_connect(char const *ipaddr, int port)
 }
 
 int
-net_packet(int net_socket, struct WI_Buffer *net_message)
+net_packet(int net_socket, struct AXbuffer *net_message)
 {
   int ret = recv((SOCKET)net_socket,
                  (char *)net_message->data, net_message->maxsize, 0);
@@ -119,7 +119,7 @@ net_packet(int net_socket, struct WI_Buffer *net_message)
 }
 
 int
-net_send_packet(int sock, struct WI_Buffer *net_message)
+net_send_packet(int sock, struct AXbuffer *net_message)
 {
   return send((SOCKET)sock,
               (char const *)net_message->data, net_message->cursize, 0);

@@ -7,7 +7,7 @@
 #define MIN_WINDOW_WIDTH 256
 #define MIN_WINDOW_HEIGHT 256
 
-WI_API uint32_t _IOSurface = -1;
+AX_API uint32_t _IOSurface = -1;
 
 //#define API_TYPE_WINDOW "Window"
 
@@ -76,13 +76,13 @@ struct wstate {
 } wstate = {0};
 
 void
-WI_NotifySizeChanged(uint32_t width, uint32_t height)
+axNotifySizeChanged(uint32_t width, uint32_t height)
 {
   wstate.width = width;
   wstate.height = height;
   
-  WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), 0);
-  WI_PostMessageW(NULL, kEventWindowPaint, MAKEDWORD(width, height), 0);
+  axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), 0);
+  axPostMessageW(NULL, kEventWindowPaint, MAKEDWORD(width, height), 0);
 }
 
 static NSRect
@@ -178,7 +178,7 @@ static void ConfigureOpenGLView(NSOpenGLView *openglView) {
 }
 
 bool_t
-WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
+axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
 {
   /*
   NSOpenGLPixelFormatAttribute attrs[] = {
@@ -244,7 +244,7 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
   ListenForDarkModeChanges(window);
   
   if (wstate.width != width || wstate.height != height) {
-    WI_NotifySizeChanged(width, height);
+    axNotifySizeChanged(width, height);
   }
 
   assert(!wstate.surf);
@@ -262,7 +262,7 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
 	return TRUE;
 }
 
-void WI_Shutdown(void) {
+void axShutdown(void) {
 #ifndef USE_SINGLE_WINDOW
 	NSWindow *window = hWnd->window;
   [window setContentView:nil];
@@ -274,12 +274,12 @@ void WI_Shutdown(void) {
 }
 
 float
-WI_GetScaling(void)
+axGetScaling(void)
 {
   return MAX(wstate.backingScale, 1);
 }
 
-uint32_t WI_GetSize(struct WI_Size * pSize) {
+uint32_t axGetSize(struct AXsize * pSize) {
   if (pSize) {
     pSize->width = wstate.width;
     pSize->height = wstate.height;
@@ -287,7 +287,7 @@ uint32_t WI_GetSize(struct WI_Size * pSize) {
   return MAKEDWORD(MAX(MIN_WINDOW_WIDTH, wstate.width), MAX(MIN_WINDOW_HEIGHT, wstate.height));
 }
 
-bool_t WI_SetSize(uint32_t width, uint32_t height, bool_t centered) {
+bool_t axSetSize(uint32_t width, uint32_t height, bool_t centered) {
   if (wstate.width == width && wstate.height == height) {
     return TRUE;
   }
@@ -305,7 +305,7 @@ bool_t WI_SetSize(uint32_t width, uint32_t height, bool_t centered) {
   }
 }
 
-void WI_BindFramebuffer(void) {
+void axBindFramebuffer(void) {
   if (wstate.Window) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
   } else if (wstate.surf) {
@@ -313,17 +313,17 @@ void WI_BindFramebuffer(void) {
   }
 }
 
-void WI_BeginPaint(void) {
+void axBeginPaint(void) {
   if (wstate.Window) {
     NSOpenGLView *view = [wstate.Window contentView];
     [[view openGLContext] makeCurrentContext];
   } else if (wstate.surf) {
     CGLSetCurrentContext(wstate.ctx);
   }
-  WI_BindFramebuffer();
+  axBindFramebuffer();
 }
 
-void WI_EndPaint(void) {
+void axEndPaint(void) {
   if (wstate.Window) {
     if (!(wstate.flags & WI_WINDOW_DOUBLEBUFFER)) {
       glFlush();
@@ -333,7 +333,7 @@ void WI_EndPaint(void) {
   }
 }
 
-void WI_MakeCurrentContext(void) {
+void axMakeCurrentContext(void) {
   if (wstate.Window) {
     NSOpenGLView *view = [wstate.Window contentView];
     [[view openGLContext] makeCurrentContext];
@@ -377,7 +377,7 @@ IOSurface_Create(uint32_t w, uint32_t h)
   wstate.height = h;
   wstate.backingScale = 1;
 
-  WI_PostMessageW(NULL, kEventWindowPaint, MAKEDWORD(w, h), 0);
+  axPostMessageW(NULL, kEventWindowPaint, MAKEDWORD(w, h), 0);
   
   _IOSurface = IOSurfaceGetID(wstate.surf);
   fprintf(stderr, "IOSurface ID: %u\n", _IOSurface);  // Share this ID with the other app
@@ -396,7 +396,7 @@ IOSurface_Release(uint32_t iosurface)
 }
 
 bool_t
-WI_CreateSurface(uint32_t width, uint32_t height)
+axCreateSurface(uint32_t width, uint32_t height)
 {
   if (wstate.surf) {
     return TRUE;
@@ -418,7 +418,7 @@ WI_CreateSurface(uint32_t width, uint32_t height)
 @implementation WindowDelegate {}
 
 - (void) windowWillClose:(NSNotification *)aNotification {
-  WI_PostMessageW(NULL, kEventWindowClosed, 0, 0);
+  axPostMessageW(NULL, kEventWindowClosed, 0, 0);
 }
 //- (bool)validateMenuItem:(NSMenuItem *)menuItem {
 //    NSLog(@"%@", menuItem.title);
@@ -427,11 +427,11 @@ WI_CreateSurface(uint32_t width, uint32_t height)
 - (void) windowDidResize:(NSNotification *)notification {
   uint32_t width = self.window.contentView.frame.size.width;
   uint32_t height = self.window.contentView.frame.size.height;
-  //  WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height));
-  WI_NotifySizeChanged(width, height);
+  //  axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height));
+  axNotifySizeChanged(width, height);
 }
 -(void) windowDidChangeScreen:(NSNotification *)notification {
-  WI_PostMessageW(NULL, kEventWindowChangedScreen, 0, 0);
+  axPostMessageW(NULL, kEventWindowChangedScreen, 0, 0);
 }
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
   if (([sender draggingSourceOperationMask] & NSDragOperationGeneric) == NSDragOperationGeneric) {
