@@ -164,7 +164,7 @@ draw_window(struct _WND* window)
 struct _WND window;
 
 void
-WI_Init(void)
+axInit(void)
 {
   display = wl_display_connect(NULL);
   struct wl_registry* registry = wl_display_get_registry(display);
@@ -199,7 +199,7 @@ WI_Init(void)
 }
 
 void
-WI_Shutdown(void)
+axShutdown(void)
 {
   xkb_state_unref(xkb_state);
   xkb_keymap_unref(xkb_keymap);
@@ -227,7 +227,7 @@ R_CreateIOSurface(unsigned w, unsigned h, unsigned texnum)
 }
 
 // int main (void) {
-// 	WI_Init();
+// 	axInit();
 
 // 	struct _WND window;
 // 	create_window (&window, WIDTH, HEIGHT);
@@ -239,6 +239,6 @@ R_CreateIOSurface(unsigned w, unsigned h, unsigned texnum)
 
 // 	delete_window (&window);
 
-// 	WI_Shutdown();
+// 	axShutdown();
 // 	return 0;
 // }

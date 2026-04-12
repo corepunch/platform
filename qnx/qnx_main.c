@@ -131,25 +131,25 @@ initEGL(void)
 }
 
 void
-WI_Init(void)
+axInit(void)
 {
   int rc;
 
   rc = initScreen();
   if (rc != EXIT_SUCCESS) {
-    fprintf(stderr, "WI_Init: initScreen failed\n");
+    fprintf(stderr, "AX_Init: initScreen failed\n");
     return;
   }
 
   rc = initEGL();
   if (rc != EXIT_SUCCESS) {
-    fprintf(stderr, "WI_Init: initEGL failed\n");
+    fprintf(stderr, "AX_Init: initEGL failed\n");
     return;
   }
 }
 
 void
-WI_Shutdown(void)
+axShutdown(void)
 {
   eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
   eglDestroySurface(egl_display, egl_surface);
@@ -162,14 +162,14 @@ WI_Shutdown(void)
 }
 
 bool_t
-WI_CreateWindow(char const *name, uint32_t width, uint32_t height, uint32_t flags)
+axCreateWindow(char const *name, uint32_t width, uint32_t height, uint32_t flags)
 {
   (void)name;
   (void)flags;
   if (width > 0 && height > 0) {
-    WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
+    axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
   }
-  WI_PostMessageW(NULL, kEventWindowPaint, 0, NULL);
+  axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
   return TRUE;
 }
 
@@ -210,7 +210,7 @@ GetWindowSize(HWND hWnd, LPSIZE2 lpSize)
 }
 
 char const *
-WI_GetPlatform(void)
+axGetPlatform(void)
 {
   return "qnx";
 }
@@ -234,19 +234,19 @@ PollEvent(struct event* ev)
 }
 
 char const *
-WI_LibDirectory(void)
+axLibDirectory(void)
 {
   return ".";
 }
 
 char const *
-WI_SettingsDirectory(void)
+axSettingsDirectory(void)
 {
   return ".";
 }
 
 char const *
-WI_ShareDirectory(void)
+axShareDirectory(void)
 {
   return ".";
 }

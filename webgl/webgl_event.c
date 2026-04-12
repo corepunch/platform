@@ -23,36 +23,36 @@ static uint32_t
 map_keycode(unsigned long keyCode)
 {
   switch (keyCode) {
-  case 8:   return WI_KEY_BACKSPACE;
-  case 9:   return WI_KEY_TAB;
-  case 13:  return WI_KEY_ENTER;
-  case 16:  return WI_KEY_SHIFT;
-  case 17:  return WI_KEY_CTRL;
-  case 18:  return WI_KEY_ALT;
-  case 27:  return WI_KEY_ESCAPE;
-  case 32:  return WI_KEY_SPACE;
-  case 33:  return WI_KEY_PGUP;
-  case 34:  return WI_KEY_PGDN;
-  case 35:  return WI_KEY_END;
-  case 36:  return WI_KEY_HOME;
-  case 37:  return WI_KEY_LEFTARROW;
-  case 38:  return WI_KEY_UPARROW;
-  case 39:  return WI_KEY_RIGHTARROW;
-  case 40:  return WI_KEY_DOWNARROW;
-  case 45:  return WI_KEY_INS;
-  case 46:  return WI_KEY_DEL;
-  case 112: return WI_KEY_F1;
-  case 113: return WI_KEY_F2;
-  case 114: return WI_KEY_F3;
-  case 115: return WI_KEY_F4;
-  case 116: return WI_KEY_F5;
-  case 117: return WI_KEY_F6;
-  case 118: return WI_KEY_F7;
-  case 119: return WI_KEY_F8;
-  case 120: return WI_KEY_F9;
-  case 121: return WI_KEY_F10;
-  case 122: return WI_KEY_F11;
-  case 123: return WI_KEY_F12;
+  case 8:   return AX_KEY_BACKSPACE;
+  case 9:   return AX_KEY_TAB;
+  case 13:  return AX_KEY_ENTER;
+  case 16:  return AX_KEY_SHIFT;
+  case 17:  return AX_KEY_CTRL;
+  case 18:  return AX_KEY_ALT;
+  case 27:  return AX_KEY_ESCAPE;
+  case 32:  return AX_KEY_SPACE;
+  case 33:  return AX_KEY_PGUP;
+  case 34:  return AX_KEY_PGDN;
+  case 35:  return AX_KEY_END;
+  case 36:  return AX_KEY_HOME;
+  case 37:  return AX_KEY_LEFTARROW;
+  case 38:  return AX_KEY_UPARROW;
+  case 39:  return AX_KEY_RIGHTARROW;
+  case 40:  return AX_KEY_DOWNARROW;
+  case 45:  return AX_KEY_INS;
+  case 46:  return AX_KEY_DEL;
+  case 112: return AX_KEY_F1;
+  case 113: return AX_KEY_F2;
+  case 114: return AX_KEY_F3;
+  case 115: return AX_KEY_F4;
+  case 116: return AX_KEY_F5;
+  case 117: return AX_KEY_F6;
+  case 118: return AX_KEY_F7;
+  case 119: return AX_KEY_F8;
+  case 120: return AX_KEY_F9;
+  case 121: return AX_KEY_F10;
+  case 122: return AX_KEY_F11;
+  case 123: return AX_KEY_F12;
   default:
     if (keyCode >= 65 && keyCode <= 90) {
       return (uint32_t)tolower((int)keyCode); // A-Z -> a-z
@@ -291,8 +291,8 @@ on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
 
   /* Resize the canvas drawing buffer */
   emscripten_set_canvas_element_size("#canvas",
-    (int)(g_canvas_width  * WI_GetScaling() + 0.5),
-    (int)(g_canvas_height * WI_GetScaling() + 0.5));
+    (int)(g_canvas_width  * axGetScaling() + 0.5),
+    (int)(g_canvas_height * axGetScaling() + 0.5));
 
   /* Notify the engine with the canvas size (not window size) */
 
@@ -320,7 +320,7 @@ webgl_register_callbacks(void)
 }
 
 int
-WI_WaitEvent(TIME time)
+axWaitEvent(TIME time)
 {
   (void)time;
   // In the browser all events arrive via registered callbacks; nothing to block on.
@@ -328,7 +328,7 @@ WI_WaitEvent(TIME time)
 }
 
 int
-WI_PollEvent(PEVENT pEvent)
+axPollEvent(PEVENT pEvent)
 {
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];
@@ -338,7 +338,7 @@ WI_PollEvent(PEVENT pEvent)
 }
 
 void
-WI_PostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 {
   if ((WORD)(events.write - events.read) == (WORD)(sizeof(events.queue) / sizeof(events.queue[0]) - 1)) {
     return;
@@ -352,7 +352,7 @@ WI_PostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 }
 
 void
-WI_RemoveFromQueue(void *hobj)
+axRemoveFromQueue(void *hobj)
 {
   WORD read_idx = events.read;
   WORD write_idx = events.write;
@@ -366,7 +366,7 @@ WI_RemoveFromQueue(void *hobj)
   events.write = new_write;
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
-      WI_CancelTimer(s_timers[i].id);
+      axCancelTimer(s_timers[i].id);
 }
 
 void
@@ -391,14 +391,14 @@ timer_fired(uint32_t timer_id)
         .lParam  = s_timers[i].userdata,
       };
       if (!s_timers[i].repeat)
-        WI_CancelTimer(timer_id);
+        axCancelTimer(timer_id);
       return;
     }
   }
 }
 
 uint32_t
-WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+axSetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 {
   int slot = -1;
   for (int i = 0; i < MAX_TIMERS; i++)
@@ -419,7 +419,7 @@ WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 }
 
 void
-WI_CancelTimer(uint32_t timer_id)
+axCancelTimer(uint32_t timer_id)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {

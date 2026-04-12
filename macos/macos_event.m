@@ -25,25 +25,25 @@ uint32_t KEY_GetKeyName(uint32_t keycode) {
 
 struct
 {
-  struct WI_Message data[0x10000];
+  struct AXmessage data[0x10000];
   uint16_t read, write;
 } queue = { 0 };
 
 void
-WI_RemoveFromQueue(void* target)
+axRemoveFromQueue(void* target)
 {
   for (uint16_t r = queue.read; r != queue.write; r++)
     if (queue.data[r].target == target)
       memset(&queue.data[r], 0, sizeof(queue.data[r]));
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == target)
-      WI_CancelTimer(s_timers[i].id);
+      axCancelTimer(s_timers[i].id);
 }
 
 void
-WI_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
+axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 {
-  struct WI_Message const msg = {
+  struct AXmessage const msg = {
     .target = obj,
     .message = Msg,
     .wParam = wParam,
@@ -77,7 +77,7 @@ WI_PostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 void
 NotifyFileDropEvent(char const *filename, float x, float y)
 {
-//	struct WI_Message * ev       = malloc(sizeof(EVENT));
+//	struct AXmessage * ev       = malloc(sizeof(EVENT));
 //	ev->type               = ;
 //	ev->windowNumber       = (int)windowNumber;
 //	ev->next               = window_events;
@@ -92,16 +92,16 @@ modkey(NSEventModifierFlags modifierFlags)
 {
 	uint32_t flags=0;
 	if (modifierFlags & NSEventModifierFlagShift) {
-		flags |= WI_MOD_SHIFT;
+		flags |= AX_MOD_SHIFT;
 	}
 	if (modifierFlags & NSEventModifierFlagCommand) {
-		flags |= WI_MOD_CMD;
+		flags |= AX_MOD_CMD;
 	}
 	if (modifierFlags & NSEventModifierFlagControl) {
-		flags |= WI_MOD_CTRL;
+		flags |= AX_MOD_CTRL;
 	}
 	if (modifierFlags & NSEventModifierFlagOption) {
-		flags |= WI_MOD_ALT;
+		flags |= AX_MOD_ALT;
 	}
 	return flags;
 }
@@ -158,7 +158,7 @@ GetKeyCode(NSEvent *event)
 }
 
 int
-WI_PollEvent(struct WI_Message * e)
+axPollEvent(struct AXmessage * e)
 {
   NSEvent *event;
 
@@ -173,7 +173,7 @@ start_over:
 
   if (event.type == NSEventTypeApplicationDefined) {
     queue.read = event.subtype;
-    memcpy(e, &queue.data[queue.read], sizeof(struct WI_Message));
+    memcpy(e, &queue.data[queue.read], sizeof(struct AXmessage));
     [event release];
     if (!e->message) {
       goto start_over;
@@ -221,7 +221,7 @@ start_over:
 }
 
 int
-WI_WaitEvent(longTime_t msec)
+axWaitEvent(longTime_t msec)
 {
   @autoreleasepool {
     NSDate *date = msec > 0
@@ -236,7 +236,7 @@ WI_WaitEvent(longTime_t msec)
 }
 
 uint32_t
-WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+axSetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 {
   int slot = -1;
   for (int i = 0; i < MAX_TIMERS; i++)
@@ -250,7 +250,7 @@ WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
   s_timers[slot].timer = [NSTimer scheduledTimerWithTimeInterval:(double)interval_ms / 1000.0
                                                          repeats:(BOOL)repeat
                                                            block:^(NSTimer* __unused t) {
-    WI_PostMessageW(obj, kEventTimer, tid, userdata);
+    axPostMessageW(obj, kEventTimer, tid, userdata);
     if (!repeat && s_timers[slot].id == tid) {
       s_timers[slot].id       = 0;
       s_timers[slot].timer    = nil;
@@ -262,7 +262,7 @@ WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 }
 
 void
-WI_CancelTimer(uint32_t timer_id)
+axCancelTimer(uint32_t timer_id)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {

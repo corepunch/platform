@@ -26,24 +26,24 @@ Here's a minimal example showing how to create a window and process input events
 
 int main(void) {
     // Initialize the platform library
-    WI_Init();
+    axInit();
     
     // Create a window (800x600 pixels)
-    if (!WI_CreateWindow("My Application", 800, 600, 0)) {
+    if (!axCreateWindow("My Application", 800, 600, 0)) {
         fprintf(stderr, "Failed to create window\n");
         return 1;
     }
     
     // Main event loop
-    struct WI_Message msg;
+    struct AXmessage msg;
     int running = 1;
     
     while (running) {
         // Wait for events (with 16ms timeout for ~60 FPS)
-        WI_WaitEvent(16);
+        axWaitEvent(16);
         
         // Process all pending events
-        while (WI_PollEvent(&msg)) {
+        while (axPollEvent(&msg)) {
             switch (msg.message) {
                 case kEventWindowClosed:
                     running = 0;
@@ -54,7 +54,7 @@ int main(void) {
                            msg.keyCode, msg.modflags);
                     
                     // Exit on ESC key
-                    if (msg.keyCode == WI_KEY_ESCAPE) {
+                    if (msg.keyCode == AX_KEY_ESCAPE) {
                         running = 0;
                     }
                     break;
@@ -74,15 +74,15 @@ int main(void) {
         }
         
         // Render your frame here
-        WI_BeginPaint();
+        axBeginPaint();
         
         // ... OpenGL rendering calls ...
         
-        WI_EndPaint();
+        axEndPaint();
     }
     
     // Cleanup
-    WI_Shutdown();
+    axShutdown();
     return 0;
 }
 ```
@@ -121,31 +121,31 @@ Make sure `libplatform.so` (Linux) or `libplatform.dylib` (macOS) is in your lib
 ### Initialization and Cleanup
 
 ```c
-void WI_Init(void);                    // Initialize the platform library
-void WI_Shutdown(void);                // Clean up and shutdown
+void axInit(void);                    // Initialize the platform library
+void axShutdown(void);                // Clean up and shutdown
 ```
 
 ### Window Management
 
 ```c
-bool_t WI_CreateWindow(const char* title, uint32_t width, uint32_t height, uint32_t flags);
-bool_t WI_CreateSurface(uint32_t width, uint32_t height);
-bool_t WI_SetSize(uint32_t width, uint32_t height, bool_t centered);
-uint32_t WI_GetSize(struct WI_Size* size);
-float WI_GetScaling(void);             // Get display scaling factor
+bool_t axCreateWindow(const char* title, uint32_t width, uint32_t height, uint32_t flags);
+bool_t axCreateSurface(uint32_t width, uint32_t height);
+bool_t axSetSize(uint32_t width, uint32_t height, bool_t centered);
+uint32_t axGetSize(struct AXsize* size);
+float axGetScaling(void);             // Get display scaling factor
 ```
 
 ### Event Processing
 
 ```c
-int WI_PollEvent(struct WI_Message* msg);          // Poll for next event (non-blocking)
-int WI_WaitEvent(longTime_t timeout_ms);           // Wait for events with timeout
-void WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
+int axPollEvent(struct AXmessage* msg);          // Poll for next event (non-blocking)
+int axWaitEvent(longTime_t timeout_ms);           // Wait for events with timeout
+void axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
 ```
 
 ### Event Types
 
-The library supports comprehensive event handling through the `WI_Message` structure:
+The library supports comprehensive event handling through the `AX_Message` structure:
 
 - **Mouse Events**: `kEventLeftMouseDown`, `kEventLeftMouseUp`, `kEventMouseMoved`, `kEventScrollWheel`
 - **Keyboard Events**: `kEventKeyDown`, `kEventKeyUp`, `kEventChar`
@@ -155,41 +155,41 @@ The library supports comprehensive event handling through the `WI_Message` struc
 ### Rendering
 
 ```c
-void WI_MakeCurrentContext(void);      // Make OpenGL context current
-void WI_BeginPaint(void);              // Begin rendering frame
-void WI_EndPaint(void);                // End rendering and swap buffers
-void WI_BindFramebuffer(void);         // Bind default framebuffer
+void axMakeCurrentContext(void);      // Make OpenGL context current
+void axBeginPaint(void);              // Begin rendering frame
+void axEndPaint(void);                // End rendering and swap buffers
+void axBindFramebuffer(void);         // Bind default framebuffer
 ```
 
 ### File Dialogs
 
 ```c
-bool_t WI_GetOpenFileName(WI_OpenFileName const* params);
-bool_t WI_GetSaveFileName(WI_OpenFileName const* params);
-bool_t WI_GetFolderName(WI_OpenFileName const* params);
+bool_t axGetOpenFileName(AXopenfilename const* params);
+bool_t axGetSaveFileName(AXopenfilename const* params);
+bool_t axGetFolderName(AXopenfilename const* params);
 ```
 
 ### System Utilities
 
 ```c
-longTime_t WI_GetMilliseconds(void);   // Get current time in milliseconds
-void WI_Sleep(longTime_t msec);        // Sleep for specified milliseconds
-bool_t WI_IsDarkTheme(void);           // Check if dark theme is active
-const char* WI_GetPlatform(void);      // Get platform name
-const char* WI_SettingsDirectory(void); // Get settings directory path
-const char* WI_ShareDirectory(void);   // Get share directory path
-const char* WI_LibDirectory(void);     // Get library directory path
+longTime_t axGetMilliseconds(void);   // Get current time in milliseconds
+void axSleep(longTime_t msec);        // Sleep for specified milliseconds
+bool_t axIsDarkTheme(void);           // Check if dark theme is active
+const char* axGetPlatform(void);      // Get platform name
+const char* axSettingsDirectory(void); // Get settings directory path
+const char* axShareDirectory(void);   // Get share directory path
+const char* axLibDirectory(void);     // Get library directory path
 ```
 
 ### Key Codes
 
 The library defines comprehensive key codes including:
 - Standard ASCII characters
-- Function keys (`WI_KEY_F1` - `WI_KEY_F12`)
-- Arrow keys (`WI_KEY_UPARROW`, `WI_KEY_DOWNARROW`, etc.)
-- Special keys (`WI_KEY_ENTER`, `WI_KEY_ESCAPE`, `WI_KEY_SPACE`, etc.)
-- Mouse buttons (`WI_KEY_MOUSE1`, `WI_KEY_MOUSE2`, `WI_KEY_MOUSE3`)
-- Modifier flags (`WI_MOD_SHIFT`, `WI_MOD_CTRL`, `WI_MOD_ALT`, `WI_MOD_CMD`)
+- Function keys (`AX_KEY_F1` - `AX_KEY_F12`)
+- Arrow keys (`AX_KEY_UPARROW`, `AX_KEY_DOWNARROW`, etc.)
+- Special keys (`AX_KEY_ENTER`, `AX_KEY_ESCAPE`, `AX_KEY_SPACE`, etc.)
+- Mouse buttons (`AX_KEY_MOUSE1`, `AX_KEY_MOUSE2`, `AX_KEY_MOUSE3`)
+- Modifier flags (`AX_MOD_SHIFT`, `AX_MOD_CTRL`, `AX_MOD_ALT`, `AX_MOD_CMD`)
 
 See `platform.h` for the complete list of key codes and event definitions.
 

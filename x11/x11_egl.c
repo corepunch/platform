@@ -107,7 +107,7 @@ delete_window(struct _WND* win)
 }
 
 void
-WI_Init(void)
+axInit(void)
 {
   x_display = XOpenDisplay(NULL);
   if (!x_display) {
@@ -130,7 +130,7 @@ WI_Init(void)
 }
 
 void
-WI_Shutdown(void)
+axShutdown(void)
 {
   delete_window(&window);
   if (egl_display != EGL_NO_DISPLAY) {

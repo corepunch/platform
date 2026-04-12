@@ -13,13 +13,13 @@ static PATHSTR g_local = { 0 };
 static PATHSTR g_lib = { 0 };
 
 char const*
-WI_GetPlatform(void)
+axGetPlatform(void)
 {
   return "linux (wayland)";
 }
 
 char const*
-WI_SettingsDirectory()
+axSettingsDirectory()
 {
   if (g_local[0] == 0) {
     snprintf(g_local, sizeof(g_local), "%s/." APPNAME, getenv("HOME"));
@@ -28,7 +28,7 @@ WI_SettingsDirectory()
 }
 
 static void
-WI_BundleDirectory(char* buf, int sz, char const* dir)
+axBundleDirectory(char* buf, int sz, char const* dir)
 {
   char path[512];
   snprintf(path, sizeof(path), "/proc/%d/exe", getpid());
@@ -48,19 +48,19 @@ WI_BundleDirectory(char* buf, int sz, char const* dir)
 }
 
 char const*
-WI_ShareDirectory()
+axShareDirectory()
 {
   if (g_share[0] == 0) {
-    WI_BundleDirectory(g_share, sizeof(g_share), "/share/" APPNAME);
+    axBundleDirectory(g_share, sizeof(g_share), "/share/" APPNAME);
   }
   return g_share;
 }
 
 char const*
-WI_LibDirectory()
+axLibDirectory()
 {
   if (g_lib[0] == 0) {
-    WI_BundleDirectory(g_lib, sizeof(g_lib), "/lib/" APPNAME);
+    axBundleDirectory(g_lib, sizeof(g_lib), "/lib/" APPNAME);
   }
   return g_lib;
 }
@@ -78,7 +78,7 @@ KEY_GetKeyName(uint32_t keycode)
 }
 
 char const*
-WI_DocumentsDirectory(void)
+axDocumentsDirectory(void)
 {
   if (documents[0] == 0) {
     char const* home = getenv("HOME");
@@ -90,7 +90,7 @@ WI_DocumentsDirectory(void)
 }
 
 bool_t
-WI_IsDarkTheme(void)
+axIsDarkTheme(void)
 {
   // Try to detect dark theme from environment variables
   // This is a simplified implementation - a full implementation would
@@ -110,7 +110,7 @@ WI_IsDarkTheme(void)
 }
 
 bool_t
-WI_GetOpenFileName(struct _WI_OpenFileName const* ofn)
+axGetOpenFileName(struct _AXopenfilename const* ofn)
 {
   // File dialogs require GTK or Qt integration
   // For now, this is a stub that returns FALSE
@@ -120,7 +120,7 @@ WI_GetOpenFileName(struct _WI_OpenFileName const* ofn)
 }
 
 bool_t
-WI_GetSaveFileName(struct _WI_OpenFileName const* ofn)
+axGetSaveFileName(struct _AXopenfilename const* ofn)
 {
   // File dialogs require GTK or Qt integration
   // For now, this is a stub that returns FALSE
@@ -129,7 +129,7 @@ WI_GetSaveFileName(struct _WI_OpenFileName const* ofn)
 }
 
 bool_t
-WI_GetFolderName(struct _WI_OpenFileName const* ofn)
+axGetFolderName(struct _AXopenfilename const* ofn)
 {
   // File dialogs require GTK or Qt integration
   // For now, this is a stub that returns FALSE

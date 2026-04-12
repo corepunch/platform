@@ -2,7 +2,7 @@
 #include "webgl_local.h"
 
 void
-WI_Init(void)
+axInit(void)
 {
   /* Size the canvas drawing buffer to CSS size × DPR before creating context
    * so iOS Safari allocates the correct framebuffer on the first frame. */
@@ -44,44 +44,44 @@ WI_Init(void)
 }
 
 void
-WI_Shutdown(void)
+axShutdown(void)
 {
   emscripten_webgl_destroy_context(g_webgl_ctx);
   g_webgl_ctx = 0;
 }
 
 char const *
-WI_GetPlatform(void)
+axGetPlatform(void)
 {
   return "webgl";
 }
 
 char const *
-WI_SettingsDirectory(void)
+axSettingsDirectory(void)
 {
   return "/";
 }
 
 char const *
-WI_ShareDirectory(void)
+axShareDirectory(void)
 {
   return "/";
 }
 
 char const *
-WI_LibDirectory(void)
+axLibDirectory(void)
 {
   return "/";
 }
 
 longTime_t
-WI_GetMilliseconds(void)
+axGetMilliseconds(void)
 {
   return (longTime_t)emscripten_get_now();
 }
 
 void
-WI_Sleep(longTime_t msec)
+axSleep(longTime_t msec)
 {
   (void)msec;
   /* Blocking sleep is not practical in a browser event loop.
@@ -89,35 +89,35 @@ WI_Sleep(longTime_t msec)
 }
 
 bool_t
-WI_IsDarkTheme(void)
+axIsDarkTheme(void)
 {
   /* Color-scheme detection would require a JS interop call; return FALSE for now. */
   return FALSE;
 }
 
 bool_t
-WI_GetOpenFileName(WI_OpenFileName const *ofn)
+axGetOpenFileName(AXopenfilename const *ofn)
 {
   (void)ofn;
   return FALSE;
 }
 
 bool_t
-WI_GetSaveFileName(WI_OpenFileName const *ofn)
+axGetSaveFileName(AXopenfilename const *ofn)
 {
   (void)ofn;
   return FALSE;
 }
 
 bool_t
-WI_GetFolderName(WI_OpenFileName const *ofn)
+axGetFolderName(AXopenfilename const *ofn)
 {
   (void)ofn;
   return FALSE;
 }
 
 char const *
-WI_KeynumToString(uint32_t keynum)
+axKeynumToString(uint32_t keynum)
 {
   static char tinystr[2];
   if (keynum == (uint32_t)-1)

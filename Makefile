@@ -74,7 +74,7 @@ all: $(TARGET)
 $(TARGET):
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
 
-# Parse platform.h to find all WI_API functions, generate a C test that asserts
+# Parse platform.h to find all AX_API functions, generate a C test that asserts
 # each function pointer is non-NULL (i.e. the symbol is defined), then compile,
 # link and run that test against the built library.
 ifdef EMSCRIPTEN
@@ -83,7 +83,7 @@ test:
 else
 test: $(TARGET)
 	@printf '#include "platform.h"\n#include <assert.h>\nint main(void) {\n' > $(TEST_SRC)
-	@awk '/^WI_API[[:space:]]/{getline; sub(/[(].*/,""); printf "    assert(%s != NULL);\n", $$1}' platform.h >> $(TEST_SRC)
+	@awk '/^AX_API[[:space:]]/{getline; sub(/[(].*/,""); printf "    assert(%s != NULL);\n", $$1}' platform.h >> $(TEST_SRC)
 	@printf '    return 0;\n}\n' >> $(TEST_SRC)
 	@$(CC) -I. $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
 	@$(TEST_BIN)

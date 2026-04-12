@@ -16,7 +16,7 @@ static struct
   WORD write, read;
   VECTOR2D pointer;
   uint32_t buttons;        /* bitmask of currently pressed buttons */
-  uint32_t mods;           /* current WI_MOD_* modifier flags */
+  uint32_t mods;           /* current AX_MOD_* modifier flags */
   uint32_t last_btn;       /* button of last click (for double-click) */
   uint32_t last_btn_time;  /* timestamp of last click (ms) */
 } events = { 0 };
@@ -48,7 +48,7 @@ timers_poll(void)
         .lParam  = s_timers[i].userdata,
       };
       if (!s_timers[i].repeat)
-        WI_CancelTimer(s_timers[i].id);
+        axCancelTimer(s_timers[i].id);
     }
   }
 }
@@ -227,69 +227,69 @@ keyboard_leave(void* data,
 }
 
 static uint32_t
-keysym_to_wi_key(xkb_keysym_t sym)
+keysym_to_ax_key(xkb_keysym_t sym)
 {
   /* Printable ASCII: normalise letters to lowercase */
   if (sym >= 0x20 && sym <= 0x7e)
     return (uint32_t)tolower((int)sym);
 
   switch (sym) {
-  case XKB_KEY_Tab:       return WI_KEY_TAB;
-  case XKB_KEY_Return:    return WI_KEY_ENTER;
-  case XKB_KEY_Escape:    return WI_KEY_ESCAPE;
-  case XKB_KEY_space:     return WI_KEY_SPACE;
-  case XKB_KEY_BackSpace: return WI_KEY_BACKSPACE;
+  case XKB_KEY_Tab:       return AX_KEY_TAB;
+  case XKB_KEY_Return:    return AX_KEY_ENTER;
+  case XKB_KEY_Escape:    return AX_KEY_ESCAPE;
+  case XKB_KEY_space:     return AX_KEY_SPACE;
+  case XKB_KEY_BackSpace: return AX_KEY_BACKSPACE;
 
-  case XKB_KEY_Up:        return WI_KEY_UPARROW;
-  case XKB_KEY_Down:      return WI_KEY_DOWNARROW;
-  case XKB_KEY_Left:      return WI_KEY_LEFTARROW;
-  case XKB_KEY_Right:     return WI_KEY_RIGHTARROW;
+  case XKB_KEY_Up:        return AX_KEY_UPARROW;
+  case XKB_KEY_Down:      return AX_KEY_DOWNARROW;
+  case XKB_KEY_Left:      return AX_KEY_LEFTARROW;
+  case XKB_KEY_Right:     return AX_KEY_RIGHTARROW;
 
   case XKB_KEY_Alt_L:
-  case XKB_KEY_Alt_R:     return WI_KEY_ALT;
+  case XKB_KEY_Alt_R:     return AX_KEY_ALT;
   case XKB_KEY_Control_L:
-  case XKB_KEY_Control_R: return WI_KEY_CTRL;
+  case XKB_KEY_Control_R: return AX_KEY_CTRL;
   case XKB_KEY_Shift_L:
-  case XKB_KEY_Shift_R:   return WI_KEY_SHIFT;
+  case XKB_KEY_Shift_R:   return AX_KEY_SHIFT;
   case XKB_KEY_Super_L:
-  case XKB_KEY_Super_R:   return WI_KEY_ALT; /* map Super to Alt for uniformity */
+  case XKB_KEY_Super_R:   return AX_KEY_ALT; /* map Super to Alt for uniformity */
 
-  case XKB_KEY_F1:        return WI_KEY_F1;
-  case XKB_KEY_F2:        return WI_KEY_F2;
-  case XKB_KEY_F3:        return WI_KEY_F3;
-  case XKB_KEY_F4:        return WI_KEY_F4;
-  case XKB_KEY_F5:        return WI_KEY_F5;
-  case XKB_KEY_F6:        return WI_KEY_F6;
-  case XKB_KEY_F7:        return WI_KEY_F7;
-  case XKB_KEY_F8:        return WI_KEY_F8;
-  case XKB_KEY_F9:        return WI_KEY_F9;
-  case XKB_KEY_F10:       return WI_KEY_F10;
-  case XKB_KEY_F11:       return WI_KEY_F11;
-  case XKB_KEY_F12:       return WI_KEY_F12;
+  case XKB_KEY_F1:        return AX_KEY_F1;
+  case XKB_KEY_F2:        return AX_KEY_F2;
+  case XKB_KEY_F3:        return AX_KEY_F3;
+  case XKB_KEY_F4:        return AX_KEY_F4;
+  case XKB_KEY_F5:        return AX_KEY_F5;
+  case XKB_KEY_F6:        return AX_KEY_F6;
+  case XKB_KEY_F7:        return AX_KEY_F7;
+  case XKB_KEY_F8:        return AX_KEY_F8;
+  case XKB_KEY_F9:        return AX_KEY_F9;
+  case XKB_KEY_F10:       return AX_KEY_F10;
+  case XKB_KEY_F11:       return AX_KEY_F11;
+  case XKB_KEY_F12:       return AX_KEY_F12;
 
-  case XKB_KEY_Insert:    return WI_KEY_INS;
-  case XKB_KEY_Delete:    return WI_KEY_DEL;
-  case XKB_KEY_Page_Down: return WI_KEY_PGDN;
-  case XKB_KEY_Page_Up:   return WI_KEY_PGUP;
-  case XKB_KEY_Home:      return WI_KEY_HOME;
-  case XKB_KEY_End:       return WI_KEY_END;
-  case XKB_KEY_Pause:     return WI_KEY_PAUSE;
+  case XKB_KEY_Insert:    return AX_KEY_INS;
+  case XKB_KEY_Delete:    return AX_KEY_DEL;
+  case XKB_KEY_Page_Down: return AX_KEY_PGDN;
+  case XKB_KEY_Page_Up:   return AX_KEY_PGUP;
+  case XKB_KEY_Home:      return AX_KEY_HOME;
+  case XKB_KEY_End:       return AX_KEY_END;
+  case XKB_KEY_Pause:     return AX_KEY_PAUSE;
 
-  case XKB_KEY_KP_Home:     return WI_KEY_KP_HOME;
-  case XKB_KEY_KP_Up:       return WI_KEY_KP_UPARROW;
-  case XKB_KEY_KP_Page_Up:  return WI_KEY_KP_PGUP;
-  case XKB_KEY_KP_Left:     return WI_KEY_KP_LEFTARROW;
-  case XKB_KEY_KP_Begin:    return WI_KEY_KP_5;
-  case XKB_KEY_KP_Right:    return WI_KEY_KP_RIGHTARROW;
-  case XKB_KEY_KP_End:      return WI_KEY_KP_END;
-  case XKB_KEY_KP_Down:     return WI_KEY_KP_DOWNARROW;
-  case XKB_KEY_KP_Page_Down: return WI_KEY_KP_PGDN;
-  case XKB_KEY_KP_Enter:    return WI_KEY_KP_ENTER;
-  case XKB_KEY_KP_Insert:   return WI_KEY_KP_INS;
-  case XKB_KEY_KP_Delete:   return WI_KEY_KP_DEL;
-  case XKB_KEY_KP_Divide:   return WI_KEY_KP_SLASH;
-  case XKB_KEY_KP_Subtract: return WI_KEY_KP_MINUS;
-  case XKB_KEY_KP_Add:      return WI_KEY_KP_PLUS;
+  case XKB_KEY_KP_Home:     return AX_KEY_KP_HOME;
+  case XKB_KEY_KP_Up:       return AX_KEY_KP_UPARROW;
+  case XKB_KEY_KP_Page_Up:  return AX_KEY_KP_PGUP;
+  case XKB_KEY_KP_Left:     return AX_KEY_KP_LEFTARROW;
+  case XKB_KEY_KP_Begin:    return AX_KEY_KP_5;
+  case XKB_KEY_KP_Right:    return AX_KEY_KP_RIGHTARROW;
+  case XKB_KEY_KP_End:      return AX_KEY_KP_END;
+  case XKB_KEY_KP_Down:     return AX_KEY_KP_DOWNARROW;
+  case XKB_KEY_KP_Page_Down: return AX_KEY_KP_PGDN;
+  case XKB_KEY_KP_Enter:    return AX_KEY_KP_ENTER;
+  case XKB_KEY_KP_Insert:   return AX_KEY_KP_INS;
+  case XKB_KEY_KP_Delete:   return AX_KEY_KP_DEL;
+  case XKB_KEY_KP_Divide:   return AX_KEY_KP_SLASH;
+  case XKB_KEY_KP_Subtract: return AX_KEY_KP_MINUS;
+  case XKB_KEY_KP_Add:      return AX_KEY_KP_PLUS;
 
   default: return 0;
   }
@@ -301,16 +301,16 @@ wayland_modifiers(void)
   uint32_t mods = 0;
   if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_SHIFT,
                                    XKB_STATE_MODS_EFFECTIVE) > 0)
-    mods |= WI_MOD_SHIFT;
+    mods |= AX_MOD_SHIFT;
   if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_CTRL,
                                    XKB_STATE_MODS_EFFECTIVE) > 0)
-    mods |= WI_MOD_CTRL;
+    mods |= AX_MOD_CTRL;
   if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_ALT,
                                    XKB_STATE_MODS_EFFECTIVE) > 0)
-    mods |= WI_MOD_ALT;
+    mods |= AX_MOD_ALT;
   if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_LOGO,
                                    XKB_STATE_MODS_EFFECTIVE) > 0)
-    mods |= WI_MOD_CMD;
+    mods |= AX_MOD_CMD;
   return mods;
 }
 
@@ -324,9 +324,9 @@ keyboard_key(void* data,
 {
   xkb_keycode_t keycode = key + 8;
   xkb_keysym_t keysym = xkb_state_key_get_one_sym(xkb_state, keycode);
-  uint32_t wi_key = keysym_to_wi_key(keysym);
+  uint32_t axkey = keysym_to_ax_key(keysym);
 
-  if (!wi_key)
+  if (!axkey)
     return;
 
   uint32_t mods = wayland_modifiers();
@@ -336,7 +336,7 @@ keyboard_key(void* data,
   PEVENT e = &events.queue[events.write++];
   *e = (EVENT){
     .message = msg,
-    .wParam  = wi_key | mods,
+    .wParam  = axkey | mods,
   };
 
   /* For key-down, also store the UTF-8 character in lParam */
@@ -413,7 +413,7 @@ get_xdg_surface_listener(void)
 }
 
 int
-WI_WaitEvent(TIME time)
+axWaitEvent(TIME time)
 {
   extern struct wl_display* display;
 
@@ -461,7 +461,7 @@ WI_WaitEvent(TIME time)
 }
 
 int
-WI_PollEvent(PEVENT pEvent)
+axPollEvent(PEVENT pEvent)
 {
   joy_poll();
   timers_poll();
@@ -482,7 +482,7 @@ void NotifyWindowEvent(void *window, uint32_t eventType, uint32_t wparam) {
 }
 
 void
-WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
+axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
 {
   if (events.write - events.read >= sizeof(events.queue) / sizeof(events.queue[0])) {
     // Queue is full, ignore the message
@@ -497,7 +497,7 @@ WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
 }
 
 void
-WI_RemoveFromQueue(void* hobj)
+axRemoveFromQueue(void* hobj)
 {
   WORD read_idx = events.read;
   WORD write_idx = events.write;
@@ -511,7 +511,7 @@ WI_RemoveFromQueue(void* hobj)
   events.write = new_write;
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
-      WI_CancelTimer(s_timers[i].id);
+      axCancelTimer(s_timers[i].id);
 }
 
 void
@@ -525,7 +525,7 @@ NotifyFileDropEvent(char const* filename, float x, float y)
 }
 
 uint32_t
-WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
+axSetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 {
   int slot = -1;
   for (int i = 0; i < MAX_TIMERS; i++)
@@ -556,7 +556,7 @@ WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat)
 }
 
 void
-WI_CancelTimer(uint32_t timer_id)
+axCancelTimer(uint32_t timer_id)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {

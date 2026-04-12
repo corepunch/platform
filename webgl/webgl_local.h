@@ -23,9 +23,9 @@ typedef uint16_t WORD;
 typedef uint32_t DWORD;
 typedef char const *PCSTR;
 typedef char PATHSTR[1024];
-typedef struct WI_Size *PSIZE2;
-typedef struct WI_Size const *PCSIZE2;
-typedef struct WI_Message EVENT, *PEVENT;
+typedef struct AXsize *PSIZE2;
+typedef struct AXsize const *PCSIZE2;
+typedef struct AXmessage EVENT, *PEVENT;
 typedef unsigned long TIME;
 
 extern EMSCRIPTEN_WEBGL_CONTEXT_HANDLE g_webgl_ctx;

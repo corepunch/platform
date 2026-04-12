@@ -7,7 +7,7 @@
  * rendering context management, file dialogs, and system utilities across
  * macOS, Linux (Wayland or X11), QNX, and WebGL (Emscripten) targets.
  *
- * All public symbols are exported via the #WI_API visibility macro.
+ * All public symbols are exported via the #AX_API visibility macro.
  */
 
 #ifndef __PLATFORM_H__
@@ -61,15 +61,15 @@
  * (`PLATFORM_BUILD` defined) or `__declspec(dllimport)` when consuming it.
  * Define this macro before including the header to override the default.
  */
-#ifndef WI_API
+#ifndef AX_API
 #  if defined(_WIN32) || defined(__MINGW32__)
 #    ifdef PLATFORM_BUILD
-#      define WI_API __declspec(dllexport)
+#      define AX_API __declspec(dllexport)
 #    else
-#      define WI_API __declspec(dllimport)
+#      define AX_API __declspec(dllimport)
 #    endif
 #  else
-#    define WI_API __attribute__((visibility("default")))
+#    define AX_API __attribute__((visibility("default")))
 #  endif
 #endif
 
@@ -91,7 +91,7 @@ typedef unsigned char  byte_t;      /**< Single unsigned byte. */
 
 /**
  * @defgroup keycodes Key codes
- * @brief Virtual key-code constants used in #WI_Message::wParam for key events.
+ * @brief Virtual key-code constants used in #AX_Message::wParam for key events.
  *
  * ASCII printable characters (32–126) map directly to their ASCII values.
  * Special keys start at 128 to avoid ambiguity.
@@ -99,114 +99,114 @@ typedef unsigned char  byte_t;      /**< Single unsigned byte. */
  */
 enum
 {
-  WI_KEY_TAB        = 9,   /**< Tab key. */
-  WI_KEY_ENTER      = 13,  /**< Return / Enter key. */
-  WI_KEY_ESCAPE     = 27,  /**< Escape key. */
-  WI_KEY_SPACE      = 32,  /**< Space bar. */
-  WI_KEY_BACKSPACE  = 127, /**< Backspace / Delete key. */
-  WI_KEY_UPARROW    = 128, /**< Up arrow. */
-  WI_KEY_DOWNARROW  = 129, /**< Down arrow. */
-  WI_KEY_LEFTARROW  = 130, /**< Left arrow. */
-  WI_KEY_RIGHTARROW = 131, /**< Right arrow. */
-  WI_KEY_ALT        = 132, /**< Alt / Option key. */
-  WI_KEY_CTRL       = 133, /**< Control key. */
-  WI_KEY_SHIFT      = 134, /**< Shift key. */
-  WI_KEY_F1         = 135, /**< F1 function key. */
-  WI_KEY_F2         = 136, /**< F2 function key. */
-  WI_KEY_F3         = 137, /**< F3 function key. */
-  WI_KEY_F4         = 138, /**< F4 function key. */
-  WI_KEY_F5         = 139, /**< F5 function key. */
-  WI_KEY_F6         = 140, /**< F6 function key. */
-  WI_KEY_F7         = 141, /**< F7 function key. */
-  WI_KEY_F8         = 142, /**< F8 function key. */
-  WI_KEY_F9         = 143, /**< F9 function key. */
-  WI_KEY_F10        = 144, /**< F10 function key. */
-  WI_KEY_F11        = 145, /**< F11 function key. */
-  WI_KEY_F12        = 146, /**< F12 function key. */
-  WI_KEY_INS        = 147, /**< Insert key. */
-  WI_KEY_DEL        = 148, /**< Delete key. */
-  WI_KEY_PGDN       = 149, /**< Page Down key. */
-  WI_KEY_PGUP       = 150, /**< Page Up key. */
-  WI_KEY_HOME       = 151, /**< Home key. */
-  WI_KEY_END        = 152, /**< End key. */
-  WI_KEY_KP_HOME        = 160, /**< Keypad Home (7). */
-  WI_KEY_KP_UPARROW     = 161, /**< Keypad Up (8). */
-  WI_KEY_KP_PGUP        = 162, /**< Keypad Page Up (9). */
-  WI_KEY_KP_LEFTARROW   = 163, /**< Keypad Left (4). */
-  WI_KEY_KP_5           = 164, /**< Keypad 5. */
-  WI_KEY_KP_RIGHTARROW  = 165, /**< Keypad Right (6). */
-  WI_KEY_KP_END         = 166, /**< Keypad End (1). */
-  WI_KEY_KP_DOWNARROW   = 167, /**< Keypad Down (2). */
-  WI_KEY_KP_PGDN        = 168, /**< Keypad Page Down (3). */
-  WI_KEY_KP_ENTER       = 169, /**< Keypad Enter. */
-  WI_KEY_KP_INS         = 170, /**< Keypad Insert (0). */
-  WI_KEY_KP_DEL         = 171, /**< Keypad Delete (.). */
-  WI_KEY_KP_SLASH       = 172, /**< Keypad /. */
-  WI_KEY_KP_MINUS       = 173, /**< Keypad -. */
-  WI_KEY_KP_PLUS        = 174, /**< Keypad +. */
-  WI_KEY_PAUSE          = 255, /**< Pause / Break key. */
-  WI_KEY_MOUSE1         = 200, /**< Primary mouse button (left). */
-  WI_KEY_MOUSE2         = 201, /**< Secondary mouse button (right). */
-  WI_KEY_MOUSE3         = 202, /**< Middle mouse button. */
-  WI_KEY_JOY1           = 203, /**< Joystick button 1. */
-  WI_KEY_JOY2           = 204, /**< Joystick button 2. */
-  WI_KEY_JOY3           = 205, /**< Joystick button 3. */
-  WI_KEY_JOY4           = 206, /**< Joystick button 4. */
-  WI_KEY_AUX1           = 207, /**< Auxiliary button 1. */
-  WI_KEY_AUX2           = 208, /**< Auxiliary button 2. */
-  WI_KEY_AUX3           = 209, /**< Auxiliary button 3. */
-  WI_KEY_AUX4           = 210, /**< Auxiliary button 4. */
-  WI_KEY_AUX5           = 211, /**< Auxiliary button 5. */
-  WI_KEY_AUX6           = 212, /**< Auxiliary button 6. */
-  WI_KEY_AUX7           = 213, /**< Auxiliary button 7. */
-  WI_KEY_AUX8           = 214, /**< Auxiliary button 8. */
-  WI_KEY_AUX9           = 215, /**< Auxiliary button 9. */
-  WI_KEY_AUX10          = 216, /**< Auxiliary button 10. */
-  WI_KEY_AUX11          = 217, /**< Auxiliary button 11. */
-  WI_KEY_AUX12          = 218, /**< Auxiliary button 12. */
-  WI_KEY_AUX13          = 219, /**< Auxiliary button 13. */
-  WI_KEY_AUX14          = 220, /**< Auxiliary button 14. */
-  WI_KEY_AUX15          = 221, /**< Auxiliary button 15. */
-  WI_KEY_AUX16          = 222, /**< Auxiliary button 16. */
-  WI_KEY_AUX17          = 223, /**< Auxiliary button 17. */
-  WI_KEY_AUX18          = 224, /**< Auxiliary button 18. */
-  WI_KEY_AUX19          = 225, /**< Auxiliary button 19. */
-  WI_KEY_AUX20          = 226, /**< Auxiliary button 20. */
-  WI_KEY_AUX21          = 227, /**< Auxiliary button 21. */
-  WI_KEY_AUX22          = 228, /**< Auxiliary button 22. */
-  WI_KEY_AUX23          = 229, /**< Auxiliary button 23. */
-  WI_KEY_AUX24          = 230, /**< Auxiliary button 24. */
-  WI_KEY_AUX25          = 231, /**< Auxiliary button 25. */
-  WI_KEY_AUX26          = 232, /**< Auxiliary button 26. */
-  WI_KEY_AUX27          = 233, /**< Auxiliary button 27. */
-  WI_KEY_AUX28          = 234, /**< Auxiliary button 28. */
-  WI_KEY_AUX29          = 235, /**< Auxiliary button 29. */
-  WI_KEY_AUX30          = 236, /**< Auxiliary button 30. */
-  WI_KEY_AUX31          = 237, /**< Auxiliary button 31. */
-  WI_KEY_AUX32          = 238, /**< Auxiliary button 32. */
-  WI_KEY_MWHEELDOWN     = 239, /**< Mouse wheel scroll down. */
-  WI_KEY_MWHEELUP       = 240, /**< Mouse wheel scroll up. */
+  AX_KEY_TAB        = 9,   /**< Tab key. */
+  AX_KEY_ENTER      = 13,  /**< Return / Enter key. */
+  AX_KEY_ESCAPE     = 27,  /**< Escape key. */
+  AX_KEY_SPACE      = 32,  /**< Space bar. */
+  AX_KEY_BACKSPACE  = 127, /**< Backspace / Delete key. */
+  AX_KEY_UPARROW    = 128, /**< Up arrow. */
+  AX_KEY_DOWNARROW  = 129, /**< Down arrow. */
+  AX_KEY_LEFTARROW  = 130, /**< Left arrow. */
+  AX_KEY_RIGHTARROW = 131, /**< Right arrow. */
+  AX_KEY_ALT        = 132, /**< Alt / Option key. */
+  AX_KEY_CTRL       = 133, /**< Control key. */
+  AX_KEY_SHIFT      = 134, /**< Shift key. */
+  AX_KEY_F1         = 135, /**< F1 function key. */
+  AX_KEY_F2         = 136, /**< F2 function key. */
+  AX_KEY_F3         = 137, /**< F3 function key. */
+  AX_KEY_F4         = 138, /**< F4 function key. */
+  AX_KEY_F5         = 139, /**< F5 function key. */
+  AX_KEY_F6         = 140, /**< F6 function key. */
+  AX_KEY_F7         = 141, /**< F7 function key. */
+  AX_KEY_F8         = 142, /**< F8 function key. */
+  AX_KEY_F9         = 143, /**< F9 function key. */
+  AX_KEY_F10        = 144, /**< F10 function key. */
+  AX_KEY_F11        = 145, /**< F11 function key. */
+  AX_KEY_F12        = 146, /**< F12 function key. */
+  AX_KEY_INS        = 147, /**< Insert key. */
+  AX_KEY_DEL        = 148, /**< Delete key. */
+  AX_KEY_PGDN       = 149, /**< Page Down key. */
+  AX_KEY_PGUP       = 150, /**< Page Up key. */
+  AX_KEY_HOME       = 151, /**< Home key. */
+  AX_KEY_END        = 152, /**< End key. */
+  AX_KEY_KP_HOME        = 160, /**< Keypad Home (7). */
+  AX_KEY_KP_UPARROW     = 161, /**< Keypad Up (8). */
+  AX_KEY_KP_PGUP        = 162, /**< Keypad Page Up (9). */
+  AX_KEY_KP_LEFTARROW   = 163, /**< Keypad Left (4). */
+  AX_KEY_KP_5           = 164, /**< Keypad 5. */
+  AX_KEY_KP_RIGHTARROW  = 165, /**< Keypad Right (6). */
+  AX_KEY_KP_END         = 166, /**< Keypad End (1). */
+  AX_KEY_KP_DOWNARROW   = 167, /**< Keypad Down (2). */
+  AX_KEY_KP_PGDN        = 168, /**< Keypad Page Down (3). */
+  AX_KEY_KP_ENTER       = 169, /**< Keypad Enter. */
+  AX_KEY_KP_INS         = 170, /**< Keypad Insert (0). */
+  AX_KEY_KP_DEL         = 171, /**< Keypad Delete (.). */
+  AX_KEY_KP_SLASH       = 172, /**< Keypad /. */
+  AX_KEY_KP_MINUS       = 173, /**< Keypad -. */
+  AX_KEY_KP_PLUS        = 174, /**< Keypad +. */
+  AX_KEY_PAUSE          = 255, /**< Pause / Break key. */
+  AX_KEY_MOUSE1         = 200, /**< Primary mouse button (left). */
+  AX_KEY_MOUSE2         = 201, /**< Secondary mouse button (right). */
+  AX_KEY_MOUSE3         = 202, /**< Middle mouse button. */
+  AX_KEY_JOY1           = 203, /**< Joystick button 1. */
+  AX_KEY_JOY2           = 204, /**< Joystick button 2. */
+  AX_KEY_JOY3           = 205, /**< Joystick button 3. */
+  AX_KEY_JOY4           = 206, /**< Joystick button 4. */
+  AX_KEY_AUX1           = 207, /**< Auxiliary button 1. */
+  AX_KEY_AUX2           = 208, /**< Auxiliary button 2. */
+  AX_KEY_AUX3           = 209, /**< Auxiliary button 3. */
+  AX_KEY_AUX4           = 210, /**< Auxiliary button 4. */
+  AX_KEY_AUX5           = 211, /**< Auxiliary button 5. */
+  AX_KEY_AUX6           = 212, /**< Auxiliary button 6. */
+  AX_KEY_AUX7           = 213, /**< Auxiliary button 7. */
+  AX_KEY_AUX8           = 214, /**< Auxiliary button 8. */
+  AX_KEY_AUX9           = 215, /**< Auxiliary button 9. */
+  AX_KEY_AUX10          = 216, /**< Auxiliary button 10. */
+  AX_KEY_AUX11          = 217, /**< Auxiliary button 11. */
+  AX_KEY_AUX12          = 218, /**< Auxiliary button 12. */
+  AX_KEY_AUX13          = 219, /**< Auxiliary button 13. */
+  AX_KEY_AUX14          = 220, /**< Auxiliary button 14. */
+  AX_KEY_AUX15          = 221, /**< Auxiliary button 15. */
+  AX_KEY_AUX16          = 222, /**< Auxiliary button 16. */
+  AX_KEY_AUX17          = 223, /**< Auxiliary button 17. */
+  AX_KEY_AUX18          = 224, /**< Auxiliary button 18. */
+  AX_KEY_AUX19          = 225, /**< Auxiliary button 19. */
+  AX_KEY_AUX20          = 226, /**< Auxiliary button 20. */
+  AX_KEY_AUX21          = 227, /**< Auxiliary button 21. */
+  AX_KEY_AUX22          = 228, /**< Auxiliary button 22. */
+  AX_KEY_AUX23          = 229, /**< Auxiliary button 23. */
+  AX_KEY_AUX24          = 230, /**< Auxiliary button 24. */
+  AX_KEY_AUX25          = 231, /**< Auxiliary button 25. */
+  AX_KEY_AUX26          = 232, /**< Auxiliary button 26. */
+  AX_KEY_AUX27          = 233, /**< Auxiliary button 27. */
+  AX_KEY_AUX28          = 234, /**< Auxiliary button 28. */
+  AX_KEY_AUX29          = 235, /**< Auxiliary button 29. */
+  AX_KEY_AUX30          = 236, /**< Auxiliary button 30. */
+  AX_KEY_AUX31          = 237, /**< Auxiliary button 31. */
+  AX_KEY_AUX32          = 238, /**< Auxiliary button 32. */
+  AX_KEY_MWHEELDOWN     = 239, /**< Mouse wheel scroll down. */
+  AX_KEY_MWHEELUP       = 240, /**< Mouse wheel scroll up. */
 };
 /** @} */
 
 /**
  * @defgroup modifiers Modifier key flags
- * @brief Bit flags ORed into #WI_Message::wParam for keyboard and mouse events.
+ * @brief Bit flags ORed into #AX_Message::wParam for keyboard and mouse events.
  * @{
  */
 enum
 {
-  WI_MOD_SHIFT = 1 << 16, /**< Shift key is held. */
-  WI_MOD_CTRL  = 1 << 17, /**< Control key is held. */
-  WI_MOD_ALT   = 1 << 18, /**< Alt / Option key is held. */
-  WI_MOD_CMD   = 1 << 19, /**< Command / Super / Meta key is held. */
+  AX_MOD_SHIFT = 1 << 16, /**< Shift key is held. */
+  AX_MOD_CTRL  = 1 << 17, /**< Control key is held. */
+  AX_MOD_ALT   = 1 << 18, /**< Alt / Option key is held. */
+  AX_MOD_CMD   = 1 << 19, /**< Command / Super / Meta key is held. */
 };
 /** @} */
 
 /**
  * @brief General-purpose byte buffer.
  */
-struct WI_Buffer
+struct AXbuffer
 {
   byte_t* data;      /**< Pointer to the raw byte storage. */
   int     maxsize;   /**< Total capacity in bytes. */
@@ -217,7 +217,7 @@ struct WI_Buffer
 /**
  * @brief Platform-independent event message.
  *
- * Dispatched by #WI_PollEvent.  The @p message field identifies the event
+ * Dispatched by #axPollEvent.  The @p message field identifies the event
  * type (one of the `kEvent*` constants from events.h) and determines how the
  * parameter unions should be interpreted.
  *
@@ -225,7 +225,7 @@ struct WI_Buffer
  * Keyboard events: @p wParam = key-code | modifier flags, @p lParam = UTF-8 char.
  * Window events:  @p target = window handle, @p wParam = new width/height.
  */
-struct WI_Message
+struct AXmessage
 {
   void*    target;   /**< Window or object that should receive the event. */
   uint32_t message;  /**< Event type identifier (e.g. #kEventKeyDown). */
@@ -244,7 +244,7 @@ struct WI_Message
 /**
  * @brief 2-D size in pixels.
  */
-struct WI_Size
+struct AXsize
 {
   uint32_t width;  /**< Width in pixels. */
   uint32_t height; /**< Height in pixels. */
@@ -263,13 +263,13 @@ struct WI_Size
  * coalesced: if an identical message for the same @p hobj is already queued,
  * only its parameters are updated rather than adding a second entry.
  *
- * @param hobj   Target window or object handle (stored in #WI_Message::target).
+ * @param hobj   Target window or object handle (stored in #AX_Message::target).
  * @param event  Event type identifier (e.g. #kEventWindowPaint).
  * @param wparam Word-sized parameter; semantics depend on @p event.
  * @param lparam Pointer-sized parameter; semantics depend on @p event.
  */
-WI_API void
-WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
+AX_API void
+axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
 
 /**
  * @brief Retrieve the next event from the queue without blocking.
@@ -280,8 +280,8 @@ WI_PostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
  * @param[out] msg  Filled with event data when an event is available.
  * @return 1 if an event was written to @p msg, 0 if the queue is empty.
  */
-WI_API int
-WI_PollEvent(struct WI_Message* msg);
+AX_API int
+axPollEvent(struct AXmessage* msg);
 
 /**
  * @brief Remove all queued events whose target matches @p target.
@@ -291,21 +291,21 @@ WI_PollEvent(struct WI_Message* msg);
  *
  * @param target  Window or object handle to match against.
  */
-WI_API void
-WI_RemoveFromQueue(void* target);
+AX_API void
+axRemoveFromQueue(void* target);
 
 /**
  * @brief Notify the event system that a file was dropped onto the window.
  *
  * This is called internally by platform-specific drag-and-drop handlers.
  * Applications should not normally call this directly; instead listen for
- * #kEventDragDrop messages via #WI_PollEvent.
+ * #kEventDragDrop messages via #axPollEvent.
  *
  * @param filename  Null-terminated UTF-8 path of the dropped file.
  * @param x         Horizontal drop position in window coordinates.
  * @param y         Vertical drop position in window coordinates.
  */
-WI_API void
+AX_API void
 NotifyFileDropEvent(char const *filename, float x, float y);
 
 /** @} */
@@ -329,13 +329,13 @@ enum {
 /**
  * @brief Parameters for file and folder dialog functions.
  */
-typedef struct _WI_OpenFileName {
+typedef struct _AXopenfilename {
   char       *lpstrFile;   /**< Buffer that receives the chosen path (UTF-8, null-terminated). */
   uint32_t    nMaxFile;    /**< Size of @p lpstrFile in bytes, including the null terminator. */
   char const *lpstrFilter; /**< Optional file-type filter string (platform-specific format). */
   char const *lpstrTitle;  /**< Optional dialog title; NULL uses the platform default. */
   uint32_t    Flags;       /**< Combination of OFN_* flags. */
-} WI_OpenFileName;
+} AXopenfilename;
 
 /**
  * @brief Show a native open-file dialog.
@@ -347,8 +347,8 @@ typedef struct _WI_OpenFileName {
  * @param ofn  Dialog parameters.
  * @return `TRUE` if the user selected a file, `FALSE` if cancelled or unsupported.
  */
-WI_API bool_t
-WI_GetOpenFileName(WI_OpenFileName const *ofn);
+AX_API bool_t
+axGetOpenFileName(AXopenfilename const *ofn);
 
 /**
  * @brief Show a native save-file dialog.
@@ -360,8 +360,8 @@ WI_GetOpenFileName(WI_OpenFileName const *ofn);
  * @param ofn  Dialog parameters.
  * @return `TRUE` if the user entered a path, `FALSE` if cancelled or unsupported.
  */
-WI_API bool_t
-WI_GetSaveFileName(WI_OpenFileName const *ofn);
+AX_API bool_t
+axGetSaveFileName(AXopenfilename const *ofn);
 
 /**
  * @brief Show a native folder-picker dialog.
@@ -373,8 +373,8 @@ WI_GetSaveFileName(WI_OpenFileName const *ofn);
  * @param ofn  Dialog parameters.
  * @return `TRUE` if the user selected a folder, `FALSE` if cancelled or unsupported.
  */
-WI_API bool_t
-WI_GetFolderName(WI_OpenFileName const *ofn);
+AX_API bool_t
+axGetFolderName(AXopenfilename const *ofn);
 
 /** @} */
 
@@ -387,21 +387,21 @@ WI_GetFolderName(WI_OpenFileName const *ofn);
 /**
  * @brief Initialise the platform subsystem.
  *
- * Must be called once before any other WI_* function.  On macOS this starts
+ * Must be called once before any other AX_* function.  On macOS this starts
  * the NSApplication run loop; on Wayland it connects to the Wayland display
  * and initialises EGL; on QNX it creates the Screen context and EGL surface.
  */
-WI_API void
-WI_Init(void);
+AX_API void
+axInit(void);
 
 /**
  * @brief Shut down the platform subsystem and release all resources.
  *
- * After this call no other WI_* function may be called until #WI_Init is
+ * After this call no other AX_* function may be called until #AX_Init is
  * called again.
  */
-WI_API void
-WI_Shutdown(void);
+AX_API void
+axShutdown(void);
 
 /** @} */
 
@@ -419,16 +419,16 @@ WI_Shutdown(void);
  *
  * @return Milliseconds since an arbitrary fixed point.
  */
-WI_API longTime_t
-WI_GetMilliseconds(void);
+AX_API longTime_t
+axGetMilliseconds(void);
 
 /**
  * @brief Suspend the calling thread for at least @p msec milliseconds.
  *
  * @param msec  Sleep duration in milliseconds.  A value of 0 yields the CPU.
  */
-WI_API void
-WI_Sleep(longTime_t msec);
+AX_API void
+axSleep(longTime_t msec);
 
 /**
  * @brief Test whether the system is currently using a dark colour scheme.
@@ -439,8 +439,8 @@ WI_Sleep(longTime_t msec);
  *
  * @return `TRUE` if a dark theme is active, `FALSE` otherwise.
  */
-WI_API bool_t
-WI_IsDarkTheme(void);
+AX_API bool_t
+axIsDarkTheme(void);
 
 /**
  * @brief Return a short string identifying the current platform.
@@ -448,8 +448,8 @@ WI_IsDarkTheme(void);
  * @return One of `"macos"`, `"linux (wayland)"`, `"linux (x11)"`, `"qnx"`, or `"webgl"`.
  *         The returned pointer is valid for the lifetime of the process.
  */
-WI_API char const *
-WI_GetPlatform(void);
+AX_API char const *
+axGetPlatform(void);
 
 /**
  * @brief Return the per-user settings (application support) directory.
@@ -460,8 +460,8 @@ WI_GetPlatform(void);
  * @return Null-terminated UTF-8 path string.  Valid for the lifetime of the
  *         process; do not free.
  */
-WI_API char const *
-WI_SettingsDirectory(void);
+AX_API char const *
+axSettingsDirectory(void);
 
 /**
  * @brief Return the directory that contains shared read-only application data.
@@ -472,20 +472,20 @@ WI_SettingsDirectory(void);
  * @return Null-terminated UTF-8 path string.  Valid for the lifetime of the
  *         process; do not free.
  */
-WI_API char const *
-WI_ShareDirectory(void);
+AX_API char const *
+axShareDirectory(void);
 
 /**
  * @brief Return the directory that contains platform-specific dynamic libraries.
  *
- * On macOS this is the same as #WI_ShareDirectory; on Linux it is
+ * On macOS this is the same as #AX_ShareDirectory; on Linux it is
  * `<exe>/../lib/<appname>/`.
  *
  * @return Null-terminated UTF-8 path string.  Valid for the lifetime of the
  *         process; do not free.
  */
-WI_API char const *
-WI_LibDirectory(void);
+AX_API char const *
+axLibDirectory(void);
 
 /** @} */
 
@@ -497,7 +497,7 @@ WI_LibDirectory(void);
 
 /**
  * @defgroup windowflags Window creation flags
- * @brief Bit flags passed to #WI_CreateWindow to control window and rendering
+ * @brief Bit flags passed to #axCreateWindow to control window and rendering
  *        context behaviour.
  *
  * Pass 0 for the default behaviour (double-buffered, decorated, resizable,
@@ -508,46 +508,46 @@ enum
 {
   /** Enable double buffering.  Already the default; specify explicitly for
    *  clarity or to pair with a future single-buffer flag. */
-  WI_WINDOW_DOUBLEBUFFER = 1 << 0,
+  AX_WINDOW_DOUBLEBUFFER = 1 << 0,
 
   /** Create the window in fullscreen mode. */
-  WI_WINDOW_FULLSCREEN   = 1 << 1,
+  AX_WINDOW_FULLSCREEN   = 1 << 1,
 
   /** Create the window without title bar or OS decorations. */
-  WI_WINDOW_BORDERLESS   = 1 << 2,
+  AX_WINDOW_BORDERLESS   = 1 << 2,
 
   /** Allow the window to be resized by the user.  When passing any nonzero
-   *  @p flags to #WI_CreateWindow, include this flag explicitly to keep the
+   *  @p flags to #axCreateWindow, include this flag explicitly to keep the
    *  window resizable; omitting it while using other flags will produce a
    *  fixed-size window on most platforms.  With @p flags == 0 the window
    *  remains resizable for backward compatibility. */
-  WI_WINDOW_RESIZABLE    = 1 << 3,
+  AX_WINDOW_RESIZABLE    = 1 << 3,
 
   /** Create the window in a hidden state.  Call the platform show/focus API
    *  later to make it visible. */
-  WI_WINDOW_HIDDEN       = 1 << 4,
+  AX_WINDOW_HIDDEN       = 1 << 4,
 
   /** Request a high-DPI / Retina-resolution surface where available. */
-  WI_WINDOW_HIGHDPI      = 1 << 5,
+  AX_WINDOW_HIGHDPI      = 1 << 5,
 };
 /** @} */
 
 /**
  * @brief Create the main application window.
  *
- * Only one window is supported at a time.  Call #WI_Init before this
+ * Only one window is supported at a time.  Call #AX_Init before this
  * function.
  *
  * @param title   Null-terminated UTF-8 window title string.
  * @param width   Initial client-area width in logical pixels.
  * @param height  Initial client-area height in logical pixels.
- * @param flags   Combination of #WI_WINDOW_DOUBLEBUFFER, #WI_WINDOW_FULLSCREEN,
- *                #WI_WINDOW_BORDERLESS, #WI_WINDOW_RESIZABLE, #WI_WINDOW_HIDDEN,
- *                and #WI_WINDOW_HIGHDPI, or 0 for defaults.
+ * @param flags   Combination of #AX_WINDOW_DOUBLEBUFFER, #AX_WINDOW_FULLSCREEN,
+ *                #AX_WINDOW_BORDERLESS, #AX_WINDOW_RESIZABLE, #AX_WINDOW_HIDDEN,
+ *                and #AX_WINDOW_HIGHDPI, or 0 for defaults.
  * @return `TRUE` on success, `FALSE` if window creation failed.
  */
-WI_API bool_t
-WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags);
+AX_API bool_t
+axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags);
 
 /**
  * @brief Create an off-screen rendering surface.
@@ -559,8 +559,8 @@ WI_CreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t fla
  * @param height  Surface height in pixels.
  * @return `TRUE` on success, `FALSE` if off-screen surfaces are unsupported.
  */
-WI_API bool_t
-WI_CreateSurface(uint32_t width, uint32_t height);
+AX_API bool_t
+axCreateSurface(uint32_t width, uint32_t height);
 
 /**
  * @brief Return the display scaling factor (HiDPI / Retina multiplier).
@@ -570,8 +570,8 @@ WI_CreateSurface(uint32_t width, uint32_t height);
  *
  * @return Display scale factor (e.g. 2.0 on a Retina display).
  */
-WI_API float
-WI_GetScaling(void);
+AX_API float
+axGetScaling(void);
 
 /**
  * @brief Resize the window to the specified logical dimensions.
@@ -581,8 +581,8 @@ WI_GetScaling(void);
  * @param centered If `TRUE`, re-centre the window on screen after resizing.
  * @return `TRUE` on success, `FALSE` if the operation is unsupported.
  */
-WI_API bool_t
-WI_SetSize(uint32_t width, uint32_t height, bool_t centered);
+AX_API bool_t
+axSetSize(uint32_t width, uint32_t height, bool_t centered);
 
 /**
  * @brief Query the current window size.
@@ -590,21 +590,21 @@ WI_SetSize(uint32_t width, uint32_t height, bool_t centered);
  * @param[out] size  If non-NULL, receives the current width and height.
  * @return MAKEDWORD(width, height) packed into a single 32-bit value.
  */
-WI_API uint32_t
-WI_GetSize(struct WI_Size* size);
+AX_API uint32_t
+axGetSize(struct AXsize* size);
 
 /**
  * @brief Wait for the next event or until @p msec milliseconds have elapsed.
  *
  * On QNX the calling thread blocks on a POSIX semaphore that is signalled by
- * #WI_PostMessageW, so the wait is woken immediately when a new event is
+ * #AX_PostMessageW, so the wait is woken immediately when a new event is
  * posted from any thread.  Pass 0 to block indefinitely.
  *
  * @param msec  Maximum time to wait in milliseconds, or 0 to block indefinitely.
  * @return 1 if at least one event is ready, 0 if the timeout expired.
  */
-WI_API int
-WI_WaitEvent(longTime_t msec);
+AX_API int
+axWaitEvent(longTime_t msec);
 
 /**
  * @brief Make the platform OpenGL/EGL context current on the calling thread.
@@ -612,17 +612,17 @@ WI_WaitEvent(longTime_t msec);
  * Must be called before issuing any OpenGL commands.  On macOS this binds
  * the NSOpenGLContext; on Wayland/QNX it calls eglMakeCurrent.
  */
-WI_API void
-WI_MakeCurrentContext(void);
+AX_API void
+axMakeCurrentContext(void);
 
 /**
  * @brief Begin a frame: make the context current and flush pending events.
  *
- * Equivalent to calling #WI_MakeCurrentContext followed by a display flush
+ * Equivalent to calling #AX_MakeCurrentContext followed by a display flush
  * on Wayland, or dispatching the Cocoa run loop on macOS.
  */
-WI_API void
-WI_BeginPaint(void);
+AX_API void
+axBeginPaint(void);
 
 /**
  * @brief End a frame: swap buffers and flush the display connection.
@@ -631,8 +631,8 @@ WI_BeginPaint(void);
  * back-buffer.  Also ensures the alpha channel is opaque where required
  * by compositors.
  */
-WI_API void
-WI_EndPaint(void);
+AX_API void
+axEndPaint(void);
 
 /**
  * @brief Bind the platform's default framebuffer.
@@ -640,8 +640,8 @@ WI_EndPaint(void);
  * On macOS this binds the IOSurface-backed FBO; on EGL-based platforms the
  * default framebuffer (0) is always active, so this is a no-op.
  */
-WI_API void
-WI_BindFramebuffer(void);
+AX_API void
+axBindFramebuffer(void);
 
 /** @} */
 
@@ -659,13 +659,13 @@ WI_BindFramebuffer(void);
  * Returns `"<UNKNOWN KEYNUM>"` for unrecognised codes and
  * `"<KEY NOT FOUND>"` when @p keynum is `(uint32_t)-1`.
  *
- * @param keynum  Virtual key code (one of the `WI_KEY_*` constants or a
+ * @param keynum  Virtual key code (one of the `AX_KEY_*` constants or a
  *                printable ASCII value).
  * @return Null-terminated ASCII string.  Valid until the next call to this
  *         function (uses an internal static buffer for single-character names).
  */
-WI_API char const *
-WI_KeynumToString(uint32_t keynum);
+AX_API char const *
+axKeynumToString(uint32_t keynum);
 
 /** @} */
 
@@ -674,7 +674,7 @@ WI_KeynumToString(uint32_t keynum);
  * @brief Functions for enumerating and reading joystick / gamepad devices.
  *
  * Joystick events are delivered through the standard event queue via
- * #WI_PollEvent.  The event fields carry the device data as follows:
+ * #axPollEvent.  The event fields carry the device data as follows:
  *
  * - #kEventJoyAxisMotion:  @p wParam = axis index (0-based),
  *                          @p lParam = axis value as @c int16_t cast to @c void*.
@@ -690,31 +690,31 @@ WI_KeynumToString(uint32_t keynum);
  *         Returning `FALSE` is not fatal; the application can continue without
  *         joystick input.
  */
-WI_API bool_t
-WI_JoystickInit(void);
+AX_API bool_t
+axJoystickInit(void);
 
 /**
  * @brief Shut down the joystick subsystem and close any open device.
  */
-WI_API void
-WI_JoystickShutdown(void);
+AX_API void
+axJoystickShutdown(void);
 
 /**
  * @brief Check whether a joystick is currently connected and open.
  *
  * @return `TRUE` if a device is available, `FALSE` otherwise.
  */
-WI_API bool_t
-WI_JoystickAvailable(void);
+AX_API bool_t
+axJoystickAvailable(void);
 
 /**
  * @brief Return the name of the connected joystick.
  *
  * @return Null-terminated UTF-8 device name, or `NULL` if no device is open.
- *         The pointer is valid until the next call to #WI_JoystickShutdown.
+ *         The pointer is valid until the next call to #AX_JoystickShutdown.
  */
-WI_API char const *
-WI_JoystickGetName(void);
+AX_API char const *
+axJoystickGetName(void);
 
 /** @} */
 
@@ -732,8 +732,8 @@ WI_JoystickGetName(void);
  * @return `TRUE` on success, `FALSE` if the operation is unsupported on the
  *         current platform.
  */
-WI_API bool_t
-WI_SetSwapInterval(int interval);
+AX_API bool_t
+axSetSwapInterval(int interval);
 
 /** @} */
 
@@ -742,8 +742,8 @@ WI_SetSwapInterval(int interval);
  * @brief Recurring and one-shot timer events delivered via the event queue.
  *
  * Timers post a #kEventTimer event when they fire.  The event fields carry:
- * - @p wParam = timer ID (the value returned by #WI_SetTimer).
- * - @p lParam = the @p userdata pointer passed to #WI_SetTimer.
+ * - @p wParam = timer ID (the value returned by #AX_SetTimer).
+ * - @p lParam = the @p userdata pointer passed to #AX_SetTimer.
  * @{
  */
 
@@ -751,25 +751,25 @@ WI_SetSwapInterval(int interval);
  * @brief Create a timer that posts #kEventTimer when it fires.
  *
  * The timer event is posted to @p obj, matching the target used by
- * #WI_PostMessageW.  Calling #WI_RemoveFromQueue with the same @p obj will
+ * #AX_PostMessageW.  Calling #AX_RemoveFromQueue with the same @p obj will
  * both flush queued events *and* cancel all timers registered for that object.
  *
- * @param obj          Target object; passed as #WI_Message::target on fire.
+ * @param obj          Target object; passed as #AX_Message::target on fire.
  * @param interval_ms  Timer interval in milliseconds.
- * @param userdata     Passed back in #WI_Message::lParam when the timer fires.
+ * @param userdata     Passed back in #AX_Message::lParam when the timer fires.
  * @param repeat       `TRUE` for a recurring timer, `FALSE` for a one-shot.
  * @return Timer ID (> 0) on success, 0 on failure.
  */
-WI_API uint32_t
-WI_SetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat);
+AX_API uint32_t
+axSetTimer(void* obj, uint32_t interval_ms, void* userdata, bool_t repeat);
 
 /**
  * @brief Cancel an active timer.
  *
- * @param timer_id  ID returned by #WI_SetTimer.
+ * @param timer_id  ID returned by #AX_SetTimer.
  */
-WI_API void
-WI_CancelTimer(uint32_t timer_id);
+AX_API void
+axCancelTimer(uint32_t timer_id);
 
 /** @} */
 

@@ -25,7 +25,7 @@ extern void  GetWindowSize(HWND hWnd, LPSIZE2 lpSize);
 
 static struct
 {
-  struct WI_Message data[0x10000];
+  struct AXmessage data[0x10000];
   uint16_t read, write;
 } queue = { 0 };
 
@@ -39,7 +39,7 @@ static int qnx_ptr_x = 0;
 static int qnx_ptr_y = 0;
 static int qnx_buttons = 0;
 
-/* Map a QNX key symbol to a WI_KEY_* constant */
+/* Map a QNX key symbol to a AX_KEY_* constant */
 static uint32_t
 qnx_keysym_to_wi(int sym)
 {
@@ -48,60 +48,60 @@ qnx_keysym_to_wi(int sym)
     return (uint32_t)tolower(sym);
 
   switch (sym) {
-  case KEYCODE_TAB:        return WI_KEY_TAB;
-  case KEYCODE_RETURN:     return WI_KEY_ENTER;
-  case KEYCODE_ESCAPE:     return WI_KEY_ESCAPE;
-  case KEYCODE_SPACE:      return WI_KEY_SPACE;
-  case KEYCODE_BACKSPACE:  return WI_KEY_BACKSPACE;
+  case KEYCODE_TAB:        return AX_KEY_TAB;
+  case KEYCODE_RETURN:     return AX_KEY_ENTER;
+  case KEYCODE_ESCAPE:     return AX_KEY_ESCAPE;
+  case KEYCODE_SPACE:      return AX_KEY_SPACE;
+  case KEYCODE_BACKSPACE:  return AX_KEY_BACKSPACE;
 
-  case KEYCODE_UP:         return WI_KEY_UPARROW;
-  case KEYCODE_DOWN:       return WI_KEY_DOWNARROW;
-  case KEYCODE_LEFT:       return WI_KEY_LEFTARROW;
-  case KEYCODE_RIGHT:      return WI_KEY_RIGHTARROW;
+  case KEYCODE_UP:         return AX_KEY_UPARROW;
+  case KEYCODE_DOWN:       return AX_KEY_DOWNARROW;
+  case KEYCODE_LEFT:       return AX_KEY_LEFTARROW;
+  case KEYCODE_RIGHT:      return AX_KEY_RIGHTARROW;
 
   case KEYCODE_LEFT_ALT:
-  case KEYCODE_RIGHT_ALT:  return WI_KEY_ALT;
+  case KEYCODE_RIGHT_ALT:  return AX_KEY_ALT;
   case KEYCODE_LEFT_CTRL:
-  case KEYCODE_RIGHT_CTRL: return WI_KEY_CTRL;
+  case KEYCODE_RIGHT_CTRL: return AX_KEY_CTRL;
   case KEYCODE_LEFT_SHIFT:
-  case KEYCODE_RIGHT_SHIFT: return WI_KEY_SHIFT;
+  case KEYCODE_RIGHT_SHIFT: return AX_KEY_SHIFT;
 
-  case KEYCODE_F1:         return WI_KEY_F1;
-  case KEYCODE_F2:         return WI_KEY_F2;
-  case KEYCODE_F3:         return WI_KEY_F3;
-  case KEYCODE_F4:         return WI_KEY_F4;
-  case KEYCODE_F5:         return WI_KEY_F5;
-  case KEYCODE_F6:         return WI_KEY_F6;
-  case KEYCODE_F7:         return WI_KEY_F7;
-  case KEYCODE_F8:         return WI_KEY_F8;
-  case KEYCODE_F9:         return WI_KEY_F9;
-  case KEYCODE_F10:        return WI_KEY_F10;
-  case KEYCODE_F11:        return WI_KEY_F11;
-  case KEYCODE_F12:        return WI_KEY_F12;
+  case KEYCODE_F1:         return AX_KEY_F1;
+  case KEYCODE_F2:         return AX_KEY_F2;
+  case KEYCODE_F3:         return AX_KEY_F3;
+  case KEYCODE_F4:         return AX_KEY_F4;
+  case KEYCODE_F5:         return AX_KEY_F5;
+  case KEYCODE_F6:         return AX_KEY_F6;
+  case KEYCODE_F7:         return AX_KEY_F7;
+  case KEYCODE_F8:         return AX_KEY_F8;
+  case KEYCODE_F9:         return AX_KEY_F9;
+  case KEYCODE_F10:        return AX_KEY_F10;
+  case KEYCODE_F11:        return AX_KEY_F11;
+  case KEYCODE_F12:        return AX_KEY_F12;
 
-  case KEYCODE_INSERT:     return WI_KEY_INS;
-  case KEYCODE_DELETE:     return WI_KEY_DEL;
-  case KEYCODE_PG_UP:      return WI_KEY_PGUP;
-  case KEYCODE_PG_DOWN:    return WI_KEY_PGDN;
-  case KEYCODE_HOME:       return WI_KEY_HOME;
-  case KEYCODE_END:        return WI_KEY_END;
-  case KEYCODE_PAUSE:      return WI_KEY_PAUSE;
+  case KEYCODE_INSERT:     return AX_KEY_INS;
+  case KEYCODE_DELETE:     return AX_KEY_DEL;
+  case KEYCODE_PG_UP:      return AX_KEY_PGUP;
+  case KEYCODE_PG_DOWN:    return AX_KEY_PGDN;
+  case KEYCODE_HOME:       return AX_KEY_HOME;
+  case KEYCODE_END:        return AX_KEY_END;
+  case KEYCODE_PAUSE:      return AX_KEY_PAUSE;
 
-  case KEYCODE_KP_HOME:    return WI_KEY_KP_HOME;
-  case KEYCODE_KP_UP:      return WI_KEY_KP_UPARROW;
-  case KEYCODE_KP_PG_UP:   return WI_KEY_KP_PGUP;
-  case KEYCODE_KP_LEFT:    return WI_KEY_KP_LEFTARROW;
-  case KEYCODE_KP_FIVE:    return WI_KEY_KP_5;
-  case KEYCODE_KP_RIGHT:   return WI_KEY_KP_RIGHTARROW;
-  case KEYCODE_KP_END:     return WI_KEY_KP_END;
-  case KEYCODE_KP_DOWN:    return WI_KEY_KP_DOWNARROW;
-  case KEYCODE_KP_PG_DOWN: return WI_KEY_KP_PGDN;
-  case KEYCODE_KP_ENTER:   return WI_KEY_KP_ENTER;
-  case KEYCODE_KP_INSERT:  return WI_KEY_KP_INS;
-  case KEYCODE_KP_DELETE:  return WI_KEY_KP_DEL;
-  case KEYCODE_KP_DIVIDE:  return WI_KEY_KP_SLASH;
-  case KEYCODE_KP_MINUS:   return WI_KEY_KP_MINUS;
-  case KEYCODE_KP_PLUS:    return WI_KEY_KP_PLUS;
+  case KEYCODE_KP_HOME:    return AX_KEY_KP_HOME;
+  case KEYCODE_KP_UP:      return AX_KEY_KP_UPARROW;
+  case KEYCODE_KP_PG_UP:   return AX_KEY_KP_PGUP;
+  case KEYCODE_KP_LEFT:    return AX_KEY_KP_LEFTARROW;
+  case KEYCODE_KP_FIVE:    return AX_KEY_KP_5;
+  case KEYCODE_KP_RIGHT:   return AX_KEY_KP_RIGHTARROW;
+  case KEYCODE_KP_END:     return AX_KEY_KP_END;
+  case KEYCODE_KP_DOWN:    return AX_KEY_KP_DOWNARROW;
+  case KEYCODE_KP_PG_DOWN: return AX_KEY_KP_PGDN;
+  case KEYCODE_KP_ENTER:   return AX_KEY_KP_ENTER;
+  case KEYCODE_KP_INSERT:  return AX_KEY_KP_INS;
+  case KEYCODE_KP_DELETE:  return AX_KEY_KP_DEL;
+  case KEYCODE_KP_DIVIDE:  return AX_KEY_KP_SLASH;
+  case KEYCODE_KP_MINUS:   return AX_KEY_KP_MINUS;
+  case KEYCODE_KP_PLUS:    return AX_KEY_KP_PLUS;
 
   default: return 0;
   }
@@ -111,11 +111,11 @@ qnx_keysym_to_wi(int sym)
 static uint32_t
 qnx_key_modifiers(int mods)
 {
-  uint32_t wi_mods = 0;
-  if (mods & KEYMOD_SHIFT)   wi_mods |= WI_MOD_SHIFT;
-  if (mods & KEYMOD_CTRL)    wi_mods |= WI_MOD_CTRL;
-  if (mods & KEYMOD_ALT)     wi_mods |= WI_MOD_ALT;
-  return wi_mods;
+  uint32_t AX_MODs = 0;
+  if (mods & KEYMOD_SHIFT)   AX_MODs |= AX_MOD_SHIFT;
+  if (mods & KEYMOD_CTRL)    AX_MODs |= AX_MOD_CTRL;
+  if (mods & KEYMOD_ALT)     AX_MODs |= AX_MOD_ALT;
+  return AX_MODs;
 }
 
 /* Drain pending QNX Screen events into the WI queue */
@@ -166,7 +166,7 @@ qnx_process_screen_events(void)
 
       /* Scroll wheel: QNX uses bit flags SCREEN_MOUSE_BUTTON_SCROLL_UP/DOWN */
       if (buttons & SCREEN_MOUSE_BUTTON_SCROLL_UP) {
-        struct WI_Message msg = {
+        struct AXmessage msg = {
           .message = kEventScrollWheel,
           .x = (uint16_t)pos[0],
           .y = (uint16_t)pos[1],
@@ -177,7 +177,7 @@ qnx_process_screen_events(void)
         break;
       }
       if (buttons & SCREEN_MOUSE_BUTTON_SCROLL_DOWN) {
-        struct WI_Message msg = {
+        struct AXmessage msg = {
           .message = kEventScrollWheel,
           .x = (uint16_t)pos[0],
           .y = (uint16_t)pos[1],
@@ -215,7 +215,7 @@ qnx_process_screen_events(void)
             last_btn_x = pos[0];
             last_btn_y = pos[1];
           }
-          struct WI_Message ev = {
+          struct AXmessage ev = {
             .message = msg_type,
             .x = (uint16_t)pos[0],
             .y = (uint16_t)pos[1],
@@ -224,7 +224,7 @@ qnx_process_screen_events(void)
           sem_post(&event_sem);
         }
         if (released & btns[i].mask) {
-          struct WI_Message ev = {
+          struct AXmessage ev = {
             .message = btns[i].up,
             .x = (uint16_t)pos[0],
             .y = (uint16_t)pos[1],
@@ -246,7 +246,7 @@ qnx_process_screen_events(void)
         else
           move_msg = kEventMouseMoved;
 
-        struct WI_Message ev = {
+        struct AXmessage ev = {
           .message = move_msg,
           .x = (uint16_t)pos[0],
           .y = (uint16_t)pos[1],
@@ -265,13 +265,13 @@ qnx_process_screen_events(void)
       screen_get_event_property_iv(screen_ev, SCREEN_PROPERTY_KEY_SYM,       &sym);
       screen_get_event_property_iv(screen_ev, SCREEN_PROPERTY_KEY_MODIFIERS, &mods);
 
-      uint32_t wi_key = qnx_keysym_to_wi(sym);
-      if (wi_key) {
-        uint32_t wi_mods = qnx_key_modifiers(mods);
+      uint32_t axkey = qnx_keysym_to_wi(sym);
+      if (axkey) {
+        uint32_t AX_MODs = qnx_key_modifiers(mods);
         bool_t pressed = (flags & KEY_DOWN) != 0;
-        struct WI_Message ev = {
+        struct AXmessage ev = {
           .message = pressed ? kEventKeyDown : kEventKeyUp,
-          .wParam  = wi_key | wi_mods,
+          .wParam  = axkey | AX_MODs,
         };
         /* Store printable character in lParam */
         if (pressed && sym >= 0x20 && sym <= 0x7e) {
@@ -285,7 +285,7 @@ qnx_process_screen_events(void)
     }
 
     case SCREEN_EVENT_CLOSE: {
-      struct WI_Message ev = { .message = kEventWindowClosed };
+      struct AXmessage ev = { .message = kEventWindowClosed };
       queue.data[queue.write++] = ev;
       sem_post(&event_sem);
       break;
@@ -308,7 +308,7 @@ init_event_sem(void)
 }
 
 void
-WI_PostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 {
   init_event_sem();
 
@@ -336,7 +336,7 @@ WI_PostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 }
 
 int
-WI_PollEvent(struct WI_Message *e)
+axPollEvent(struct AXmessage *e)
 {
   qnx_process_screen_events();
   if (queue.read == queue.write)
@@ -346,7 +346,7 @@ WI_PollEvent(struct WI_Message *e)
 }
 
 void
-WI_RemoveFromQueue(void *target)
+axRemoveFromQueue(void *target)
 {
   for (uint16_t r = queue.read; r != queue.write; r++)
     if (queue.data[r].target == target)
@@ -354,7 +354,7 @@ WI_RemoveFromQueue(void *target)
 }
 
 int
-WI_WaitEvent(longTime_t msec)
+axWaitEvent(longTime_t msec)
 {
   init_event_sem();
 
@@ -387,21 +387,21 @@ NotifyFileDropEvent(char const *filename, float x, float y)
  */
 
 bool_t
-WI_GetOpenFileName(WI_OpenFileName const *ofn)
+axGetOpenFileName(AXopenfilename const *ofn)
 {
   (void)ofn;
   return FALSE;
 }
 
 bool_t
-WI_GetSaveFileName(WI_OpenFileName const *ofn)
+axGetSaveFileName(AXopenfilename const *ofn)
 {
   (void)ofn;
   return FALSE;
 }
 
 bool_t
-WI_GetFolderName(WI_OpenFileName const *ofn)
+axGetFolderName(AXopenfilename const *ofn)
 {
   (void)ofn;
   return FALSE;
@@ -412,7 +412,7 @@ WI_GetFolderName(WI_OpenFileName const *ofn)
  */
 
 longTime_t
-WI_GetMilliseconds(void)
+axGetMilliseconds(void)
 {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -420,7 +420,7 @@ WI_GetMilliseconds(void)
 }
 
 void
-WI_Sleep(longTime_t msec)
+axSleep(longTime_t msec)
 {
   struct timespec ts;
   ts.tv_sec  = msec / 1000;
@@ -433,7 +433,7 @@ WI_Sleep(longTime_t msec)
  */
 
 bool_t
-WI_IsDarkTheme(void)
+axIsDarkTheme(void)
 {
   return FALSE;
 }
@@ -443,7 +443,7 @@ WI_IsDarkTheme(void)
  */
 
 bool_t
-WI_CreateSurface(uint32_t width, uint32_t height)
+axCreateSurface(uint32_t width, uint32_t height)
 {
   (void)width;
   (void)height;
@@ -451,23 +451,23 @@ WI_CreateSurface(uint32_t width, uint32_t height)
 }
 
 float
-WI_GetScaling(void)
+axGetScaling(void)
 {
   return GetWindowScale(NULL);
 }
 
 bool_t
-WI_SetSize(uint32_t width, uint32_t height, bool_t centered)
+axSetSize(uint32_t width, uint32_t height, bool_t centered)
 {
   (void)centered;
   /* Actual screen/EGL window resize is not yet implemented on QNX.
    * Notify the application so it can respond to the size change. */
-  WI_PostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
+  axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height), NULL);
   return TRUE;
 }
 
 uint32_t
-WI_GetSize(struct WI_Size *pSize)
+axGetSize(struct AXsize *pSize)
 {
   SIZE2 size = { 0, 0 };
   GetWindowSize(NULL, &size);
@@ -479,25 +479,25 @@ WI_GetSize(struct WI_Size *pSize)
 }
 
 void
-WI_MakeCurrentContext(void)
+axMakeCurrentContext(void)
 {
   BeginPaint(NULL);
 }
 
 void
-WI_BeginPaint(void)
+axBeginPaint(void)
 {
   BeginPaint(NULL);
 }
 
 void
-WI_EndPaint(void)
+axEndPaint(void)
 {
   EndPaint(NULL, NULL);
 }
 
 void
-WI_BindFramebuffer(void)
+axBindFramebuffer(void)
 {
   /* EGL uses the default framebuffer (0) */
 }
@@ -507,7 +507,7 @@ WI_BindFramebuffer(void)
  */
 
 char const *
-WI_KeynumToString(uint32_t keynum)
+axKeynumToString(uint32_t keynum)
 {
   static char tinystr[2];
 
