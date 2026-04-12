@@ -1,32 +1,32 @@
 # OpenGL Rendering
 
 The platform library manages an OpenGL / EGL context for you.  You call
-`WI_BeginPaint` before drawing and `WI_EndPaint` to present the frame.
+`axBeginPaint` before drawing and `axEndPaint` to present the frame.
 
 ---
 
 ## Basic paint loop
 
 ```c
-WI_BeginPaint();
+axBeginPaint();
 
 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 draw_scene();
 
-WI_EndPaint();
+axEndPaint();
 ```
 
-`WI_BeginPaint` makes the context current on the calling thread and flushes
+`axBeginPaint` makes the context current on the calling thread and flushes
 any pending platform events (Wayland display flush, macOS Cocoa run-loop tick).
-`WI_EndPaint` swaps the back and front buffers.
+`axEndPaint` swaps the back and front buffers.
 
 If you need to issue GL commands outside the paint loop — for example when
-loading textures on startup — call `WI_MakeCurrentContext` directly:
+loading textures on startup — call `axMakeCurrentContext` directly:
 
 ```c
-WI_MakeCurrentContext();
+axMakeCurrentContext();
 upload_textures();
 ```
 
@@ -35,18 +35,18 @@ upload_textures();
 ## VSync / swap interval
 
 ```c
-WI_SetSwapInterval(1);   /* lock to display refresh rate */
-WI_SetSwapInterval(0);   /* present as fast as possible  */
+axSetSwapInterval(1);   /* lock to display refresh rate */
+axSetSwapInterval(0);   /* present as fast as possible  */
 ```
 
 Returns `FALSE` on platforms where swap-interval control is unavailable.  The
-default after `WI_CreateWindow` is platform-dependent (usually vsync-on).
+default after `axCreateWindow` is platform-dependent (usually vsync-on).
 
 Typical pattern for a game that wants to run uncapped:
 
 ```c
-WI_CreateWindow("Game", 1280, 720, WI_WINDOW_DOUBLEBUFFER | WI_WINDOW_RESIZABLE);
-WI_SetSwapInterval(0);
+axCreateWindow("Game", 1280, 720, AX_WINDOW_DOUBLEBUFFER | AX_WINDOW_RESIZABLE);
+axSetSwapInterval(0);
 ```
 
 ---
@@ -54,14 +54,14 @@ WI_SetSwapInterval(0);
 ## HiDPI / Retina rendering
 
 On Retina Macs and high-DPI displays the logical window size differs from the
-physical framebuffer size.  Always use `WI_GetScaling()` to compute the correct
+physical framebuffer size.  Always use `axGetScaling()` to compute the correct
 viewport dimensions:
 
 ```c
-struct WI_Size logical;
-WI_GetSize(&logical);
+struct AXsize logical;
+axGetSize(&logical);
 
-float scale = WI_GetScaling();   /* 2.0 on Retina, 1.0 elsewhere */
+float scale = axGetScaling();   /* 2.0 on Retina, 1.0 elsewhere */
 
 GLsizei fb_w = (GLsizei)(logical.width  * scale);
 GLsizei fb_h = (GLsizei)(logical.height * scale);
@@ -80,7 +80,7 @@ Re-run this after every `kEventWindowResized` and
 case kEventWindowResized: {
     uint32_t w = LOWORD(msg.wParam);
     uint32_t h = HIWORD(msg.wParam);
-    float scale = WI_GetScaling();
+    float scale = axGetScaling();
     glViewport(0, 0, (GLsizei)(w * scale), (GLsizei)(h * scale));
     update_projection(w, h);
     break;
@@ -91,24 +91,24 @@ case kEventWindowResized: {
 
 ## Off-screen surfaces (macOS only)
 
-`WI_CreateSurface` allocates an IOSurface-backed off-screen framebuffer.  Bind
-it with `WI_BindFramebuffer` before rendering:
+`axCreateSurface` allocates an IOSurface-backed off-screen framebuffer.  Bind
+it with `axBindFramebuffer` before rendering:
 
 ```c
-WI_CreateSurface(1920, 1080);
+axCreateSurface(1920, 1080);
 
 /* render off-screen */
-WI_MakeCurrentContext();
-WI_BindFramebuffer();
+axMakeCurrentContext();
+axBindFramebuffer();
 
 glClear(GL_COLOR_BUFFER_BIT);
 draw_scene();
 
 /* present */
-WI_EndPaint();
+axEndPaint();
 ```
 
-`WI_CreateSurface` returns `FALSE` on all platforms except macOS.
+`axCreateSurface` returns `FALSE` on all platforms except macOS.
 
 ---
 
@@ -116,7 +116,7 @@ WI_EndPaint();
 
 The library manages a single context.  If you render from a background thread:
 
-1. Ensure the main thread never calls `WI_BeginPaint` / `WI_MakeCurrentContext`
+1. Ensure the main thread never calls `axBeginPaint` / `axMakeCurrentContext`
    concurrently.
-2. Call `WI_MakeCurrentContext()` at the start of your render thread.
-3. Use `WI_EndPaint()` from the same thread to present.
+2. Call `axMakeCurrentContext()` at the start of your render thread.
+3. Use `axEndPaint()` from the same thread to present.

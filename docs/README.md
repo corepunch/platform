@@ -14,21 +14,21 @@ works on Windows, macOS, Linux (Wayland or X11), and WebGL.
 #include "platform.h"
 
 int main(void) {
-    WI_Init();
-    WI_CreateWindow("Hello", 800, 600, 0);
+    axInit();
+    axCreateWindow("Hello", 800, 600, 0);
 
-    struct WI_Message msg;
+    struct AXmessage msg;
     while (1) {
-        WI_WaitEvent(16);
-        while (WI_PollEvent(&msg)) {
+        axWaitEvent(16);
+        while (axPollEvent(&msg)) {
             if (msg.message == kEventWindowClosed) goto done;
         }
-        WI_BeginPaint();
+        axBeginPaint();
         /* glClear / draw calls here */
-        WI_EndPaint();
+        axEndPaint();
     }
 done:
-    WI_Shutdown();
+    axShutdown();
 }
 ```
 

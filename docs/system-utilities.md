@@ -6,36 +6,36 @@
 
 ### Millisecond clock
 
-`WI_GetMilliseconds` returns a monotonic timestamp.  The epoch is arbitrary —
+`axGetMilliseconds` returns a monotonic timestamp.  The epoch is arbitrary —
 use the *difference* between two calls to measure elapsed time:
 
 ```c
-longTime_t start = WI_GetMilliseconds();
+longTime_t start = axGetMilliseconds();
 do_work();
-longTime_t elapsed = WI_GetMilliseconds() - start;
+longTime_t elapsed = axGetMilliseconds() - start;
 printf("took %lu ms\n", elapsed);
 ```
 
 ### Sleep
 
 ```c
-WI_Sleep(100);   /* pause for 100 ms */
-WI_Sleep(0);     /* yield the CPU without sleeping */
+axSleep(100);   /* pause for 100 ms */
+axSleep(0);     /* yield the CPU without sleeping */
 ```
 
 ### Frame-rate limiter
 
 ```c
 while (running) {
-    longTime_t frame_start = WI_GetMilliseconds();
+    longTime_t frame_start = axGetMilliseconds();
 
-    WI_BeginPaint();
+    axBeginPaint();
     render();
-    WI_EndPaint();
+    axEndPaint();
 
-    longTime_t frame_ms = WI_GetMilliseconds() - frame_start;
+    longTime_t frame_ms = axGetMilliseconds() - frame_start;
     if (frame_ms < 16)
-        WI_Sleep(16 - frame_ms);   /* cap at ~60 FPS */
+        axSleep(16 - frame_ms);   /* cap at ~60 FPS */
 }
 ```
 
@@ -47,7 +47,7 @@ Check once at startup and again whenever the system theme changes:
 
 ```c
 void apply_theme(void) {
-    if (WI_IsDarkTheme()) {
+    if (axIsDarkTheme()) {
         set_colours(&dark_palette);
     } else {
         set_colours(&light_palette);
@@ -70,7 +70,7 @@ apply_theme();
 ## Platform identification
 
 ```c
-printf("running on: %s\n", WI_GetPlatform());
+printf("running on: %s\n", axGetPlatform());
 ```
 
 Returns one of: `"windows"`, `"macos"`, `"linux (wayland)"`,
@@ -90,7 +90,7 @@ Per-user mutable data: preferences, save files, caches.
 
 ```c
 char path[1024];
-snprintf(path, sizeof(path), "%s/config.ini", WI_SettingsDirectory());
+snprintf(path, sizeof(path), "%s/config.ini", axSettingsDirectory());
 load_config(path);
 ```
 
@@ -109,7 +109,7 @@ Read-only bundled data: shaders, fonts, default assets.
 ```c
 char shader_path[1024];
 snprintf(shader_path, sizeof(shader_path),
-         "%s/shaders/basic.vert", WI_ShareDirectory());
+         "%s/shaders/basic.vert", axShareDirectory());
 load_shader(shader_path);
 ```
 
@@ -126,12 +126,12 @@ Platform-specific dynamic libraries shipped with the application.
 ```c
 char plugin_path[1024];
 snprintf(plugin_path, sizeof(plugin_path),
-         "%s/plugins/renderer.so", WI_LibDirectory());
+         "%s/plugins/renderer.so", axLibDirectory());
 dlopen(plugin_path, RTLD_LAZY);
 ```
 
 | Platform | Typical path |
 |----------|-------------|
 | Windows  | Same directory as the executable |
-| macOS    | Same as `WI_ShareDirectory()` |
+| macOS    | Same as `axShareDirectory()` |
 | Linux    | `<exe>/../lib/<appname>/` |

@@ -1,7 +1,7 @@
 # Joystick & Gamepad
 
 The library detects the first connected joystick or gamepad and delivers axis
-and button changes as events through the normal `WI_PollEvent` queue.
+and button changes as events through the normal `axPollEvent` queue.
 
 On **Windows** XInput (Xbox-compatible controllers) is used.  On **Linux** the
 `/dev/input/js0` joystick device is read.  Other platforms expose the same API
@@ -12,22 +12,22 @@ but may not have a backend yet.
 ## Initialisation
 
 ```c
-WI_Init();
-WI_CreateWindow("Game", 1280, 720, WI_WINDOW_DOUBLEBUFFER | WI_WINDOW_RESIZABLE);
+axInit();
+axCreateWindow("Game", 1280, 720, AX_WINDOW_DOUBLEBUFFER | AX_WINDOW_RESIZABLE);
 
-if (WI_JoystickInit()) {
-    printf("controller: %s\n", WI_JoystickGetName());
+if (axJoystickInit()) {
+    printf("controller: %s\n", axJoystickGetName());
 } else {
     printf("no controller found, continuing without\n");
 }
 ```
 
-`WI_JoystickInit` returns `FALSE` when no device is present — that is not a
-fatal error.  You can check `WI_JoystickAvailable()` at any time to see
+`axJoystickInit` returns `FALSE` when no device is present — that is not a
+fatal error.  You can check `axJoystickAvailable()` at any time to see
 whether a device is still connected.
 
 ```c
-WI_JoystickShutdown();   /* release the device at exit */
+axJoystickShutdown();   /* release the device at exit */
 ```
 
 ---
@@ -107,21 +107,21 @@ Button indices on Windows (XInput):
 ## Full example
 
 ```c
-WI_Init();
-WI_CreateWindow("Gamepad Demo", 800, 600,
-    WI_WINDOW_DOUBLEBUFFER | WI_WINDOW_RESIZABLE);
+axInit();
+axCreateWindow("Gamepad Demo", 800, 600,
+    AX_WINDOW_DOUBLEBUFFER | AX_WINDOW_RESIZABLE);
 
-bool_t has_joy = WI_JoystickInit();
+bool_t has_joy = axJoystickInit();
 if (has_joy)
-    printf("Using: %s\n", WI_JoystickGetName());
+    printf("Using: %s\n", axJoystickGetName());
 
-struct WI_Message msg;
+struct AXmessage msg;
 int running = 1;
 float player_x = 400, player_y = 300;
 
 while (running) {
-    WI_WaitEvent(16);
-    while (WI_PollEvent(&msg)) {
+    axWaitEvent(16);
+    while (axPollEvent(&msg)) {
         switch (msg.message) {
         case kEventWindowClosed:
             running = 0;
@@ -138,11 +138,11 @@ while (running) {
             break;
         }
     }
-    WI_BeginPaint();
+    axBeginPaint();
     draw_player(player_x, player_y);
-    WI_EndPaint();
+    axEndPaint();
 }
 
-if (has_joy) WI_JoystickShutdown();
-WI_Shutdown();
+if (has_joy) axJoystickShutdown();
+axShutdown();
 ```

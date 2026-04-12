@@ -6,7 +6,7 @@ confirms or cancels.
 
 ---
 
-## The `WI_OpenFileName` struct
+## The `AXopenfilename` struct
 
 ```c
 typedef struct {
@@ -15,7 +15,7 @@ typedef struct {
     char const *lpstrFilter; /* optional file-type filter               */
     char const *lpstrTitle;  /* optional dialog title (NULL = default)  */
     uint32_t    Flags;       /* OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST   */
-} WI_OpenFileName;
+} AXopenfilename;
 ```
 
 ---
@@ -25,7 +25,7 @@ typedef struct {
 ```c
 char path[1024] = {0};
 
-WI_OpenFileName ofn = {
+AXopenfilename ofn = {
     .lpstrFile   = path,
     .nMaxFile    = sizeof(path),
     .lpstrFilter = "Images\0*.png;*.jpg\0All files\0*.*\0",
@@ -33,7 +33,7 @@ WI_OpenFileName ofn = {
     .Flags       = OFN_FILEMUSTEXIST,
 };
 
-if (WI_GetOpenFileName(&ofn)) {
+if (axGetOpenFileName(&ofn)) {
     load_image(path);
 }
 ```
@@ -50,14 +50,14 @@ works.
 char path[1024] = {0};
 strncpy(path, "untitled.png", sizeof(path));
 
-WI_OpenFileName ofn = {
+AXopenfilename ofn = {
     .lpstrFile   = path,
     .nMaxFile    = sizeof(path),
     .lpstrFilter = "PNG image\0*.png\0",
     .lpstrTitle  = "Save as",
 };
 
-if (WI_GetSaveFileName(&ofn)) {
+if (axGetSaveFileName(&ofn)) {
     export_png(path);
 }
 ```
@@ -69,13 +69,13 @@ if (WI_GetSaveFileName(&ofn)) {
 ```c
 char dir[1024] = {0};
 
-WI_OpenFileName ofn = {
+AXopenfilename ofn = {
     .lpstrFile = dir,
     .nMaxFile  = sizeof(dir),
     .lpstrTitle = "Choose export directory",
 };
 
-if (WI_GetFolderName(&ofn)) {
+if (axGetFolderName(&ofn)) {
     set_export_dir(dir);
 }
 ```
@@ -86,9 +86,9 @@ if (WI_GetFolderName(&ofn)) {
 
 | Function | Windows | macOS | Linux (X11) | Wayland | WebGL |
 |----------|:-------:|:-----:|:-----------:|:-------:|:-----:|
-| `WI_GetOpenFileName` | ✓ | ✓ | ✓ | — | — |
-| `WI_GetSaveFileName` | ✓ | ✓ | ✓ | — | — |
-| `WI_GetFolderName`   | ✓ | ✓ | ✓ | — | — |
+| `axGetOpenFileName` | ✓ | ✓ | ✓ | — | — |
+| `axGetSaveFileName` | ✓ | ✓ | ✓ | — | — |
+| `axGetFolderName`   | ✓ | ✓ | ✓ | — | — |
 
 On unsupported platforms the functions return `FALSE` immediately and leave
 `lpstrFile` unchanged.  Check the return value before using the buffer.

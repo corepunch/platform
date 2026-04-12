@@ -1,6 +1,6 @@
 # Handling Input
 
-All input arrives as `WI_Message` events via `WI_PollEvent`.  The `wParam`
+All input arrives as `AXmessage` events via `axPollEvent`.  The `wParam`
 union gives you either a packed `(x, y)` point for mouse events or a
 `(keyCode, modflags)` pair for keyboard events.
 
@@ -20,7 +20,7 @@ case kEventKeyUp:
     break;
 ```
 
-`keyCode` is one of the `WI_KEY_*` constants below, or a printable ASCII value
+`keyCode` is one of the `AX_KEY_*` constants below, or a printable ASCII value
 (32–126) for alphanumeric keys.
 
 ### Checking modifiers
@@ -29,19 +29,19 @@ case kEventKeyUp:
 
 | Flag | Meaning |
 |------|---------|
-| `WI_MOD_SHIFT` | Shift held |
-| `WI_MOD_CTRL`  | Control held |
-| `WI_MOD_ALT`   | Alt / Option held |
-| `WI_MOD_CMD`   | Command / Super / Meta held |
+| `AX_MOD_SHIFT` | Shift held |
+| `AX_MOD_CTRL`  | Control held |
+| `AX_MOD_ALT`   | Alt / Option held |
+| `AX_MOD_CMD`   | Command / Super / Meta held |
 
 ```c
 case kEventKeyDown:
     /* Ctrl+S → save */
-    if (msg.modflags & WI_MOD_CTRL && msg.keyCode == 's')
+    if (msg.modflags & AX_MOD_CTRL && msg.keyCode == 's')
         save_file();
 
     /* Shift+Tab → reverse focus */
-    if (msg.modflags & WI_MOD_SHIFT && msg.keyCode == WI_KEY_TAB)
+    if (msg.modflags & AX_MOD_SHIFT && msg.keyCode == AX_KEY_TAB)
         focus_prev();
     break;
 ```
@@ -67,36 +67,36 @@ Use `kEventKeyDown` for hotkeys and `kEventChar` for text fields.
 
 | Constant | Value | Key |
 |----------|------:|-----|
-| `WI_KEY_TAB`       |   9 | Tab |
-| `WI_KEY_ENTER`     |  13 | Return |
-| `WI_KEY_ESCAPE`    |  27 | Escape |
-| `WI_KEY_SPACE`     |  32 | Space |
-| `WI_KEY_BACKSPACE` | 127 | Backspace |
-| `WI_KEY_UPARROW`   | 128 | ↑ |
-| `WI_KEY_DOWNARROW` | 129 | ↓ |
-| `WI_KEY_LEFTARROW` | 130 | ← |
-| `WI_KEY_RIGHTARROW`| 131 | → |
-| `WI_KEY_ALT`       | 132 | Alt key itself |
-| `WI_KEY_CTRL`      | 133 | Ctrl key itself |
-| `WI_KEY_SHIFT`     | 134 | Shift key itself |
-| `WI_KEY_F1`–`WI_KEY_F12` | 135–146 | Function keys |
-| `WI_KEY_INS`       | 147 | Insert |
-| `WI_KEY_DEL`       | 148 | Delete |
-| `WI_KEY_PGDN`      | 149 | Page Down |
-| `WI_KEY_PGUP`      | 150 | Page Up |
-| `WI_KEY_HOME`      | 151 | Home |
-| `WI_KEY_END`       | 152 | End |
-| `WI_KEY_PAUSE`     | 255 | Pause/Break |
-| `WI_KEY_MOUSE1`    | 200 | Left mouse button |
-| `WI_KEY_MOUSE2`    | 201 | Right mouse button |
-| `WI_KEY_MOUSE3`    | 202 | Middle mouse button |
-| `WI_KEY_MWHEELUP`  | 240 | Wheel up |
-| `WI_KEY_MWHEELDOWN`| 239 | Wheel down |
+| `AX_KEY_TAB`       |   9 | Tab |
+| `AX_KEY_ENTER`     |  13 | Return |
+| `AX_KEY_ESCAPE`    |  27 | Escape |
+| `AX_KEY_SPACE`     |  32 | Space |
+| `AX_KEY_BACKSPACE` | 127 | Backspace |
+| `AX_KEY_UPARROW`   | 128 | ↑ |
+| `AX_KEY_DOWNARROW` | 129 | ↓ |
+| `AX_KEY_LEFTARROW` | 130 | ← |
+| `AX_KEY_RIGHTARROW`| 131 | → |
+| `AX_KEY_ALT`       | 132 | Alt key itself |
+| `AX_KEY_CTRL`      | 133 | Ctrl key itself |
+| `AX_KEY_SHIFT`     | 134 | Shift key itself |
+| `AX_KEY_F1`–`AX_KEY_F12` | 135–146 | Function keys |
+| `AX_KEY_INS`       | 147 | Insert |
+| `AX_KEY_DEL`       | 148 | Delete |
+| `AX_KEY_PGDN`      | 149 | Page Down |
+| `AX_KEY_PGUP`      | 150 | Page Up |
+| `AX_KEY_HOME`      | 151 | Home |
+| `AX_KEY_END`       | 152 | End |
+| `AX_KEY_PAUSE`     | 255 | Pause/Break |
+| `AX_KEY_MOUSE1`    | 200 | Left mouse button |
+| `AX_KEY_MOUSE2`    | 201 | Right mouse button |
+| `AX_KEY_MOUSE3`    | 202 | Middle mouse button |
+| `AX_KEY_MWHEELUP`  | 240 | Wheel up |
+| `AX_KEY_MWHEELDOWN`| 239 | Wheel down |
 
 Printable ASCII characters (letters, digits, punctuation) use their ASCII
 values directly — `'a'` is 97, `'Z'` is 90, etc.
 
-`WI_KeynumToString(keyCode)` converts any code to a human-readable name.
+`axKeynumToString(keyCode)` converts any code to a human-readable name.
 
 ---
 
