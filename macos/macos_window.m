@@ -56,7 +56,7 @@ BuildPixelFormatAttributes(uint32_t flags)
   attributes[i++] = NSOpenGLPFAAlphaSize;
   attributes[i++] = 8;
   
-  if (flags & WI_WINDOW_DOUBLEBUFFER) {
+  if (flags & AX_WINDOW_DOUBLEBUFFER) {
     attributes[i++] = NSOpenGLPFADoubleBuffer;
   }
   
@@ -135,13 +135,13 @@ static void ListenForDarkModeChanges(NSWindow *window) {
 
 static NSWindow *MakeWindow(NSRect windowRect, uint32_t flags) {
   int mask;
-  if (flags & WI_WINDOW_BORDERLESS) {
+  if (flags & AX_WINDOW_BORDERLESS) {
     mask = NSWindowStyleMaskBorderless;
   } else {
     mask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
            NSWindowStyleMaskMiniaturizable;
     /* Resizable by default (backward compat); RESIZABLE flag makes it explicit. */
-    if ((flags == 0) || (flags & WI_WINDOW_RESIZABLE)) {
+    if ((flags == 0) || (flags & AX_WINDOW_RESIZABLE)) {
       mask |= NSWindowStyleMaskResizable;
     }
   }
@@ -164,7 +164,7 @@ static void ConfigureOpenGLView(NSOpenGLView *openglView) {
 
   [openglView setOpenGLContext:context];
   [openglView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
-  /* HiDPI is on by default (backward-compatible).  WI_WINDOW_HIGHDPI makes
+  /* HiDPI is on by default (backward-compatible).  AX_WINDOW_HIGHDPI makes
    * the request explicit; it is honoured either way. */
   [openglView setWantsBestResolutionOpenGLSurface:YES];
   
@@ -232,11 +232,11 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 	[window setFrameOrigin:CenterOnScreen(width, height).origin];
 	[window registerForDraggedTypes:[NSArray arrayWithObject:NSPasteboardTypeFileURL]];
 
-  if (!(flags & WI_WINDOW_HIDDEN)) {
+  if (!(flags & AX_WINDOW_HIDDEN)) {
     [window makeKeyAndOrderFront:nil];
   }
 
-  if (flags & WI_WINDOW_FULLSCREEN) {
+  if (flags & AX_WINDOW_FULLSCREEN) {
     [window toggleFullScreen:nil];
   }
 
@@ -325,7 +325,7 @@ void axBeginPaint(void) {
 
 void axEndPaint(void) {
   if (wstate.Window) {
-    if (!(wstate.flags & WI_WINDOW_DOUBLEBUFFER)) {
+    if (!(wstate.flags & AX_WINDOW_DOUBLEBUFFER)) {
       glFlush();
     } else {
       [[[wstate.Window contentView] openGLContext] flushBuffer];

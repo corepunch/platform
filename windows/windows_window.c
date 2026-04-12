@@ -84,16 +84,16 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   DWORD exstyle = WS_EX_APPWINDOW;
   int   x = CW_USEDEFAULT, y = CW_USEDEFAULT;
 
-  if (flags & WI_WINDOW_BORDERLESS) {
+  if (flags & AX_WINDOW_BORDERLESS) {
     style = WS_POPUP;
   } else {
     /* Resizable by default (backward compat); RESIZABLE flag makes it explicit. */
-    if ((flags == 0) || (flags & WI_WINDOW_RESIZABLE)) {
+    if ((flags == 0) || (flags & AX_WINDOW_RESIZABLE)) {
       style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
     }
   }
 
-  if (flags & WI_WINDOW_FULLSCREEN) {
+  if (flags & AX_WINDOW_FULLSCREEN) {
     style   = WS_POPUP;
     exstyle = WS_EX_APPWINDOW;
     width   = (uint32_t)GetSystemMetrics(SM_CXSCREEN);
@@ -161,7 +161,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   g_win_width  = (int)width;
   g_win_height = (int)height;
 
-  if (!(flags & WI_WINDOW_HIDDEN)) {
+  if (!(flags & AX_WINDOW_HIDDEN)) {
     ShowWindow(g_hwnd, SW_SHOW);
     UpdateWindow(g_hwnd);
   }

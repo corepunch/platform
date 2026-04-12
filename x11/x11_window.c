@@ -30,7 +30,7 @@ axCreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flag
   }
 
   /* Fullscreen via _NET_WM_STATE */
-  if (flags & WI_WINDOW_FULLSCREEN) {
+  if (flags & AX_WINDOW_FULLSCREEN) {
     Atom wm_state   = XInternAtom(x_display, "_NET_WM_STATE", False);
     Atom fullscreen = XInternAtom(x_display, "_NET_WM_STATE_FULLSCREEN", False);
     XEvent xev;
@@ -47,7 +47,7 @@ axCreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flag
   }
 
   /* Remove window decorations via Motif WM hints */
-  if (flags & WI_WINDOW_BORDERLESS) {
+  if (flags & AX_WINDOW_BORDERLESS) {
     Atom mwm_atom = XInternAtom(x_display, "_MOTIF_WM_HINTS", False);
     MWMHints hints = { 2, 0, 0, 0, 0 }; /* flags=MWM_HINTS_DECORATIONS, decorations=0 */
     XChangeProperty(x_display, x_window, mwm_atom, mwm_atom, 32,
@@ -55,9 +55,9 @@ axCreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flag
   }
 
   /* Lock size to prevent user resizing when any non-zero window flags are
-   * supplied without WI_WINDOW_RESIZABLE. With flags == 0, the window keeps
+   * supplied without AX_WINDOW_RESIZABLE. With flags == 0, the window keeps
    * the default window-manager behavior, which is typically resizable. */
-  if (!(flags & WI_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
+  if (!(flags & AX_WINDOW_RESIZABLE) && (flags != 0) && width > 0 && height > 0) {
     XSizeHints *hints = XAllocSizeHints();
     if (hints) {
       hints->flags      = PMinSize | PMaxSize;
@@ -69,7 +69,7 @@ axCreateWindow(char const* title, uint32_t width, uint32_t height, uint32_t flag
   }
 
   /* Hide the window if requested */
-  if (flags & WI_WINDOW_HIDDEN) {
+  if (flags & AX_WINDOW_HIDDEN) {
     XUnmapWindow(x_display, x_window);
   }
 

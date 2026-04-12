@@ -59,9 +59,9 @@ axCreateWindow(char const* name, uint32_t width, uint32_t height, uint32_t flags
   }
 
   /* On Wayland, the initial paint/commit is what effectively maps the window.
-   * Honor WI_WINDOW_HIDDEN by deferring that first paint until the window is
+   * Honor AX_WINDOW_HIDDEN by deferring that first paint until the window is
    * explicitly shown later.
-   * Note: WI_WINDOW_BORDERLESS has no direct xdg-shell equivalent and is not
+   * Note: AX_WINDOW_BORDERLESS has no direct xdg-shell equivalent and is not
    * implemented on Wayland. */
   if (!(flags & AX_WINDOW_HIDDEN)) {
     axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
