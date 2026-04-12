@@ -193,6 +193,55 @@ The library defines comprehensive key codes including:
 
 See `platform.h` for the complete list of key codes and event definitions.
 
+## Integrating as a Submodule
+
+The recommended way to use platform in your own project is to add it as a git submodule and build it as part of your Makefile — in a single compiler pass, with no intermediate `.o` files. This keeps rebuilds fast and the integration simple.
+
+### 1. Add the submodule
+
+```bash
+git submodule add https://github.com/corepunch/platform libs/platform
+git submodule update --init --recursive
+```
+
+### 2. Add to your Makefile
+
+```makefile
+PLATFORM_DIR = libs/platform
+PLATFORM_OUTDIR = build/lib
+
+# Build platform into your output lib directory
+platform:
+	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(PLATFORM_OUTDIR))
+
+# Link your app against it
+myapp: platform
+	$(CC) $(CFLAGS) -I$(PLATFORM_DIR) main.c \
+	    -L$(PLATFORM_OUTDIR) -lplatform \
+	    -Wl,-rpath,$(abspath $(PLATFORM_OUTDIR)) \
+	    -o myapp
+```
+
+Internally, platform's Makefile compiles all sources in a **single pass** — no `.o` files are generated. All source files are collected with `find`, converted to `#include` directives, and piped directly to the compiler:
+
+```makefile
+$(FIND_SOURCES) | sed 's|.*|#include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
+```
+
+This means the entire library recompiles in one shot, which is extremely fast and requires no dependency tracking.
+
+### 3. Clean up
+
+```makefile
+clean:
+	$(MAKE) -C $(PLATFORM_DIR) clean
+	rm -f myapp
+```
+
+For a real-world example using this pattern, see [corepunch/orca](https://github.com/corepunch/orca).
+
+---
+
 ## Building
 
 Simple Makefile that auto-detects your platform and builds the appropriate dynamic library using wildcards for source files.
