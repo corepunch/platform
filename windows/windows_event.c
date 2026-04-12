@@ -46,7 +46,7 @@ timer_proc(HWND h, UINT m, UINT_PTR nid, DWORD t)
    Extended-key flag (bit 24 of the LPARAM) is passed in ext_key
    so that numpad-Enter can be distinguished from regular Enter. */
 static uint32_t
-vk_to_wi_key(WPARAM vk, int ext_key)
+vk_to_axkey(WPARAM vk, int ext_key)
 {
   switch (vk) {
   case VK_TAB:      return AX_KEY_TAB;
@@ -138,7 +138,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case WM_KEYDOWN:
   case WM_SYSKEYDOWN: {
     int ext = (lparam >> 24) & 1; /* extended-key flag */
-    uint32_t key = vk_to_wi_key(wparam, ext);
+    uint32_t key = vk_to_axkey(wparam, ext);
     if (key) {
       events.queue[events.write++] = (EVENT){
         .message = kEventKeyDown,
@@ -151,7 +151,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case WM_KEYUP:
   case WM_SYSKEYUP: {
     int ext = (lparam >> 24) & 1;
-    uint32_t key = vk_to_wi_key(wparam, ext);
+    uint32_t key = vk_to_axkey(wparam, ext);
     if (key) {
       events.queue[events.write++] = (EVENT){
         .message = kEventKeyUp,

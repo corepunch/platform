@@ -227,7 +227,7 @@ keyboard_leave(void* data,
 }
 
 static uint32_t
-keysym_to_wi_key(xkb_keysym_t sym)
+keysym_to_ax_key(xkb_keysym_t sym)
 {
   /* Printable ASCII: normalise letters to lowercase */
   if (sym >= 0x20 && sym <= 0x7e)
@@ -324,9 +324,9 @@ keyboard_key(void* data,
 {
   xkb_keycode_t keycode = key + 8;
   xkb_keysym_t keysym = xkb_state_key_get_one_sym(xkb_state, keycode);
-  uint32_t wi_key = keysym_to_wi_key(keysym);
+  uint32_t axkey = keysym_to_ax_key(keysym);
 
-  if (!wi_key)
+  if (!axkey)
     return;
 
   uint32_t mods = wayland_modifiers();
@@ -336,7 +336,7 @@ keyboard_key(void* data,
   PEVENT e = &events.queue[events.write++];
   *e = (EVENT){
     .message = msg,
-    .wParam  = wi_key | mods,
+    .wParam  = axkey | mods,
   };
 
   /* For key-down, also store the UTF-8 character in lParam */

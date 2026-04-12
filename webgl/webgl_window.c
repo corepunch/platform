@@ -14,7 +14,7 @@ axCreateWindow(PCSTR title, DWORD width, DWORD height, DWORD flags)
   /* Most AX_WINDOW_* flags have no meaningful equivalent in a browser canvas.
    * AX_WINDOW_FULLSCREEN could be requested via the Fullscreen API but
    * requires a user gesture; it is left to the caller's JS code.
-   * AX_WINDOW_HIGHDPI is always active (handled by WI_Init / WI_GetScaling). */
+   * AX_WINDOW_HIGHDPI is always active (handled by axInit / axGetScaling). */
   (void)flags;
 
   /* If AX_Init already sized the canvas, skip the fallback resize */

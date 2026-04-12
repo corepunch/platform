@@ -18,8 +18,8 @@ AX_API uint32_t _IOSurface = -1;
 // @"NSWindowWillStartDraggingNotification"; static NSString* const
 // NSWindowDidEndDraggingNotification = @"NSWindowDidEndDraggingNotification";
 
-/* Pixel-format attributes – rebuilt from flags each time WI_CreateWindow is
- * called.  Shared with WI_CreateSurface.
+/* Pixel-format attributes – rebuilt from flags each time axCreateWindow is
+ * called.  Shared with axCreateSurface.
  *
  * Keep a safe default initializer so callers that create an off-screen surface
  * before creating a window still pass a valid, terminated attribute list to

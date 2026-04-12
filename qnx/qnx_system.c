@@ -111,11 +111,11 @@ qnx_keysym_to_wi(int sym)
 static uint32_t
 qnx_key_modifiers(int mods)
 {
-  uint32_t wi_mods = 0;
-  if (mods & KEYMOD_SHIFT)   wi_mods |= AX_MOD_SHIFT;
-  if (mods & KEYMOD_CTRL)    wi_mods |= AX_MOD_CTRL;
-  if (mods & KEYMOD_ALT)     wi_mods |= AX_MOD_ALT;
-  return wi_mods;
+  uint32_t AX_MODs = 0;
+  if (mods & KEYMOD_SHIFT)   AX_MODs |= AX_MOD_SHIFT;
+  if (mods & KEYMOD_CTRL)    AX_MODs |= AX_MOD_CTRL;
+  if (mods & KEYMOD_ALT)     AX_MODs |= AX_MOD_ALT;
+  return AX_MODs;
 }
 
 /* Drain pending QNX Screen events into the WI queue */
@@ -265,13 +265,13 @@ qnx_process_screen_events(void)
       screen_get_event_property_iv(screen_ev, SCREEN_PROPERTY_KEY_SYM,       &sym);
       screen_get_event_property_iv(screen_ev, SCREEN_PROPERTY_KEY_MODIFIERS, &mods);
 
-      uint32_t wi_key = qnx_keysym_to_wi(sym);
-      if (wi_key) {
-        uint32_t wi_mods = qnx_key_modifiers(mods);
+      uint32_t axkey = qnx_keysym_to_wi(sym);
+      if (axkey) {
+        uint32_t AX_MODs = qnx_key_modifiers(mods);
         bool_t pressed = (flags & KEY_DOWN) != 0;
         struct AXmessage ev = {
           .message = pressed ? kEventKeyDown : kEventKeyUp,
-          .wParam  = wi_key | wi_mods,
+          .wParam  = axkey | AX_MODs,
         };
         /* Store printable character in lParam */
         if (pressed && sym >= 0x20 && sym <= 0x7e) {

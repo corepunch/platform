@@ -92,7 +92,7 @@ axJoystickGetName(void)
 /* Map an 8-bit unsigned trigger value [0, 255] to a non-negative signed
  * 16-bit range [0, 32767] so it is consistent with thumb-stick axes. */
 static int16_t
-wi_trigger_to_axis(BYTE trigger)
+axtrigger_to_axis(BYTE trigger)
 {
   return (int16_t)(((int)trigger * 32767 + 127) / 255);
 }
@@ -131,11 +131,11 @@ joy_poll(void)
     { p->sThumbLY,  c->sThumbLY,  JOY_AXIS_LY },
     { p->sThumbRX,  c->sThumbRX,  JOY_AXIS_RX },
     { p->sThumbRY,  c->sThumbRY,  JOY_AXIS_RY },
-    { wi_trigger_to_axis(p->bLeftTrigger),
-      wi_trigger_to_axis(c->bLeftTrigger),
+    { axtrigger_to_axis(p->bLeftTrigger),
+      axtrigger_to_axis(c->bLeftTrigger),
       JOY_AXIS_LT },
-    { wi_trigger_to_axis(p->bRightTrigger),
-      wi_trigger_to_axis(c->bRightTrigger),
+    { axtrigger_to_axis(p->bRightTrigger),
+      axtrigger_to_axis(c->bRightTrigger),
       JOY_AXIS_RT },
   };
 

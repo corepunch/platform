@@ -54,7 +54,7 @@ timers_poll(void)
 
 /* Map an X11 KeySym to a AX_KEY_* value */
 static uint32_t
-keysym_to_wi_key(KeySym sym)
+keysym_to_ax_key(KeySym sym)
 {
   /* Printable ASCII: pass through directly */
   if (sym >= 0x20 && sym <= 0x7e) {
@@ -158,7 +158,7 @@ x11_process_events(void)
     case KeyPress:
     case KeyRelease: {
       KeySym sym = XLookupKeysym(&xev.xkey, 0);
-      uint32_t key = keysym_to_wi_key(sym);
+      uint32_t key = keysym_to_ax_key(sym);
       if (key) {
         uint32_t mods = x11_modifiers(xev.xkey.state);
         EVENT *e = &events.queue[events.write++];

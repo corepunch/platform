@@ -497,7 +497,7 @@ axLibDirectory(void);
 
 /**
  * @defgroup windowflags Window creation flags
- * @brief Bit flags passed to #WI_CreateWindow to control window and rendering
+ * @brief Bit flags passed to #axCreateWindow to control window and rendering
  *        context behaviour.
  *
  * Pass 0 for the default behaviour (double-buffered, decorated, resizable,
@@ -517,7 +517,7 @@ enum
   AX_WINDOW_BORDERLESS   = 1 << 2,
 
   /** Allow the window to be resized by the user.  When passing any nonzero
-   *  @p flags to #WI_CreateWindow, include this flag explicitly to keep the
+   *  @p flags to #axCreateWindow, include this flag explicitly to keep the
    *  window resizable; omitting it while using other flags will produce a
    *  fixed-size window on most platforms.  With @p flags == 0 the window
    *  remains resizable for backward compatibility. */
