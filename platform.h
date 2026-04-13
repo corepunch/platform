@@ -555,6 +555,74 @@ axShareDirectory(void);
 AX_API char const *
 axLibDirectory(void);
 
+/**
+ * @defgroup dynlib Dynamic library loading
+ * @brief Run-time loading and symbol lookup for shared libraries.
+ *
+ * The file-extension macro #AX_DYNLIB_EXT provides the platform-specific
+ * suffix so callers can construct library names portably:
+ * @code
+ *   void *lib = axDynlibOpen("myplugin" AX_DYNLIB_EXT);
+ * @endcode
+ * @{
+ */
+
+/**
+ * @brief Platform-specific dynamic library file extension, including the dot.
+ *
+ * Expands to `".dll"` on Windows, `".dylib"` on macOS, and `".so"` on
+ * Linux and QNX.
+ */
+#if defined(_WIN32) || defined(__MINGW32__)
+#  define AX_DYNLIB_EXT ".dll"
+#elif defined(__APPLE__)
+#  define AX_DYNLIB_EXT ".dylib"
+#else
+#  define AX_DYNLIB_EXT ".so"
+#endif
+
+/**
+ * @brief Open a shared library at @p path.
+ *
+ * @param path  Null-terminated path to the library file.
+ * @return An opaque library handle on success, `NULL` on failure.
+ *         Call #axDynlibError to obtain a human-readable error message.
+ */
+AX_API void *
+axDynlibOpen(char const *path);
+
+/**
+ * @brief Look up a symbol by name in a library handle.
+ *
+ * @param handle  Handle returned by #axDynlibOpen.
+ * @param sym     Null-terminated symbol name.
+ * @return Pointer to the symbol, or `NULL` if not found.
+ */
+AX_API void *
+axDynlibSym(void *handle, char const *sym);
+
+/**
+ * @brief Close a library handle.
+ *
+ * Passing `NULL` is safe and has no effect.
+ *
+ * @param handle  Handle returned by #axDynlibOpen, or `NULL`.
+ */
+AX_API void
+axDynlibClose(void *handle);
+
+/**
+ * @brief Return a human-readable description of the last loading error.
+ *
+ * @return Null-terminated error string, or `NULL` if no error has occurred.
+ *         The pointer may be invalidated by the next call to any dynlib
+ *         function.
+ */
+AX_API char const *
+axDynlibError(void);
+
+/** @} */
+
 /** @} */
 
 /**

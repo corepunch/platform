@@ -135,3 +135,44 @@ dlopen(plugin_path, RTLD_LAZY);
 | Windows  | Same directory as the executable |
 | macOS    | Same as `axShareDirectory()` |
 | Linux    | `<exe>/../lib/<appname>/` |
+
+---
+
+## Dynamic library loading
+
+Use `axDynlibOpen` / `axDynlibSym` / `axDynlibClose` to load plugins or
+optional shared libraries at run time.  The `AX_DYNLIB_EXT` macro provides
+the correct file-name extension for the current platform so library names can
+be written portably.
+
+### Basic usage
+
+```c
+/* Build a portable path to the plugin */
+char path[1024];
+snprintf(path, sizeof(path), "%s/myplugin" AX_DYNLIB_EXT, axLibDirectory());
+
+void *lib = axDynlibOpen(path);
+if (!lib) {
+    fprintf(stderr, "load error: %s\n", axDynlibError());
+    return;
+}
+
+/* Look up a function by name */
+typedef int (*plugin_init_fn)(void);
+plugin_init_fn init = (plugin_init_fn)axDynlibSym(lib, "plugin_init");
+if (init)
+    init();
+
+axDynlibClose(lib);
+```
+
+### Platform support
+
+| Platform | Backend |
+|----------|---------|
+| macOS    | `dlopen` / `dlsym` / `dlclose` / `dlerror` |
+| Linux (Wayland / X11) | `dlopen` / `dlsym` / `dlclose` / `dlerror` |
+| Windows  | `LoadLibraryA` / `GetProcAddress` / `FreeLibrary` / `FormatMessage` |
+| QNX      | `dlopen` / `dlsym` / `dlclose` / `dlerror` |
+| WebGL    | Stubs — always return `NULL` (dynamic loading is not supported in browsers) |

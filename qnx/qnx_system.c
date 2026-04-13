@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <dlfcn.h>
 
 #include "qnx_local.h"
 
@@ -534,4 +535,29 @@ axKeynumToString(uint32_t keynum)
   }
 
   return "<UNKNOWN KEYNUM>";
+}
+
+void *
+axDynlibOpen(char const *path)
+{
+  return dlopen(path, RTLD_LAZY);
+}
+
+void *
+axDynlibSym(void *handle, char const *sym)
+{
+  return dlsym(handle, sym);
+}
+
+void
+axDynlibClose(void *handle)
+{
+  if (handle)
+    dlclose(handle);
+}
+
+char const *
+axDynlibError(void)
+{
+  return dlerror();
 }
