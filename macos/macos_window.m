@@ -88,6 +88,7 @@ axNotifySizeChanged(uint32_t width, uint32_t height)
 static NSRect
 GetScreenFrame(uint32_t width)
 {
+  (void)width;
 	NSArray   *screens    = [NSScreen screens];
 //	NSUInteger numScreens = [screens count];
 //	return [[screens objectAtIndex:(numScreens-1)] frame];
@@ -125,6 +126,7 @@ static void ListenForDarkModeChanges(NSWindow *window) {
    object:nil
    queue:[NSOperationQueue mainQueue]
    usingBlock:^(NSNotification * _Nonnull note) {
+    (void)note;
     if (IsDarkMode(window)) {
       NSLog(@"Switched to Dark Mode");
     } else {

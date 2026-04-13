@@ -45,6 +45,7 @@ typedef struct lua_State lua_State;
 @end
 
 int API_AddMenu(lua_State *L) {
+    (void)L;
     //    static int menuInitialized = 0;
     //
     //    NSMenu *mainMenu = nil;

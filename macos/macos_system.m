@@ -92,6 +92,7 @@ char const *axLibDirectory(void) {
 }
 
 void axSetDragContents(char const *contents) {
+  (void)contents;
 }
 
 char const *axGetPlatform(void) {
@@ -185,6 +186,7 @@ bool_t axIsDarkTheme(void) {
 #include <sys/wait.h>
 
 int axExecuteProcess(char const *process) {
+  (void)process;
 #if 0
     pid_t pid;
     

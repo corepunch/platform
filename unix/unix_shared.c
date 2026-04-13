@@ -149,7 +149,7 @@ axKeynumToString(uint32_t keynum)
   keyname_t* kn;
   static char tinystr[2];
   keynum = keynum&0xff;
-  if (keynum == -1)
+  if (keynum == (uint32_t)-1)
     return "<KEY NOT FOUND>";
   if (keynum > 32 && keynum < 127) { // printable ascii
     tinystr[0] = keynum;

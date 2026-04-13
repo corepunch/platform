@@ -2,7 +2,7 @@
  * unix_joystick.c – Linux joystick support via /dev/input/js*.
  *
  * This file is compiled on both Linux and macOS (the macOS Makefile includes
- * unix/*.c).  All Linux-specific code is guarded by #ifdef __linux__ so that
+ * unix/.c).  All Linux-specific code is guarded by #ifdef __linux__ so that
  * the file compiles to nothing on macOS, where macos_joystick.m provides the
  * joystick API stubs instead.
  *
