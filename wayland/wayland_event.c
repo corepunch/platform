@@ -523,7 +523,7 @@ axRemoveFromQueue(void* hobj)
 }
 
 void
-NotifyFileDropEvent(char const* filename, float x, float y)
+axNotifyFileDropEvent(char const* filename, float x, float y)
 {
   // File drop not fully implemented yet
   // Would need to allocate and copy filename string

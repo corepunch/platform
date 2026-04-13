@@ -468,7 +468,7 @@ axCreateSurface(uint32_t width, uint32_t height)
       }
     }
     
-    NotifyFileDropEvent(fileURL.path.UTF8String, mouse.x, mouse_y);
+    axNotifyFileDropEvent(fileURL.path.UTF8String, mouse.x, mouse_y);
   }
   return YES;
 }

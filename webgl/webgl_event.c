@@ -370,7 +370,7 @@ axRemoveFromQueue(void *hobj)
 }
 
 void
-NotifyFileDropEvent(char const *filename, float x, float y)
+axNotifyFileDropEvent(char const *filename, float x, float y)
 {
   (void)filename;
   (void)x;

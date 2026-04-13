@@ -374,7 +374,7 @@ axRemoveFromQueue(void* target);
  * @param y         Vertical drop position in window coordinates.
  */
 AX_API void
-NotifyFileDropEvent(char const *filename, float x, float y);
+axNotifyFileDropEvent(char const *filename, float x, float y);
 
 /** @} */
 

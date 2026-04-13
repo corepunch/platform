@@ -75,7 +75,7 @@ axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 }
 
 void
-NotifyFileDropEvent(char const *filename, float x, float y)
+axNotifyFileDropEvent(char const *filename, float x, float y)
 {
 //	struct AXmessage * ev       = malloc(sizeof(EVENT));
 //	ev->type               = ;
@@ -85,6 +85,9 @@ NotifyFileDropEvent(char const *filename, float x, float y)
 //	ev->location.y = y;
 //	strcpy(ev->filename, filename);
 //	window_events = ev;
+  (void)filename;
+  (void)x;
+  (void)y;
 }
 
 static uint32_t
