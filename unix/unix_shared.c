@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <time.h>
+#include <dlfcn.h>
 
 #include "../platform.h"
 
@@ -159,4 +160,29 @@ axKeynumToString(uint32_t keynum)
     if (keynum == kn->keynum)
       return kn->name;
   return "<UNKNOWN KEYNUM>";
+}
+
+void *
+axDynlibOpen(char const *path)
+{
+  return dlopen(path, RTLD_LAZY);
+}
+
+void *
+axDynlibSym(void *handle, char const *sym)
+{
+  return dlsym(handle, sym);
+}
+
+void
+axDynlibClose(void *handle)
+{
+  if (handle)
+    dlclose(handle);
+}
+
+char const *
+axDynlibError(void)
+{
+  return dlerror();
 }

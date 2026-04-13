@@ -140,3 +140,42 @@ axSleep(longTime_t msec)
 {
   Sleep((DWORD)msec);
 }
+
+static _Thread_local DWORD dynlib_last_err = 0;
+
+void *
+axDynlibOpen(char const *path)
+{
+  HMODULE h = LoadLibraryA(path);
+  if (!h)
+    dynlib_last_err = GetLastError();
+  return (void *)h;
+}
+
+void *
+axDynlibSym(void *handle, char const *sym)
+{
+  FARPROC p = GetProcAddress((HMODULE)handle, sym);
+  if (!p)
+    dynlib_last_err = GetLastError();
+  return (void *)p;
+}
+
+void
+axDynlibClose(void *handle)
+{
+  if (handle)
+    FreeLibrary((HMODULE)handle);
+}
+
+char const *
+axDynlibError(void)
+{
+  static _Thread_local char buf[256];
+  if (dynlib_last_err == 0)
+    return NULL;
+  FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                 NULL, dynlib_last_err, 0, buf, sizeof(buf), NULL);
+  dynlib_last_err = 0;
+  return buf;
+}

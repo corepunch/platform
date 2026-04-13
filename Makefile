@@ -27,7 +27,7 @@ else ifeq ($(UNAME_S),Darwin)
 else ifeq ($(UNAME_S),Linux)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
-	LDFLAGS = -shared
+	LDFLAGS = -shared -ldl
 	LIB_EXT = so
 	# Try to detect Wayland libraries
 	WAYLAND_LIBS := $(shell pkg-config --libs wayland-client wayland-egl xkbcommon egl gl 2>/dev/null)

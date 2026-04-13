@@ -130,3 +130,30 @@ axKeynumToString(uint32_t keynum)
   }
   return "<UNKNOWN KEYNUM>";
 }
+
+void *
+axDynlibOpen(char const *path)
+{
+  (void)path;
+  return NULL;
+}
+
+void *
+axDynlibSym(void *handle, char const *sym)
+{
+  (void)handle;
+  (void)sym;
+  return NULL;
+}
+
+void
+axDynlibClose(void *handle)
+{
+  (void)handle;
+}
+
+char const *
+axDynlibError(void)
+{
+  return "dynamic library loading is not supported on WebGL";
+}
