@@ -236,12 +236,13 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 
   if (!(flags & AX_WINDOW_HIDDEN)) {
     [window makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES];
   }
 
   if (flags & AX_WINDOW_FULLSCREEN) {
     [window toggleFullScreen:nil];
   }
-
+  
   ConfigureOpenGLView(openGLView);
   ListenForDarkModeChanges(window);
   
@@ -258,9 +259,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   } else {
     wstate.backingScale = 1;
   }
-  
-  //    [NSApp activateIgnoringOtherApps:YES];
-  
+    
 	return TRUE;
 }
 
