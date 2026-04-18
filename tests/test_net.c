@@ -205,23 +205,23 @@ test_nonblocking_wouldblock(void)
   assert(axNetListen(server, 1) == TRUE);
 
 #if defined(_WIN32) || defined(__MINGW32__)
-  int name_len2 = sizeof(struct sockaddr_in);
+  int addr_len = sizeof(struct sockaddr_in);
   struct sockaddr_in sa;
   memset(&sa, 0, sizeof(sa));
   getsockname((SOCKET)server, (struct sockaddr *)&sa,
-              (socklen_t *)&name_len2);
-  uint16_t port2 = ntohs(sa.sin_port);
+              (socklen_t *)&addr_len);
+  uint16_t server_port = ntohs(sa.sin_port);
 #else
   struct sockaddr_in sa;
-  socklen_t name_len2 = sizeof(sa);
+  socklen_t addr_len = sizeof(sa);
   memset(&sa, 0, sizeof(sa));
-  getsockname(server, (struct sockaddr *)&sa, &name_len2);
-  uint16_t port2 = ntohs(sa.sin_port);
+  getsockname(server, (struct sockaddr *)&sa, &addr_len);
+  uint16_t server_port = ntohs(sa.sin_port);
 #endif
 
   int client = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
   assert(client >= 0);
-  assert(axNetConnect(client, "127.0.0.1", port2) == TRUE);
+  assert(axNetConnect(client, "127.0.0.1", server_port) == TRUE);
 
   int peer = axNetAccept(server);
   assert(peer >= 0);

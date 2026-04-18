@@ -252,6 +252,7 @@ axNetResolve(char const *host, char *out, int outlen)
 int
 axNetPoll(int sock, int events, int timeout_ms)
 {
+  if (timeout_ms < 0) timeout_ms = 0;
   fd_set rd, wr, ex;
   FD_ZERO(&rd); FD_ZERO(&wr); FD_ZERO(&ex);
   if (events & AX_NET_POLL_READ)  FD_SET((SOCKET)sock, &rd);
@@ -259,8 +260,8 @@ axNetPoll(int sock, int events, int timeout_ms)
   if (events & AX_NET_POLL_ERR)   FD_SET((SOCKET)sock, &ex);
 
   struct timeval tv;
-  tv.tv_sec  = timeout_ms / 1000;
-  tv.tv_usec = (timeout_ms % 1000) * 1000;
+  tv.tv_sec  = (long)(timeout_ms / 1000);
+  tv.tv_usec = (long)((timeout_ms % 1000) * 1000);
 
   int rc = select(0, &rd, &wr, &ex, &tv);
   if (rc == SOCKET_ERROR) {
@@ -406,7 +407,7 @@ schannel_handshake(AXtlsctx *tls, char const *hostname)
   }
 
   /* Save any post-handshake application data. */
-  if (tmp_len > 0 && tmp_len <= (int)sizeof(tls->enc_buf)) {
+  if (tmp_len <= (int)sizeof(tls->enc_buf)) {
     memcpy(tls->enc_buf, tmp, (size_t)tmp_len);
     tls->enc_len = tmp_len;
   }
