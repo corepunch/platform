@@ -190,7 +190,8 @@ static bool_t collect_cb(AXdirent const *e, void *userdata) {
     collect_state_t *s = (collect_state_t *)userdata;
     if (e->is_directory) return TRUE;
 
-    /* case-insensitive extension check */
+    /* case-insensitive extension check
+     * (strcasecmp is POSIX; use _stricmp on Windows/MSVC) */
     size_t nlen = strlen(e->name);
     size_t elen = strlen(s->ext);
     if (nlen >= elen &&

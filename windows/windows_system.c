@@ -149,7 +149,9 @@ bool_t
 axListDir(char const *path, AXDirCallback cb, void *userdata)
 {
   char pattern[MAX_PATH];
-  snprintf(pattern, sizeof(pattern), "%s\\*", path);
+  int n = snprintf(pattern, sizeof(pattern), "%s\\*", path);
+  if (n < 0 || (size_t)n >= sizeof(pattern))
+    return FALSE; /* path too long */
 
   WIN32_FIND_DATAA fd;
   HANDLE h = FindFirstFileA(pattern, &fd);

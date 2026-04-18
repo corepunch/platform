@@ -585,7 +585,9 @@ axListDir(char const *path, AXDirCallback cb, void *userdata)
       continue;
 
     char full[1024];
-    snprintf(full, sizeof(full), "%s/%s", path, ent->d_name);
+    int n = snprintf(full, sizeof(full), "%s/%s", path, ent->d_name);
+    if (n < 0 || (size_t)n >= sizeof(full))
+      continue; /* path too long, skip entry */
 
     struct stat st;
     if (stat(full, &st) != 0)
