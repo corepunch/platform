@@ -8,6 +8,7 @@ TEST_SRC = /tmp/test_platform_api.c
 TEST_BIN = /tmp/test_platform_api
 TEST_MSG_BIN  = /tmp/test_messages
 TEST_TIMER_BIN = /tmp/test_timer
+TEST_NET_BIN   = /tmp/test_net
 
 ifdef EMSCRIPTEN
 	CC = emcc
@@ -19,7 +20,7 @@ ifdef EMSCRIPTEN
 else ifeq ($(UNAME_S),Darwin)
 	CC = clang
 	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION
-	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -install_name @rpath/$(LIBNAME)
+	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -framework Security -framework CoreFoundation -install_name @rpath/$(LIBNAME)
 	LIB_EXT = dylib
 	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; )
 	LANG = objective-c
@@ -47,15 +48,21 @@ else ifeq ($(UNAME_S),Linux)
 			FIND_SOURCES = find unix -name "*.c"
 		endif
 	endif
+	# Optional OpenSSL support for TLS on Linux
+	OPENSSL_LIBS := $(shell pkg-config --libs openssl 2>/dev/null)
+	ifneq ($(OPENSSL_LIBS),)
+		CFLAGS  += $(shell pkg-config --cflags openssl 2>/dev/null) -DHAVE_OPENSSL
+		LDFLAGS += $(OPENSSL_LIBS)
+	endif
 	LANG = c
-	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR))
+	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR)) -Wl,--allow-shlib-undefined
 else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	CC = gcc
 	CFLAGS = -Wall -Wextra -I. -DPLATFORM_BUILD
 	LDFLAGS = -shared \
 	          -Wl,--out-implib,$(OUTDIR)/libplatform.dll.a \
 	          -lopengl32 -lgdi32 -luser32 -lcomdlg32 \
-	          -lole32 -lshell32 -ladvapi32 -lws2_32 -lxinput1_4
+	          -lole32 -lshell32 -ladvapi32 -lws2_32 -lxinput1_4 -lsecur32
 	LIB_EXT = dll
 	FIND_SOURCES = find windows -name "*.c"
 	LANG = c
@@ -65,6 +72,7 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform
 	TEST_MSG_BIN   = $(OUTDIR)/test_messages.exe
 	TEST_TIMER_BIN = $(OUTDIR)/test_timer.exe
+	TEST_NET_BIN   = $(OUTDIR)/test_net.exe
 else
 	$(error Unsupported OS: $(UNAME_S))
 endif
@@ -97,6 +105,10 @@ test: $(TARGET)
 	@$(TEST_TIMER_BIN)
 	@rm -f $(TEST_TIMER_BIN)
 	@echo "Timer tests passed."
+	@$(CC) -I. tests/test_net.c $(TEST_LDFLAGS) -o $(TEST_NET_BIN)
+	@$(TEST_NET_BIN)
+	@rm -f $(TEST_NET_BIN)
+	@echo "Network tests passed."
 endif
 
 clean:
