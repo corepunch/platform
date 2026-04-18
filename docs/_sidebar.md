@@ -9,5 +9,6 @@
 
 - **Features**
   - [File Dialogs](file-dialogs.md)
+  - [Directory Operations](directory-operations.md)
   - [Joystick & Gamepad](joystick-gamepad.md)
   - [System Utilities](system-utilities.md)

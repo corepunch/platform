@@ -137,3 +137,52 @@ KEY_GetKeyName(uint32_t keycode)
   (void)keycode;
   return "";
 }
+
+bool_t
+axMkDir(char const *path)
+{
+  return (CreateDirectoryA(path, NULL) || GetLastError() == ERROR_ALREADY_EXISTS)
+         ? TRUE : FALSE;
+}
+
+bool_t
+axListDir(char const *path, AXDirCallback cb, void *userdata)
+{
+  char pattern[MAX_PATH];
+  snprintf(pattern, sizeof(pattern), "%s\\*", path);
+
+  WIN32_FIND_DATAA fd;
+  HANDLE h = FindFirstFileA(pattern, &fd);
+  if (h == INVALID_HANDLE_VALUE)
+    return FALSE;
+
+  do {
+    if (strcmp(fd.cFileName, ".") == 0 || strcmp(fd.cFileName, "..") == 0)
+      continue;
+
+    AXdirent entry;
+    memset(&entry, 0, sizeof(entry));
+    strncpy(entry.name, fd.cFileName, sizeof(entry.name) - 1);
+    entry.is_directory = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? TRUE : FALSE;
+    entry.is_hidden    = (fd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)    ? TRUE : FALSE;
+    entry.size         = entry.is_directory ? 0 : (size_t)fd.nFileSizeLow;
+
+    /* Convert Windows FILETIME (100-ns ticks since 1601-01-01) to Unix time */
+    ULARGE_INTEGER uli;
+    uli.LowPart  = fd.ftLastWriteTime.dwLowDateTime;
+    uli.HighPart = fd.ftLastWriteTime.dwHighDateTime;
+    entry.modified = (time_t)((uli.QuadPart - 116444736000000000ULL) / 10000000ULL);
+
+    if (!cb(&entry, userdata))
+      break;
+  } while (FindNextFileA(h, &fd));
+
+  FindClose(h);
+  return TRUE;
+}
+
+bool_t
+axGetCwd(char *buf, size_t sz)
+{
+  return GetCurrentDirectoryA((DWORD)sz, buf) != 0 ? TRUE : FALSE;
+}

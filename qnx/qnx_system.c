@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <dlfcn.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "qnx_local.h"
 
@@ -560,4 +564,51 @@ char const *
 axDynlibError(void)
 {
   return dlerror();
+}
+
+bool_t
+axMkDir(char const *path)
+{
+  return (mkdir(path, 0777) == 0 || errno == EEXIST) ? TRUE : FALSE;
+}
+
+bool_t
+axListDir(char const *path, AXDirCallback cb, void *userdata)
+{
+  DIR *dir = opendir(path);
+  if (!dir)
+    return FALSE;
+
+  struct dirent *ent;
+  while ((ent = readdir(dir)) != NULL) {
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+
+    char full[1024];
+    snprintf(full, sizeof(full), "%s/%s", path, ent->d_name);
+
+    struct stat st;
+    if (stat(full, &st) != 0)
+      continue;
+
+    AXdirent entry;
+    memset(&entry, 0, sizeof(entry));
+    strncpy(entry.name, ent->d_name, sizeof(entry.name) - 1);
+    entry.is_directory = S_ISDIR(st.st_mode) ? TRUE : FALSE;
+    entry.is_hidden    = (ent->d_name[0] == '.') ? TRUE : FALSE;
+    entry.size         = entry.is_directory ? 0 : (size_t)st.st_size;
+    entry.modified     = st.st_mtime;
+
+    if (!cb(&entry, userdata))
+      break;
+  }
+
+  closedir(dir);
+  return TRUE;
+}
+
+bool_t
+axGetCwd(char *buf, size_t sz)
+{
+  return getcwd(buf, sz) != NULL ? TRUE : FALSE;
 }
