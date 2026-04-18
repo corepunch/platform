@@ -240,11 +240,27 @@ axWaitEvent(longTime_t msec)
     NSDate *date = msec > 0
       ? [NSDate dateWithTimeIntervalSinceNow:(double)msec / 1000.0]
       : [NSDate distantFuture];
-    NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                       untilDate:date
-                                          inMode:NSDefaultRunLoopMode
-                                         dequeue:NO];
-    return event ? 1 : 0;
+    for (;;) {
+      NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                         untilDate:date
+                                            inMode:NSDefaultRunLoopMode
+                                           dequeue:YES];
+      if (!event)
+        return 0;
+      /* ApplicationDefined events carry AXmessage payloads — put it back so
+         axPollEvent can dequeue and decode it. */
+      if (event.type == NSEventTypeApplicationDefined) {
+        [NSApp postEvent:event atStart:YES];
+        return 1;
+      }
+      /* Other meaningful events (mouse, key, window) — put back for axPollEvent. */
+      if (GetEventType(event)) {
+        [NSApp postEvent:event atStart:YES];
+        return 1;
+      }
+      /* Internal Cocoa events (NSEventTypePeriodic, etc.) — discard and keep waiting. */
+      [NSApp sendEvent:event];
+    }
   }
 }
 
