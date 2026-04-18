@@ -14,13 +14,13 @@ static struct {
 static uint32_t s_next_timer_id = 1;
 
 uint32_t KEY_GetKeyName(uint32_t keycode) {
-	for (struct keymap const *km = darwin_scancode_table; km->keyname; km++) {
-		if (keycode == km->keycode)
-		{
-			return km->keyname;
-		}
-	}
-	return -1;
+  for (struct keymap const *km = darwin_scancode_table; km->keyname; km++) {
+    if (keycode == km->keycode)
+    {
+      return km->keyname;
+    }
+  }
+  return -1;
 }
 
 struct
@@ -77,14 +77,14 @@ axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 void
 axNotifyFileDropEvent(char const *filename, float x, float y)
 {
-//	struct AXmessage * ev       = malloc(sizeof(EVENT));
-//	ev->type               = ;
-//	ev->windowNumber       = (int)windowNumber;
-//	ev->next               = window_events;
-//	ev->location.x = x;
-//	ev->location.y = y;
-//	strcpy(ev->filename, filename);
-//	window_events = ev;
+  //  struct AXmessage * ev       = malloc(sizeof(EVENT));
+  //  ev->type               = ;
+  //  ev->windowNumber       = (int)windowNumber;
+  //  ev->next               = window_events;
+  //  ev->location.x = x;
+  //  ev->location.y = y;
+  //  strcpy(ev->filename, filename);
+  //  window_events = ev;
   (void)filename;
   (void)x;
   (void)y;
@@ -93,27 +93,27 @@ axNotifyFileDropEvent(char const *filename, float x, float y)
 static uint32_t
 modkey(NSEventModifierFlags modifierFlags)
 {
-	uint32_t flags=0;
-	if (modifierFlags & NSEventModifierFlagShift) {
-		flags |= AX_MOD_SHIFT;
-	}
-	if (modifierFlags & NSEventModifierFlagCommand) {
-		flags |= AX_MOD_CMD;
-	}
-	if (modifierFlags & NSEventModifierFlagControl) {
-		flags |= AX_MOD_CTRL;
-	}
-	if (modifierFlags & NSEventModifierFlagOption) {
-		flags |= AX_MOD_ALT;
-	}
-	return flags;
+  uint32_t flags=0;
+  if (modifierFlags & NSEventModifierFlagShift) {
+    flags |= AX_MOD_SHIFT;
+  }
+  if (modifierFlags & NSEventModifierFlagCommand) {
+    flags |= AX_MOD_CMD;
+  }
+  if (modifierFlags & NSEventModifierFlagControl) {
+    flags |= AX_MOD_CTRL;
+  }
+  if (modifierFlags & NSEventModifierFlagOption) {
+    flags |= AX_MOD_ALT;
+  }
+  return flags;
 }
 
 static uint32_t
 GetEventType(NSEvent *event)
 {
-	switch (event.type)
-	{
+  switch (event.type)
+  {
     case NSEventTypeLeftMouseDown:
       return event.clickCount == 2 ? kEventLeftDoubleClick : kEventLeftMouseDown;
     case NSEventTypeRightMouseDown:
@@ -132,48 +132,61 @@ GetEventType(NSEvent *event)
     case NSEventTypeKeyUp: return kEventKeyUp;
     case NSEventTypeApplicationDefined:
       return queue.data[(uint16_t)event.subtype].message;
-		// case NSEventTypeMouseEntered:
-		// case NSEventTypeMouseExited:
-		// case NSEventTypeFlagsChanged:
-		// case NSEventTypeAppKitDefined:
-		// case NSEventTypeSystemDefined:
-		// case NSEventTypeApplicationDefined:
-		// case NSEventTypePeriodic:
-		// case NSEventTypeCursorUpdate:
-		// case NSEventTypeTabletPoint:
-		// case NSEventTypeTabletProximity:
+      // case NSEventTypeMouseEntered:
+      // case NSEventTypeMouseExited:
+      // case NSEventTypeFlagsChanged:
+      // case NSEventTypeAppKitDefined:
+      // case NSEventTypeSystemDefined:
+      // case NSEventTypeApplicationDefined:
+      // case NSEventTypePeriodic:
+      // case NSEventTypeCursorUpdate:
+      // case NSEventTypeTabletPoint:
+      // case NSEventTypeTabletProximity:
     default:
       return 0;
-	}
+  }
 }
 
 static int
 GetKeyCode(NSEvent *event)
 {
-	switch ([event type])
-	{
-	case NSEventTypeKeyDown:
-	case NSEventTypeKeyUp:
-		return [event keyCode];
-	default:
-		return -1;
-	}
+  switch ([event type])
+  {
+    case NSEventTypeKeyDown:
+    case NSEventTypeKeyUp:
+      return [event keyCode];
+    default:
+      return -1;
+  }
 }
 
 int
 axPollEvent(struct AXmessage * e)
 {
   NSEvent *event;
-
+  
 start_over:
   event = [NSApp nextEventMatchingMask:NSEventMaskAny
                              untilDate:[NSDate date]
                                 inMode:NSDefaultRunLoopMode
                                dequeue:YES];
-
-  if (!event)
+  
+  if (!event) {
+    /* Headless tests may have posted AX messages queued in queue.data
+     without a corresponding Cocoa event available right now.
+     Drain that queue directly so rebuild() coroutines can resume. */
+    while (queue.read != queue.write && !queue.data[queue.read].message) {
+      queue.read++;
+    }
+    if (queue.read != queue.write) {
+      memcpy(e, &queue.data[queue.read], sizeof(struct AXmessage));
+      memset(&queue.data[queue.read], 0, sizeof(struct AXmessage));
+      queue.read++;
+      return 1;
+    }
     return 0;
-
+  }
+  
   if (event.type == NSEventTypeApplicationDefined) {
     queue.read = event.subtype;
     memcpy(e, &queue.data[queue.read], sizeof(struct AXmessage));
@@ -192,45 +205,45 @@ start_over:
     goto start_over;
   }
   
-	int x = event.locationInWindow.x;
-	int y = event.window.contentView.frame.size.height - event.locationInWindow.y;
-
-	e->target = (void *)event.window;
-	e->message = GetEventType(event);
-	e->wParam = MAKEDWORD(x, y);
-
-	/* For double-click events, queue the DoubleClick notification and return
-	 * MouseDown for this call so that handlers which only listen for MouseDown
-	 * still process the second click (matches SDL and WinAPI behaviour). */
-	uint32_t dbl_followup = 0;
-	if      (e->message == kEventLeftDoubleClick)  { dbl_followup = kEventLeftDoubleClick;  e->message = kEventLeftMouseDown;  }
-	else if (e->message == kEventRightDoubleClick) { dbl_followup = kEventRightDoubleClick; e->message = kEventRightMouseDown; }
-	else if (e->message == kEventOtherDoubleClick) { dbl_followup = kEventOtherDoubleClick; e->message = kEventOtherMouseDown; }
-	if (dbl_followup)
-	  axPostMessageW(e->target, dbl_followup, e->wParam, NULL);
-	
-	switch([event type]) {
-	case NSEventTypeScrollWheel:
-		e->lParam = (void*)(intptr_t)MAKEDWORD((int)event.scrollingDeltaX,
-                                           (int)event.scrollingDeltaY);
-		break;
-	case NSEventTypeLeftMouseDragged:
-	case NSEventTypeRightMouseDragged:
-	case NSEventTypeOtherMouseDragged:
-		e->lParam = (void*)(intptr_t)MAKEDWORD((int)event.deltaX, (int)event.deltaY);
-		break;
-	case NSEventTypeKeyDown:
-	case NSEventTypeKeyUp:
-		e->wParam = KEY_GetKeyName(GetKeyCode(event)) | modkey(event.modifierFlags);
-		strncpy((char *)&e->lParam, event.characters.UTF8String, sizeof(e->lParam));
-		break;
-	default:
-		break;
-	}
-	
-	[event release];
-	
-	return 1;
+  int x = event.locationInWindow.x;
+  int y = event.window.contentView.frame.size.height - event.locationInWindow.y;
+  
+  e->target = (void *)event.window;
+  e->message = GetEventType(event);
+  e->wParam = MAKEDWORD(x, y);
+  
+  /* For double-click events, queue the DoubleClick notification and return
+   * MouseDown for this call so that handlers which only listen for MouseDown
+   * still process the second click (matches SDL and WinAPI behaviour). */
+  uint32_t dbl_followup = 0;
+  if      (e->message == kEventLeftDoubleClick)  { dbl_followup = kEventLeftDoubleClick;  e->message = kEventLeftMouseDown;  }
+  else if (e->message == kEventRightDoubleClick) { dbl_followup = kEventRightDoubleClick; e->message = kEventRightMouseDown; }
+  else if (e->message == kEventOtherDoubleClick) { dbl_followup = kEventOtherDoubleClick; e->message = kEventOtherMouseDown; }
+  if (dbl_followup)
+    axPostMessageW(e->target, dbl_followup, e->wParam, NULL);
+  
+  switch([event type]) {
+    case NSEventTypeScrollWheel:
+      e->lParam = (void*)(intptr_t)MAKEDWORD((int)event.scrollingDeltaX,
+                                             (int)event.scrollingDeltaY);
+      break;
+    case NSEventTypeLeftMouseDragged:
+    case NSEventTypeRightMouseDragged:
+    case NSEventTypeOtherMouseDragged:
+      e->lParam = (void*)(intptr_t)MAKEDWORD((int)event.deltaX, (int)event.deltaY);
+      break;
+    case NSEventTypeKeyDown:
+    case NSEventTypeKeyUp:
+      e->wParam = KEY_GetKeyName(GetKeyCode(event)) | modkey(event.modifierFlags);
+      strncpy((char *)&e->lParam, event.characters.UTF8String, sizeof(e->lParam));
+      break;
+    default:
+      break;
+  }
+  
+  [event release];
+  
+  return 1;
 }
 
 int
@@ -238,17 +251,17 @@ axWaitEvent(longTime_t msec)
 {
   @autoreleasepool {
     NSDate *date = msec > 0
-      ? [NSDate dateWithTimeIntervalSinceNow:(double)msec / 1000.0]
-      : [NSDate distantFuture];
+    ? [NSDate dateWithTimeIntervalSinceNow:(double)msec / 1000.0]
+    : [NSDate distantFuture];
     for (;;) {
       NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                         untilDate:date
-                                            inMode:NSDefaultRunLoopMode
-                                           dequeue:YES];
+                                          untilDate:date
+                                             inMode:NSDefaultRunLoopMode
+                                            dequeue:YES];
       if (!event)
         return 0;
       /* ApplicationDefined events carry AXmessage payloads — put it back so
-         axPollEvent can dequeue and decode it. */
+       axPollEvent can dequeue and decode it. */
       if (event.type == NSEventTypeApplicationDefined) {
         [NSApp postEvent:event atStart:YES];
         return 1;
