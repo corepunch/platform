@@ -617,6 +617,17 @@ AX_API bool_t
 axListDir(char const *path, AXDirCallback cb, void *userdata);
 
 /**
+ * @brief Check whether a filesystem path exists.
+ *
+ * Works for both files and directories.
+ *
+ * @param path  Null-terminated UTF-8 path to test.
+ * @return `TRUE` when the path exists, otherwise `FALSE`.
+ */
+AX_API bool_t
+axPathExists(char const *path);
+
+/**
  * @brief Get the current working directory.
  *
  * @param[out] buf  Buffer that receives the null-terminated UTF-8 path.

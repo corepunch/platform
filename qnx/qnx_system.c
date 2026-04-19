@@ -620,6 +620,13 @@ axListDir(char const *path, AXDirCallback cb, void *userdata)
 }
 
 bool_t
+axPathExists(char const *path)
+{
+  struct stat st;
+  return (path && stat(path, &st) == 0) ? TRUE : FALSE;
+}
+
+bool_t
 axGetCwd(char *buf, size_t sz)
 {
   return getcwd(buf, sz) != NULL ? TRUE : FALSE;

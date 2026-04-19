@@ -277,6 +277,18 @@ axListDir(char const *path, AXDirCallback cb, void *userdata)
 }
 
 bool_t
+axPathExists(char const *path)
+{
+  wchar_t *wpath = utf8_to_utf16(path);
+  if (!wpath)
+    return FALSE;
+
+  DWORD attrs = GetFileAttributesW(wpath);
+  free(wpath);
+  return (attrs != INVALID_FILE_ATTRIBUTES) ? TRUE : FALSE;
+}
+
+bool_t
 axGetCwd(char *buf, size_t sz)
 {
   /* GetCurrentDirectoryW returns the required length when buffer is too small,

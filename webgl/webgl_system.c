@@ -175,6 +175,13 @@ axListDir(char const *path, AXDirCallback cb, void *userdata)
 }
 
 bool_t
+axPathExists(char const *path)
+{
+  (void)path;
+  return FALSE;
+}
+
+bool_t
 axGetCwd(char *buf, size_t sz)
 {
   if (buf && sz > 0)
