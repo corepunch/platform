@@ -203,7 +203,13 @@ static bool_t collect_cb(AXdirent const *e, void *userdata) {
         }
         char full[1024];
         snprintf(full, sizeof(full), "%s/%s", s->dir, e->name);
-        s->paths[s->count++] = strdup(full);
+        /* strdup is POSIX; on MSVC use _strdup. Portable alternative: */
+        size_t len = strlen(full) + 1;
+        char *copy = (char *)malloc(len);
+        if (copy) {
+            memcpy(copy, full, len);
+            s->paths[s->count++] = copy;
+        }
     }
     return TRUE;
 }

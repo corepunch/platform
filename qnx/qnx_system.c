@@ -569,7 +569,17 @@ axDynlibError(void)
 bool_t
 axMkDir(char const *path)
 {
-  return (mkdir(path, 0777) == 0 || errno == EEXIST) ? TRUE : FALSE;
+  if (mkdir(path, 0777) == 0)
+    return TRUE;
+  
+  if (errno == EEXIST) {
+    /* Verify it's actually a directory, not a file */
+    struct stat st;
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
+      return TRUE;
+  }
+  
+  return FALSE;
 }
 
 bool_t
