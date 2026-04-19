@@ -39,6 +39,10 @@
 #define TLS_RECV_BUF   (TLS_MAX_RECORD * 4)
 
 static bool_t winsock_initialised = FALSE;
+#ifdef _WIN32
+static CRITICAL_SECTION cs_init;
+static bool_t cs_init_done = FALSE;
+#endif
 
 /* =========================================================================
  * Subsystem lifecycle
@@ -47,15 +51,30 @@ static bool_t winsock_initialised = FALSE;
 bool_t
 axNetInit(void)
 {
-  if (winsock_initialised)
-    return TRUE;
-  WSADATA wsa;
-  if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-    fprintf(stderr, "axNetInit: WSAStartup failed: %d\n", WSAGetLastError());
-    return FALSE;
+#ifdef _WIN32
+  /* Ensure thread-safe WSAStartup initialization. */
+  if (!cs_init_done) {
+    InitializeCriticalSection(&cs_init);
+    cs_init_done = TRUE;
   }
-  winsock_initialised = TRUE;
-  return TRUE;
+  EnterCriticalSection(&cs_init);
+#endif
+  
+  bool_t ok = TRUE;
+  if (!winsock_initialised) {
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+      fprintf(stderr, "axNetInit: WSAStartup failed: %d\n", WSAGetLastError());
+      ok = FALSE;
+    } else {
+      winsock_initialised = TRUE;
+    }
+  }
+  
+#ifdef _WIN32
+  LeaveCriticalSection(&cs_init);
+#endif
+  return ok;
 }
 
 void
@@ -117,39 +136,14 @@ axNetSetReuseAddr(int sock, bool_t reuse)
 bool_t
 axNetBind(int sock, uint16_t port)
 {
-  /* Detect the socket's address family via getsockname so we can bind
-   * both IPv4 and IPv6 sockets correctly. */
-  struct sockaddr_storage ss;
-  int sslen = sizeof(ss);
-  memset(&ss, 0, sizeof(ss));
-  if (getsockname((SOCKET)sock, (struct sockaddr *)&ss,
-                  (socklen_t *)&sslen) == SOCKET_ERROR) {
-    fprintf(stderr, "axNetBind: getsockname: %d\n", WSAGetLastError());
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family      = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port        = htons(port);
+  if (bind((SOCKET)sock, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) {
+    fprintf(stderr, "axNetBind: %d\n", WSAGetLastError());
     return FALSE;
-  }
-
-  if (ss.ss_family == AF_INET6) {
-    struct sockaddr_in6 addr6;
-    memset(&addr6, 0, sizeof(addr6));
-    addr6.sin6_family = AF_INET6;
-    addr6.sin6_addr   = in6addr_any;
-    addr6.sin6_port   = htons(port);
-    if (bind((SOCKET)sock, (struct sockaddr *)&addr6,
-             sizeof(addr6)) == SOCKET_ERROR) {
-      fprintf(stderr, "axNetBind: %d\n", WSAGetLastError());
-      return FALSE;
-    }
-  } else {
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family      = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addr.sin_port        = htons(port);
-    if (bind((SOCKET)sock, (struct sockaddr *)&addr,
-             sizeof(addr)) == SOCKET_ERROR) {
-      fprintf(stderr, "axNetBind: %d\n", WSAGetLastError());
-      return FALSE;
-    }
   }
   return TRUE;
 }
@@ -277,22 +271,18 @@ axNetResolve(char const *host, char *out, int outlen)
 int
 axNetPoll(int sock, int events, int timeout_ms)
 {
+  if (timeout_ms < 0) timeout_ms = 0;
   fd_set rd, wr, ex;
   FD_ZERO(&rd); FD_ZERO(&wr); FD_ZERO(&ex);
   if (events & AX_NET_POLL_READ)  FD_SET((SOCKET)sock, &rd);
   if (events & AX_NET_POLL_WRITE) FD_SET((SOCKET)sock, &wr);
   if (events & AX_NET_POLL_ERR)   FD_SET((SOCKET)sock, &ex);
 
-  /* Pass NULL timeout to select() for infinite wait (timeout_ms < 0). */
   struct timeval tv;
-  struct timeval *tvp = NULL;
-  if (timeout_ms >= 0) {
-    tv.tv_sec  = (long)(timeout_ms / 1000);
-    tv.tv_usec = (long)((timeout_ms % 1000) * 1000);
-    tvp = &tv;
-  }
+  tv.tv_sec  = (long)(timeout_ms / 1000);
+  tv.tv_usec = (long)((timeout_ms % 1000) * 1000);
 
-  int rc = select(0, &rd, &wr, &ex, tvp);
+  int rc = select(0, &rd, &wr, &ex, &tv);
   if (rc == SOCKET_ERROR) {
     fprintf(stderr, "axNetPoll: select failed: %d\n", WSAGetLastError());
     return -1;
@@ -304,6 +294,50 @@ axNetPoll(int sock, int events, int timeout_ms)
   if (FD_ISSET((SOCKET)sock, &wr)) ready |= AX_NET_POLL_WRITE;
   if (FD_ISSET((SOCKET)sock, &ex)) ready |= AX_NET_POLL_ERR;
   return ready;
+}
+
+/* =========================================================================
+ * Helper: Schannel error message formatter
+ * ====================================================================== */
+
+static const char *
+schannel_error_string(SECURITY_STATUS ss)
+{
+  /* Return human-readable error message for common SECURITY_STATUS codes. */
+  switch (ss) {
+    case SEC_E_OK:
+      return "OK";
+    case SEC_E_INCOMPLETE_MESSAGE:
+      return "Incomplete message";
+    case SEC_E_INVALID_PARAMETER:
+      return "Invalid parameter";
+    case SEC_E_INVALID_HANDLE:
+      return "Invalid handle";
+    case SEC_E_BUFFER_TOO_SMALL:
+      return "Buffer too small";
+    case SEC_E_NO_CREDENTIALS:
+      return "No credentials";
+    case SEC_E_CERT_UNKNOWN:
+      return "Unknown certificate";
+    case SEC_E_CERT_EXPIRED:
+      return "Certificate expired";
+    case SEC_E_UNTRUSTED_ROOT:
+      return "Untrusted root";
+    case SEC_E_MESSAGE_ALTERED:
+      return "Message altered (TLS record integrity failure)";
+    case SEC_I_CONTINUE_NEEDED:
+      return "Continue needed (handshake in progress)";
+    case SEC_E_ALGORITHM_MISMATCH:
+      return "Algorithm mismatch";
+    case SEC_E_DECRYPT_FAILURE:
+      return "Decryption failure";
+    case SEC_I_RENEGOTIATE:
+      return "Renegotiation requested";
+    case SEC_I_CONTEXT_EXPIRED:
+      return "Context expired";
+    default:
+      return "Unknown error";
+  }
 }
 
 /* =========================================================================
@@ -339,6 +373,10 @@ schannel_handshake(AXtlsctx *tls, char const *hostname)
 
   /* Wide-char hostname for Schannel SNI. */
   wchar_t w_host[256] = {0};
+  if (hostname && strlen(hostname) >= 255) {
+    fprintf(stderr, "schannel_handshake: hostname too long (>= 255 bytes)\n");
+    return FALSE;
+  }
   MultiByteToWideChar(CP_UTF8, 0, hostname ? hostname : "",
                       -1, w_host, 256);
 
@@ -358,8 +396,8 @@ schannel_handshake(AXtlsctx *tls, char const *hostname)
     &tls->h_ctx, &out_desc, &attribs, NULL);
 
   if (ss != SEC_I_CONTINUE_NEEDED) {
-    fprintf(stderr, "schannel_handshake: ISC (1) failed: 0x%lx\n",
-            (unsigned long)ss);
+    fprintf(stderr, "schannel_handshake: ISC (1) failed: %s\n",
+            schannel_error_string(ss));
     return FALSE;
   }
 
@@ -430,8 +468,8 @@ schannel_handshake(AXtlsctx *tls, char const *hostname)
   }
 
   if (ss != SEC_E_OK) {
-    fprintf(stderr, "schannel_handshake: ISC failed: 0x%lx\n",
-            (unsigned long)ss);
+    fprintf(stderr, "schannel_handshake: ISC failed: %s\n",
+            schannel_error_string(ss));
     return FALSE;
   }
 
@@ -464,8 +502,8 @@ axTlsConnect(int sock, char const *hostname)
     NULL, &cred, NULL, NULL, &ctx->h_cred, NULL);
 
   if (ss != SEC_E_OK) {
-    fprintf(stderr, "axTlsConnect: AcquireCredentialsHandle failed: "
-            "0x%lx\n", (unsigned long)ss);
+    fprintf(stderr, "axTlsConnect: AcquireCredentialsHandle failed: %s\n",
+            schannel_error_string(ss));
     free(ctx);
     return NULL;
   }
@@ -584,6 +622,12 @@ axTlsRecv(AXtlsctx *ctx, void *buf, int len)
 
   /* Read more encrypted data into the accumulation buffer. */
   int space = (int)sizeof(ctx->enc_buf) - ctx->enc_len;
+  /* Prevent silent data loss if encrypted buffer is full (oversized TLS record). */
+  if (space <= 0) {
+    fprintf(stderr, "axTlsRecv: encrypted record buffer overflow (record > %d bytes?)\n",
+            TLS_MAX_RECORD);
+    return -1;
+  }
   if (space > 0) {
     int n = recv((SOCKET)ctx->fd,
                  (char *)ctx->enc_buf + ctx->enc_len, space, 0);
@@ -621,8 +665,8 @@ axTlsRecv(AXtlsctx *ctx, void *buf, int len)
     return 0; /* orderly shutdown or renegotiation */
 
   if (ss != SEC_E_OK) {
-    fprintf(stderr, "axTlsRecv: DecryptMessage failed: 0x%lx\n",
-            (unsigned long)ss);
+    fprintf(stderr, "axTlsRecv: DecryptMessage failed: %s\n",
+            schannel_error_string(ss));
     return -1;
   }
 
