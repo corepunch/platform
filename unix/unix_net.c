@@ -336,13 +336,18 @@ axTlsConnect(int sock, char const *hostname)
   if (!ctx) return NULL;
   ctx->fd = sock;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   ctx->ssl = SSLCreateContext(kCFAllocatorDefault,
                               kSSLClientSide, kSSLStreamType);
+#pragma clang diagnostic pop
   if (!ctx->ssl) {
     free(ctx);
     return NULL;
   }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   SSLSetIOFuncs(ctx->ssl, st_read, st_write);
   SSLSetConnection(ctx->ssl, (SSLConnectionRef)&ctx->fd);
 
@@ -360,6 +365,7 @@ axTlsConnect(int sock, char const *hostname)
     free(ctx);
     return NULL;
   }
+#pragma clang diagnostic pop
   return ctx;
 }
 
@@ -367,7 +373,10 @@ void
 axTlsClose(AXtlsctx *ctx)
 {
   if (!ctx) return;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   SSLClose(ctx->ssl);
+#pragma clang diagnostic pop
   CFRelease(ctx->ssl);
   free(ctx);
 }
@@ -376,7 +385,10 @@ int
 axTlsSend(AXtlsctx *ctx, void const *buf, int len)
 {
   size_t   processed = 0;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   OSStatus status    = SSLWrite(ctx->ssl, buf, (size_t)len, &processed);
+#pragma clang diagnostic pop
   if (status == noErr || status == errSSLWouldBlock)
     return (int)processed;
   fprintf(stderr, "axTlsSend: SSLWrite failed (%d)\n", (int)status);
@@ -387,7 +399,10 @@ int
 axTlsRecv(AXtlsctx *ctx, void *buf, int len)
 {
   size_t   processed = 0;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   OSStatus status    = SSLRead(ctx->ssl, buf, (size_t)len, &processed);
+#pragma clang diagnostic pop
   if (status == noErr || status == errSSLWouldBlock)
     return (int)processed;
   if (status == errSSLClosedGraceful || status == errSSLClosedNoNotify)
