@@ -8,6 +8,7 @@ TEST_SRC = /tmp/test_platform_api.c
 TEST_BIN = /tmp/test_platform_api
 TEST_MSG_BIN  = /tmp/test_messages
 TEST_TIMER_BIN = /tmp/test_timer
+TEST_NET_BIN   = /tmp/test_net
 
 ifdef EMSCRIPTEN
 	CC = emcc
@@ -19,11 +20,12 @@ ifdef EMSCRIPTEN
 else ifeq ($(UNAME_S),Darwin)
 	CC = clang
 	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION
-	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -install_name @rpath/$(LIBNAME)
+	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -framework Security -framework CoreFoundation -install_name @rpath/$(LIBNAME)
 	LIB_EXT = dylib
 	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; )
 	LANG = objective-c
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -rpath $(abspath $(OUTDIR))
+	HAS_WINDOWING := 1
 else ifeq ($(UNAME_S),Linux)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
@@ -35,6 +37,7 @@ else ifeq ($(UNAME_S),Linux)
 		CFLAGS += $(shell pkg-config --cflags wayland-client wayland-egl xkbcommon egl gl 2>/dev/null)
 		LDFLAGS += $(WAYLAND_LIBS)
 		FIND_SOURCES = ( find wayland -name "*.c"; find unix -name "*.c"; )
+		HAS_WINDOWING := 1
 	else
 		# Try to detect X11 libraries as fallback
 		X11_LIBS := $(shell pkg-config --libs x11 egl gl 2>/dev/null)
@@ -42,20 +45,28 @@ else ifeq ($(UNAME_S),Linux)
 			CFLAGS += $(shell pkg-config --cflags x11 egl gl 2>/dev/null)
 			LDFLAGS += $(X11_LIBS)
 			FIND_SOURCES = ( find x11 -name "*.c"; find unix -name "*.c"; )
+			HAS_WINDOWING := 1
 		else
 			# Fallback to unix-only (no windowing support)
 			FIND_SOURCES = find unix -name "*.c"
+			HAS_WINDOWING := 0
 		endif
 	endif
+	# Optional OpenSSL support for TLS on Linux
+	OPENSSL_LIBS := $(shell pkg-config --libs openssl 2>/dev/null)
+	ifneq ($(OPENSSL_LIBS),)
+		CFLAGS  += $(shell pkg-config --cflags openssl 2>/dev/null) -DHAVE_OPENSSL
+		LDFLAGS += $(OPENSSL_LIBS)
+	endif
 	LANG = c
-	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR))
+	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR)) -Wl,--allow-shlib-undefined
 else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	CC = gcc
 	CFLAGS = -Wall -Wextra -I. -DPLATFORM_BUILD
 	LDFLAGS = -shared \
 	          -Wl,--out-implib,$(OUTDIR)/libplatform.dll.a \
 	          -lopengl32 -lgdi32 -luser32 -lcomdlg32 \
-	          -lole32 -lshell32 -ladvapi32 -lws2_32 -lxinput1_4
+	          -lole32 -lshell32 -ladvapi32 -lws2_32 -lxinput1_4 -lsecur32
 	LIB_EXT = dll
 	FIND_SOURCES = find windows -name "*.c"
 	LANG = c
@@ -65,6 +76,8 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform
 	TEST_MSG_BIN   = $(OUTDIR)/test_messages.exe
 	TEST_TIMER_BIN = $(OUTDIR)/test_timer.exe
+	TEST_NET_BIN   = $(OUTDIR)/test_net.exe
+	HAS_WINDOWING := 1
 else
 	$(error Unsupported OS: $(UNAME_S))
 endif
@@ -89,6 +102,7 @@ test: $(TARGET)
 	@$(TEST_BIN)
 	@rm -f $(TEST_SRC) $(TEST_BIN)
 	@echo "All platform API functions are defined."
+ifeq ($(HAS_WINDOWING),1)
 	@$(CC) -I. tests/test_messages.c $(TEST_LDFLAGS) -o $(TEST_MSG_BIN)
 	@$(TEST_MSG_BIN)
 	@rm -f $(TEST_MSG_BIN)
@@ -97,6 +111,13 @@ test: $(TARGET)
 	@$(TEST_TIMER_BIN)
 	@rm -f $(TEST_TIMER_BIN)
 	@echo "Timer tests passed."
+else
+	@echo "Message queue and timer tests skipped (no windowing backend)."
+endif
+	@$(CC) -I. tests/test_net.c $(TEST_LDFLAGS) -o $(TEST_NET_BIN)
+	@$(TEST_NET_BIN)
+	@rm -f $(TEST_NET_BIN)
+	@echo "Network tests passed."
 endif
 
 clean:
