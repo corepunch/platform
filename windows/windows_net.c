@@ -39,6 +39,10 @@
 #define TLS_RECV_BUF   (TLS_MAX_RECORD * 4)
 
 static bool_t winsock_initialised = FALSE;
+#ifdef _WIN32
+static CRITICAL_SECTION cs_init;
+static bool_t cs_init_done = FALSE;
+#endif
 
 /* =========================================================================
  * Subsystem lifecycle
@@ -47,15 +51,30 @@ static bool_t winsock_initialised = FALSE;
 bool_t
 axNetInit(void)
 {
-  if (winsock_initialised)
-    return TRUE;
-  WSADATA wsa;
-  if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-    fprintf(stderr, "axNetInit: WSAStartup failed: %d\n", WSAGetLastError());
-    return FALSE;
+#ifdef _WIN32
+  /* Ensure thread-safe WSAStartup initialization. */
+  if (!cs_init_done) {
+    InitializeCriticalSection(&cs_init);
+    cs_init_done = TRUE;
   }
-  winsock_initialised = TRUE;
-  return TRUE;
+  EnterCriticalSection(&cs_init);
+#endif
+  
+  bool_t ok = TRUE;
+  if (!winsock_initialised) {
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+      fprintf(stderr, "axNetInit: WSAStartup failed: %d\n", WSAGetLastError());
+      ok = FALSE;
+    } else {
+      winsock_initialised = TRUE;
+    }
+  }
+  
+#ifdef _WIN32
+  LeaveCriticalSection(&cs_init);
+#endif
+  return ok;
 }
 
 void
@@ -278,6 +297,50 @@ axNetPoll(int sock, int events, int timeout_ms)
 }
 
 /* =========================================================================
+ * Helper: Schannel error message formatter
+ * ====================================================================== */
+
+static const char *
+schannel_error_string(SECURITY_STATUS ss)
+{
+  /* Return human-readable error message for common SECURITY_STATUS codes. */
+  switch (ss) {
+    case SEC_E_OK:
+      return "OK";
+    case SEC_E_INCOMPLETE_MESSAGE:
+      return "Incomplete message";
+    case SEC_E_INVALID_PARAMETER:
+      return "Invalid parameter";
+    case SEC_E_INVALID_HANDLE:
+      return "Invalid handle";
+    case SEC_E_BUFFER_TOO_SMALL:
+      return "Buffer too small";
+    case SEC_E_NO_CREDENTIALS:
+      return "No credentials";
+    case SEC_E_CERT_UNKNOWN:
+      return "Unknown certificate";
+    case SEC_E_CERT_EXPIRED:
+      return "Certificate expired";
+    case SEC_E_UNTRUSTED_ROOT:
+      return "Untrusted root";
+    case SEC_E_MESSAGE_ALTERED:
+      return "Message altered (TLS record integrity failure)";
+    case SEC_I_CONTINUE_NEEDED:
+      return "Continue needed (handshake in progress)";
+    case SEC_E_ALGORITHM_MISMATCH:
+      return "Algorithm mismatch";
+    case SEC_E_DECRYPT_FAILURE:
+      return "Decryption failure";
+    case SEC_I_RENEGOTIATE:
+      return "Renegotiation requested";
+    case SEC_I_CONTEXT_EXPIRED:
+      return "Context expired";
+    default:
+      return "Unknown error";
+  }
+}
+
+/* =========================================================================
  * TLS – Schannel
  * ====================================================================== */
 
@@ -310,6 +373,10 @@ schannel_handshake(AXtlsctx *tls, char const *hostname)
 
   /* Wide-char hostname for Schannel SNI. */
   wchar_t w_host[256] = {0};
+  if (hostname && strlen(hostname) >= 255) {
+    fprintf(stderr, "schannel_handshake: hostname too long (>= 255 bytes)\n");
+    return FALSE;
+  }
   MultiByteToWideChar(CP_UTF8, 0, hostname ? hostname : "",
                       -1, w_host, 256);
 
@@ -329,8 +396,8 @@ schannel_handshake(AXtlsctx *tls, char const *hostname)
     &tls->h_ctx, &out_desc, &attribs, NULL);
 
   if (ss != SEC_I_CONTINUE_NEEDED) {
-    fprintf(stderr, "schannel_handshake: ISC (1) failed: 0x%lx\n",
-            (unsigned long)ss);
+    fprintf(stderr, "schannel_handshake: ISC (1) failed: %s\n",
+            schannel_error_string(ss));
     return FALSE;
   }
 
@@ -401,8 +468,8 @@ schannel_handshake(AXtlsctx *tls, char const *hostname)
   }
 
   if (ss != SEC_E_OK) {
-    fprintf(stderr, "schannel_handshake: ISC failed: 0x%lx\n",
-            (unsigned long)ss);
+    fprintf(stderr, "schannel_handshake: ISC failed: %s\n",
+            schannel_error_string(ss));
     return FALSE;
   }
 
@@ -435,8 +502,8 @@ axTlsConnect(int sock, char const *hostname)
     NULL, &cred, NULL, NULL, &ctx->h_cred, NULL);
 
   if (ss != SEC_E_OK) {
-    fprintf(stderr, "axTlsConnect: AcquireCredentialsHandle failed: "
-            "0x%lx\n", (unsigned long)ss);
+    fprintf(stderr, "axTlsConnect: AcquireCredentialsHandle failed: %s\n",
+            schannel_error_string(ss));
     free(ctx);
     return NULL;
   }
@@ -555,6 +622,12 @@ axTlsRecv(AXtlsctx *ctx, void *buf, int len)
 
   /* Read more encrypted data into the accumulation buffer. */
   int space = (int)sizeof(ctx->enc_buf) - ctx->enc_len;
+  /* Prevent silent data loss if encrypted buffer is full (oversized TLS record). */
+  if (space <= 0) {
+    fprintf(stderr, "axTlsRecv: encrypted record buffer overflow (record > %d bytes?)\n",
+            TLS_MAX_RECORD);
+    return -1;
+  }
   if (space > 0) {
     int n = recv((SOCKET)ctx->fd,
                  (char *)ctx->enc_buf + ctx->enc_len, space, 0);
@@ -592,8 +665,8 @@ axTlsRecv(AXtlsctx *ctx, void *buf, int len)
     return 0; /* orderly shutdown or renegotiation */
 
   if (ss != SEC_E_OK) {
-    fprintf(stderr, "axTlsRecv: DecryptMessage failed: 0x%lx\n",
-            (unsigned long)ss);
+    fprintf(stderr, "axTlsRecv: DecryptMessage failed: %s\n",
+            schannel_error_string(ss));
     return -1;
   }
 

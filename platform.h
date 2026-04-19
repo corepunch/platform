@@ -1121,9 +1121,11 @@ axNetRecv(int sock, void *buf, int len);
  * @brief Test whether the last send/receive returned due to no data
  *        being available rather than a hard error.
  *
- * Call this after #axNetSend or #axNetRecv returns 0 or -1 on a
+ * Call this immediately after #axNetSend or #axNetRecv returns 0 or -1 on a
  * non-blocking socket to distinguish EAGAIN / EWOULDBLOCK / WSAEWOULDBLOCK
- * from a real error.
+ * from a real error. This function reads thread-local state (errno on POSIX,
+ * WSAGetLastError() on Windows), which is volatile. Calling any other function
+ * that may modify network state before this function will give incorrect results.
  *
  * @return `TRUE` if the last network call would have blocked, `FALSE`
  *         otherwise.
