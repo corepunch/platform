@@ -582,6 +582,35 @@ AX_API char const *
 axSettingsDirectory(void);
 
 /**
+ * @brief Save an application settings blob under the settings directory.
+ *
+ * The @p name is treated as a file name relative to #axSettingsDirectory.
+ * Existing file contents are replaced.
+ *
+ * @param name  Relative settings file name (for example, "browser.ini").
+ * @param data  Pointer to bytes to write.
+ * @param size  Number of bytes to write.
+ * @return `TRUE` on success, `FALSE` on error.
+ */
+AX_API bool_t
+axSettingsSave(char const *name, void const *data, size_t size);
+
+/**
+ * @brief Load an application settings blob from the settings directory.
+ *
+ * The @p name is treated as a file name relative to #axSettingsDirectory.
+ *
+ * @param name      Relative settings file name (for example, "browser.ini").
+ * @param data      Destination buffer.
+ * @param capacity  Destination buffer size in bytes.
+ * @param out_size  Optional; receives bytes read on success.
+ * @return `TRUE` on success, `FALSE` on error or when the file is larger than
+ *         @p capacity.
+ */
+AX_API bool_t
+axSettingsLoad(char const *name, void *data, size_t capacity, size_t *out_size);
+
+/**
  * @brief Return the directory that contains shared read-only application data.
  *
  * On macOS this is `<bundle>/Contents/Resources/`; on Linux it is
