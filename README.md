@@ -12,6 +12,7 @@ A lightweight, cross-platform C library providing a unified API for window manag
 - **Window Management**: Create and manage windows with OpenGL/EGL context support
 - **Event System**: Unified event handling for mouse, keyboard, and window events
 - **Input Processing**: Comprehensive keyboard and mouse input with modifier support
+- **Networking**: Portable TCP/UDP sockets, DNS resolution, TLS (Schannel/Secure Transport/OpenSSL), and non-blocking I/O
 - **File Dialogs**: Native file open/save dialogs
 - **System Integration**: Theme detection, directory paths, timing utilities
 - **Minimal Dependencies**: Simple C API with no bloat
@@ -168,6 +169,32 @@ bool_t axGetOpenFileName(AXopenfilename const* params);
 bool_t axGetSaveFileName(AXopenfilename const* params);
 bool_t axGetFolderName(AXopenfilename const* params);
 ```
+
+### Networking
+
+```c
+bool_t axNetInit(void);                                           // Initialise networking subsystem
+void   axNetShutdown(void);                                       // Release networking resources
+int    axNetSocket(int af, int type);                             // Create a TCP or UDP socket
+void   axNetClose(int sock);                                      // Close a socket
+bool_t axNetConnect(int sock, const char* host, uint16_t port);   // Resolve host and connect
+int    axNetSend(int sock, const void* buf, int len);             // Send data
+int    axNetRecv(int sock, void* buf, int len);                   // Receive data
+bool_t axNetWouldBlock(void);                                     // Test for EAGAIN/EWOULDBLOCK
+bool_t axNetResolve(const char* host, char* out, int outlen);     // DNS lookup to IP string
+int    axNetPoll(int sock, int events, int timeout_ms);           // Wait for I/O readiness
+bool_t axNetBind(int sock, uint16_t port);                        // Bind to a local port
+bool_t axNetListen(int sock, int backlog);                        // Mark socket as passive
+int    axNetAccept(int sock);                                     // Accept an incoming connection
+
+// TLS (Schannel on Windows, Secure Transport on macOS, OpenSSL on Linux)
+AXtlsctx* axTlsConnect(int sock, const char* hostname);           // TLS handshake
+void      axTlsClose(AXtlsctx* ctx);                             // Send close_notify and free
+int       axTlsSend(AXtlsctx* ctx, const void* buf, int len);    // Send through TLS
+int       axTlsRecv(AXtlsctx* ctx, void* buf, int len);          // Receive through TLS
+```
+
+See [`docs/networking.md`](docs/networking.md) for full examples.
 
 ### System Utilities
 

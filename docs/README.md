@@ -47,6 +47,7 @@ emmake make   # WebGL via Emscripten
 | [Handling Input](handling-input.md) | Keyboard, mouse, modifiers |
 | [The Event Loop](event-loop.md) | Poll, wait, timers, custom events |
 | [OpenGL Rendering](opengl-rendering.md) | Paint loop, VSync, off-screen |
+| [Networking](networking.md) | TCP, HTTPS/TLS, non-blocking, DNS |
 | [File Dialogs](file-dialogs.md) | Open, save, folder picker |
 | [Joystick & Gamepad](joystick-gamepad.md) | Axes, buttons, XInput |
 | [System Utilities](system-utilities.md) | Time, dark theme, directories |
