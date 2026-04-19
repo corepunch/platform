@@ -60,7 +60,7 @@ int main(void) {
                     }
                     break;
                     
-                case kEventLeftMouseDown:
+                case kEventLeftButtonDown:
                     printf("Mouse clicked at: %d, %d\n", msg.x, msg.y);
                     break;
                     
@@ -148,7 +148,7 @@ void axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
 
 The library supports comprehensive event handling through the `AX_Message` structure:
 
-- **Mouse Events**: `kEventLeftMouseDown`, `kEventLeftMouseUp`, `kEventMouseMoved`, `kEventScrollWheel`
+- **Mouse Events**: `kEventLeftButtonDown`, `kEventLeftButtonUp`, `kEventMouseMoved`, `kEventScrollWheel`
 - **Keyboard Events**: `kEventKeyDown`, `kEventKeyUp`, `kEventChar`
 - **Window Events**: `kEventWindowClosed`, `kEventWindowResized`, `kEventWindowPaint`
 - **Drag & Drop**: `kEventDragDrop`, `kEventDragEnter`

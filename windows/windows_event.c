@@ -175,7 +175,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case WM_LBUTTONDOWN:
     SetCapture(hwnd);
     events.queue[events.write++] = (EVENT){
-      .message = kEventLeftMouseDown,
+      .message = kEventLeftButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -184,7 +184,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case WM_LBUTTONUP:
     ReleaseCapture();
     events.queue[events.write++] = (EVENT){
-      .message = kEventLeftMouseUp,
+      .message = kEventLeftButtonUp,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -192,7 +192,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_LBUTTONDBLCLK:
     events.queue[events.write++] = (EVENT){
-      .message = kEventLeftMouseDown,
+      .message = kEventLeftButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -205,7 +205,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_RBUTTONDOWN:
     events.queue[events.write++] = (EVENT){
-      .message = kEventRightMouseDown,
+      .message = kEventRightButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -213,7 +213,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_RBUTTONUP:
     events.queue[events.write++] = (EVENT){
-      .message = kEventRightMouseUp,
+      .message = kEventRightButtonUp,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -221,7 +221,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_MBUTTONDOWN:
     events.queue[events.write++] = (EVENT){
-      .message = kEventOtherMouseDown,
+      .message = kEventOtherButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -229,7 +229,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_MBUTTONUP:
     events.queue[events.write++] = (EVENT){
-      .message = kEventOtherMouseUp,
+      .message = kEventOtherButtonUp,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -237,7 +237,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_RBUTTONDBLCLK:
     events.queue[events.write++] = (EVENT){
-      .message = kEventRightMouseDown,
+      .message = kEventRightButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -250,7 +250,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
   case WM_MBUTTONDBLCLK:
     events.queue[events.write++] = (EVENT){
-      .message = kEventOtherMouseDown,
+      .message = kEventOtherButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
     };
@@ -273,11 +273,11 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     uint32_t msg;
     if (wparam & MK_LBUTTON)
-      msg = kEventLeftMouseDragged;
+      msg = kEventLeftButtonDragged;
     else if (wparam & MK_RBUTTON)
-      msg = kEventRightMouseDragged;
+      msg = kEventRightButtonDragged;
     else if (wparam & MK_MBUTTON)
-      msg = kEventOtherMouseDragged;
+      msg = kEventOtherButtonDragged;
     else
       msg = kEventMouseMoved;
 

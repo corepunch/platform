@@ -195,9 +195,9 @@ qnx_process_screen_events(void)
 
       /* Button press/release events */
       struct { int mask; uint32_t down; uint32_t up; uint32_t dbl; } btns[] = {
-        { SCREEN_LEFT_MOUSE_BUTTON,   kEventLeftMouseDown,  kEventLeftMouseUp,  kEventLeftDoubleClick  },
-        { SCREEN_RIGHT_MOUSE_BUTTON,  kEventRightMouseDown, kEventRightMouseUp, kEventRightDoubleClick },
-        { SCREEN_MIDDLE_MOUSE_BUTTON, kEventOtherMouseDown, kEventOtherMouseUp, kEventOtherDoubleClick },
+        { SCREEN_LEFT_MOUSE_BUTTON,   kEventLeftButtonDown,  kEventLeftButtonUp,  kEventLeftDoubleClick  },
+        { SCREEN_RIGHT_MOUSE_BUTTON,  kEventRightButtonDown, kEventRightButtonUp, kEventRightDoubleClick },
+        { SCREEN_MIDDLE_MOUSE_BUTTON, kEventOtherButtonDown, kEventOtherButtonUp, kEventOtherDoubleClick },
       };
 
       for (int i = 0; i < 3; i++) {
@@ -254,11 +254,11 @@ qnx_process_screen_events(void)
       {
         uint32_t move_msg;
         if (buttons & SCREEN_LEFT_MOUSE_BUTTON)
-          move_msg = kEventLeftMouseDragged;
+          move_msg = kEventLeftButtonDragged;
         else if (buttons & SCREEN_RIGHT_MOUSE_BUTTON)
-          move_msg = kEventRightMouseDragged;
+          move_msg = kEventRightButtonDragged;
         else if (buttons & SCREEN_MIDDLE_MOUSE_BUTTON)
-          move_msg = kEventOtherMouseDragged;
+          move_msg = kEventOtherButtonDragged;
         else
           move_msg = kEventMouseMoved;
 
