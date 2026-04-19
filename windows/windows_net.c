@@ -117,14 +117,39 @@ axNetSetReuseAddr(int sock, bool_t reuse)
 bool_t
 axNetBind(int sock, uint16_t port)
 {
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family      = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port        = htons(port);
-  if (bind((SOCKET)sock, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) {
-    fprintf(stderr, "axNetBind: %d\n", WSAGetLastError());
+  /* Detect the socket's address family via getsockname so we can bind
+   * both IPv4 and IPv6 sockets correctly. */
+  struct sockaddr_storage ss;
+  int sslen = sizeof(ss);
+  memset(&ss, 0, sizeof(ss));
+  if (getsockname((SOCKET)sock, (struct sockaddr *)&ss,
+                  (socklen_t *)&sslen) == SOCKET_ERROR) {
+    fprintf(stderr, "axNetBind: getsockname: %d\n", WSAGetLastError());
     return FALSE;
+  }
+
+  if (ss.ss_family == AF_INET6) {
+    struct sockaddr_in6 addr6;
+    memset(&addr6, 0, sizeof(addr6));
+    addr6.sin6_family = AF_INET6;
+    addr6.sin6_addr   = in6addr_any;
+    addr6.sin6_port   = htons(port);
+    if (bind((SOCKET)sock, (struct sockaddr *)&addr6,
+             sizeof(addr6)) == SOCKET_ERROR) {
+      fprintf(stderr, "axNetBind: %d\n", WSAGetLastError());
+      return FALSE;
+    }
+  } else {
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family      = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port        = htons(port);
+    if (bind((SOCKET)sock, (struct sockaddr *)&addr,
+             sizeof(addr)) == SOCKET_ERROR) {
+      fprintf(stderr, "axNetBind: %d\n", WSAGetLastError());
+      return FALSE;
+    }
   }
   return TRUE;
 }
@@ -252,18 +277,22 @@ axNetResolve(char const *host, char *out, int outlen)
 int
 axNetPoll(int sock, int events, int timeout_ms)
 {
-  if (timeout_ms < 0) timeout_ms = 0;
   fd_set rd, wr, ex;
   FD_ZERO(&rd); FD_ZERO(&wr); FD_ZERO(&ex);
   if (events & AX_NET_POLL_READ)  FD_SET((SOCKET)sock, &rd);
   if (events & AX_NET_POLL_WRITE) FD_SET((SOCKET)sock, &wr);
   if (events & AX_NET_POLL_ERR)   FD_SET((SOCKET)sock, &ex);
 
+  /* Pass NULL timeout to select() for infinite wait (timeout_ms < 0). */
   struct timeval tv;
-  tv.tv_sec  = (long)(timeout_ms / 1000);
-  tv.tv_usec = (long)((timeout_ms % 1000) * 1000);
+  struct timeval *tvp = NULL;
+  if (timeout_ms >= 0) {
+    tv.tv_sec  = (long)(timeout_ms / 1000);
+    tv.tv_usec = (long)((timeout_ms % 1000) * 1000);
+    tvp = &tv;
+  }
 
-  int rc = select(0, &rd, &wr, &ex, &tv);
+  int rc = select(0, &rd, &wr, &ex, tvp);
   if (rc == SOCKET_ERROR) {
     fprintf(stderr, "axNetPoll: select failed: %d\n", WSAGetLastError());
     return -1;

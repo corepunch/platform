@@ -25,6 +25,7 @@ else ifeq ($(UNAME_S),Darwin)
 	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; )
 	LANG = objective-c
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -rpath $(abspath $(OUTDIR))
+	HAS_WINDOWING := 1
 else ifeq ($(UNAME_S),Linux)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
@@ -36,6 +37,7 @@ else ifeq ($(UNAME_S),Linux)
 		CFLAGS += $(shell pkg-config --cflags wayland-client wayland-egl xkbcommon egl gl 2>/dev/null)
 		LDFLAGS += $(WAYLAND_LIBS)
 		FIND_SOURCES = ( find wayland -name "*.c"; find unix -name "*.c"; )
+		HAS_WINDOWING := 1
 	else
 		# Try to detect X11 libraries as fallback
 		X11_LIBS := $(shell pkg-config --libs x11 egl gl 2>/dev/null)
@@ -43,9 +45,11 @@ else ifeq ($(UNAME_S),Linux)
 			CFLAGS += $(shell pkg-config --cflags x11 egl gl 2>/dev/null)
 			LDFLAGS += $(X11_LIBS)
 			FIND_SOURCES = ( find x11 -name "*.c"; find unix -name "*.c"; )
+			HAS_WINDOWING := 1
 		else
 			# Fallback to unix-only (no windowing support)
 			FIND_SOURCES = find unix -name "*.c"
+			HAS_WINDOWING := 0
 		endif
 	endif
 	# Optional OpenSSL support for TLS on Linux
@@ -73,6 +77,7 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	TEST_MSG_BIN   = $(OUTDIR)/test_messages.exe
 	TEST_TIMER_BIN = $(OUTDIR)/test_timer.exe
 	TEST_NET_BIN   = $(OUTDIR)/test_net.exe
+	HAS_WINDOWING := 1
 else
 	$(error Unsupported OS: $(UNAME_S))
 endif
@@ -97,6 +102,7 @@ test: $(TARGET)
 	@$(TEST_BIN)
 	@rm -f $(TEST_SRC) $(TEST_BIN)
 	@echo "All platform API functions are defined."
+ifeq ($(HAS_WINDOWING),1)
 	@$(CC) -I. tests/test_messages.c $(TEST_LDFLAGS) -o $(TEST_MSG_BIN)
 	@$(TEST_MSG_BIN)
 	@rm -f $(TEST_MSG_BIN)
@@ -105,6 +111,9 @@ test: $(TARGET)
 	@$(TEST_TIMER_BIN)
 	@rm -f $(TEST_TIMER_BIN)
 	@echo "Timer tests passed."
+else
+	@echo "Message queue and timer tests skipped (no windowing backend)."
+endif
 	@$(CC) -I. tests/test_net.c $(TEST_LDFLAGS) -o $(TEST_NET_BIN)
 	@$(TEST_NET_BIN)
 	@rm -f $(TEST_NET_BIN)

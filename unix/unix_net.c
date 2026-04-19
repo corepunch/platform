@@ -116,14 +116,36 @@ axNetSetReuseAddr(int sock, bool_t reuse)
 bool_t
 axNetBind(int sock, uint16_t port)
 {
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family      = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port        = htons(port);
-  if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-    perror("axNetBind");
+  /* Detect the socket's address family via getsockname so we can bind
+   * both IPv4 and IPv6 sockets correctly. */
+  struct sockaddr_storage ss;
+  socklen_t sslen = sizeof(ss);
+  memset(&ss, 0, sizeof(ss));
+  if (getsockname(sock, (struct sockaddr *)&ss, &sslen) == -1) {
+    perror("axNetBind: getsockname");
     return FALSE;
+  }
+
+  if (ss.ss_family == AF_INET6) {
+    struct sockaddr_in6 addr6;
+    memset(&addr6, 0, sizeof(addr6));
+    addr6.sin6_family = AF_INET6;
+    addr6.sin6_addr   = in6addr_any;
+    addr6.sin6_port   = htons(port);
+    if (bind(sock, (struct sockaddr *)&addr6, sizeof(addr6)) == -1) {
+      perror("axNetBind");
+      return FALSE;
+    }
+  } else {
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family      = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port        = htons(port);
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+      perror("axNetBind");
+      return FALSE;
+    }
   }
   return TRUE;
 }
