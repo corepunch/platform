@@ -181,6 +181,27 @@ const char* axShareDirectory(void);   // Get share directory path
 const char* axLibDirectory(void);     // Get library directory path
 ```
 
+### Logging
+
+```c
+bool_t axSetLogFile(const char *path); // Open or close the process log file
+const char *axGetLogFile(void);        // Query current log file path
+void axLog(const char *fmt, ...);      // Append one formatted log line
+void axLogFlush(void);                 // Flush buffered log output
+```
+
+Example:
+
+```c
+char log_path[1024];
+snprintf(log_path, sizeof(log_path), "%s/myapp.log", axSettingsDirectory());
+if (axSetLogFile(log_path)) {
+    axLog("app started on %s", axGetPlatform());
+}
+```
+
+On WebGL builds, file logging is unavailable and `axSetLogFile("...")` returns `FALSE`.
+
 ### Key Codes
 
 The library defines comprehensive key codes including:
