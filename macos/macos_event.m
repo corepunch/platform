@@ -59,7 +59,9 @@ axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
                       subtype:queue.write
                         data1:wParam
                         data2:0];
-  for (uint16_t r = queue.read; ++r != queue.write;) {
+  for (uint16_t r = queue.read; r != queue.write; r++) {
+    if (!queue.data[r].message)
+      continue;
     if (queue.data[r].message != Msg)
       continue;
     switch (Msg) {
@@ -190,6 +192,8 @@ start_over:
   if (event.type == NSEventTypeApplicationDefined) {
     queue.read = event.subtype;
     memcpy(e, &queue.data[queue.read], sizeof(struct AXmessage));
+    memset(&queue.data[queue.read], 0, sizeof(struct AXmessage));
+    queue.read++;
     [event release];
     if (!e->message) {
       goto start_over;
