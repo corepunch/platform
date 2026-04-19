@@ -475,6 +475,55 @@ axShutdown(void);
 /** @} */
 
 /**
+ * @defgroup logging Logging
+ * @brief Optional file-based diagnostic logging.
+ * @{
+ */
+
+/**
+ * @brief Set or clear the process-wide platform log file.
+ *
+ * Passing a non-empty path opens that file in append mode and routes future
+ * #axLog calls to it. Passing `NULL` or an empty string disables logging and
+ * closes any previously opened log file.
+ *
+ * @param path  Absolute or relative log-file path, or `NULL` to disable logging.
+ * @return `TRUE` if the new setting was applied, `FALSE` if the file could not
+ *         be opened.
+ */
+AX_API bool_t
+axSetLogFile(char const *path);
+
+/**
+ * @brief Return the currently configured log-file path.
+ *
+ * Returns an empty string when file logging is disabled.
+ *
+ * @return Null-terminated path string owned by the platform layer.
+ */
+AX_API char const *
+axGetLogFile(void);
+
+/**
+ * @brief Write a formatted line to the configured log file.
+ *
+ * If no log file is configured, this function is a no-op.
+ * The platform prepends a millisecond timestamp and appends a trailing newline.
+ *
+ * @param fmt  `printf`-style format string.
+ */
+AX_API void
+axLog(char const *fmt, ...);
+
+/**
+ * @brief Flush buffered output for the current log file.
+ */
+AX_API void
+axLogFlush(void);
+
+/** @} */
+
+/**
  * @defgroup system System utilities
  * @brief Timing, theme detection, and platform identification.
  * @{
