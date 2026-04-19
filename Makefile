@@ -9,6 +9,7 @@ TEST_BIN = /tmp/test_platform_api
 TEST_MSG_BIN  = /tmp/test_messages
 TEST_TIMER_BIN = /tmp/test_timer
 TEST_NET_BIN   = /tmp/test_net
+TEST_FS_BIN    = /tmp/test_filesystem
 
 ifdef EMSCRIPTEN
 	CC = emcc
@@ -77,6 +78,7 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	TEST_MSG_BIN   = $(OUTDIR)/test_messages.exe
 	TEST_TIMER_BIN = $(OUTDIR)/test_timer.exe
 	TEST_NET_BIN   = $(OUTDIR)/test_net.exe
+	TEST_FS_BIN    = $(OUTDIR)/test_filesystem.exe
 	HAS_WINDOWING := 1
 else
 	$(error Unsupported OS: $(UNAME_S))
@@ -118,6 +120,10 @@ endif
 	@$(TEST_NET_BIN)
 	@rm -f $(TEST_NET_BIN)
 	@echo "Network tests passed."
+	@$(CC) -I. tests/test_filesystem.c $(TEST_LDFLAGS) -o $(TEST_FS_BIN)
+	@$(TEST_FS_BIN)
+	@rm -f $(TEST_FS_BIN)
+	@echo "Filesystem tests passed."
 endif
 
 clean:
