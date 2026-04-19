@@ -21,6 +21,7 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -189,10 +190,26 @@ axNetConnect(int sock, char const *host, uint16_t port)
 
   bool_t ok = FALSE;
   for (struct addrinfo *p = res; p; p = p->ai_next) {
-    if (connect(sock, p->ai_addr, p->ai_addrlen) == 0 ||
-        errno == EINPROGRESS) {
+    if (connect(sock, p->ai_addr, p->ai_addrlen) == 0) {
       ok = TRUE;
       break;
+    }
+
+    if (errno == EINPROGRESS) {
+      struct pollfd pfd;
+      pfd.fd = sock;
+      pfd.events = POLLOUT;
+      pfd.revents = 0;
+
+      int prc = poll(&pfd, 1, 10000);
+      if (prc > 0 && (pfd.revents & POLLOUT)) {
+        int so_err = 0;
+        socklen_t so_len = sizeof(so_err);
+        if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_err, &so_len) == 0 && so_err == 0) {
+          ok = TRUE;
+          break;
+        }
+      }
     }
   }
   freeaddrinfo(res);
@@ -309,8 +326,11 @@ struct AXtlsctx
 static OSStatus
 st_read(SSLConnectionRef conn, void *data, size_t *len)
 {
-  int     fd = *(int const *)conn;
-  ssize_t n  = read(fd, data, *len);
+  int fd = (int)(intptr_t)conn;
+  ssize_t n;
+  do {
+    n = read(fd, data, *len);
+  } while (n < 0 && errno == EINTR);
   if (n > 0)  { *len = (size_t)n; return noErr; }
   if (n == 0) { *len = 0; return errSSLClosedGraceful; }
   *len = 0;
@@ -321,8 +341,11 @@ st_read(SSLConnectionRef conn, void *data, size_t *len)
 static OSStatus
 st_write(SSLConnectionRef conn, void const *data, size_t *len)
 {
-  int     fd = *(int const *)conn;
-  ssize_t n  = write(fd, data, *len);
+  int fd = (int)(intptr_t)conn;
+  ssize_t n;
+  do {
+    n = write(fd, data, *len);
+  } while (n < 0 && errno == EINTR);
   if (n >= 0) { *len = (size_t)n; return noErr; }
   *len = 0;
   if (errno == EAGAIN || errno == EWOULDBLOCK) return errSSLWouldBlock;
@@ -348,13 +371,32 @@ axTlsConnect(int sock, char const *hostname)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  SSLSetIOFuncs(ctx->ssl, st_read, st_write);
-  SSLSetConnection(ctx->ssl, (SSLConnectionRef)&ctx->fd);
+  OSStatus status = SSLSetIOFuncs(ctx->ssl, st_read, st_write);
+  if (status != noErr) {
+    fprintf(stderr, "axTlsConnect: SSLSetIOFuncs failed (%d)\n", (int)status);
+    CFRelease(ctx->ssl);
+    free(ctx);
+    return NULL;
+  }
 
-  if (hostname && hostname[0])
-    SSLSetPeerDomainName(ctx->ssl, hostname, strlen(hostname));
+  status = SSLSetConnection(ctx->ssl, (SSLConnectionRef)(intptr_t)ctx->fd);
+  if (status != noErr) {
+    fprintf(stderr, "axTlsConnect: SSLSetConnection failed (%d)\n", (int)status);
+    CFRelease(ctx->ssl);
+    free(ctx);
+    return NULL;
+  }
 
-  OSStatus status;
+  if (hostname && hostname[0]) {
+    status = SSLSetPeerDomainName(ctx->ssl, hostname, strlen(hostname));
+    if (status != noErr) {
+      fprintf(stderr, "axTlsConnect: SSLSetPeerDomainName failed (%d)\n", (int)status);
+      CFRelease(ctx->ssl);
+      free(ctx);
+      return NULL;
+    }
+  }
+
   do {
     status = SSLHandshake(ctx->ssl);
   } while (status == errSSLWouldBlock);
@@ -405,7 +447,8 @@ axTlsRecv(AXtlsctx *ctx, void *buf, int len)
 #pragma clang diagnostic pop
   if (status == noErr || status == errSSLWouldBlock)
     return (int)processed;
-  if (status == errSSLClosedGraceful || status == errSSLClosedNoNotify)
+  if (status == errSSLClosedGraceful || status == errSSLClosedNoNotify ||
+      status == errSSLClosedAbort)
     return 0;
   fprintf(stderr, "axTlsRecv: SSLRead failed (%d)\n", (int)status);
   return -1;
