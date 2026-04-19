@@ -2,6 +2,7 @@
 #include "../platform.h"
 #include <commdlg.h>
 #include <shlobj.h>
+#include <stdio.h>
 
 static char g_documents[MAX_PATH] = { 0 };
 static PATHSTR g_share = { 0 };
@@ -305,5 +306,81 @@ axGetCwd(char *buf, size_t sz)
     return FALSE; /* Conversion failed or doesn't fit */
   
   WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, (int)sz, NULL, NULL);
+  return TRUE;
+}
+
+static bool_t
+axBuildSettingsPath(char *out, size_t out_sz, char const *name)
+{
+  if (!out || out_sz == 0 || !name || !name[0])
+    return FALSE;
+
+  char const *base = axSettingsDirectory();
+  if (!base || !base[0])
+    return FALSE;
+
+  int n = snprintf(out, out_sz, "%s\\%s", base, name);
+  return (n > 0 && (size_t)n < out_sz) ? TRUE : FALSE;
+}
+
+bool_t
+axSettingsSave(char const *name, void const *data, size_t size)
+{
+  if (!data || size == 0)
+    return FALSE;
+
+  char path[MAX_PATH];
+  if (!axBuildSettingsPath(path, sizeof(path), name))
+    return FALSE;
+
+  FILE *fp = fopen(path, "wb");
+  if (!fp)
+    return FALSE;
+
+  size_t wrote = fwrite(data, 1, size, fp);
+  fclose(fp);
+  return (wrote == size) ? TRUE : FALSE;
+}
+
+bool_t
+axSettingsLoad(char const *name, void *data, size_t capacity, size_t *out_size)
+{
+  if (out_size)
+    *out_size = 0;
+  if (!data || capacity == 0)
+    return FALSE;
+
+  char path[MAX_PATH];
+  if (!axBuildSettingsPath(path, sizeof(path), name))
+    return FALSE;
+
+  FILE *fp = fopen(path, "rb");
+  if (!fp)
+    return FALSE;
+
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    fclose(fp);
+    return FALSE;
+  }
+
+  long sz = ftell(fp);
+  if (sz < 0 || (size_t)sz > capacity) {
+    fclose(fp);
+    return FALSE;
+  }
+
+  if (fseek(fp, 0, SEEK_SET) != 0) {
+    fclose(fp);
+    return FALSE;
+  }
+
+  size_t need = (size_t)sz;
+  size_t got = fread(data, 1, need, fp);
+  fclose(fp);
+  if (got != need)
+    return FALSE;
+
+  if (out_size)
+    *out_size = got;
   return TRUE;
 }

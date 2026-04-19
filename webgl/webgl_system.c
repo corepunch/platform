@@ -188,3 +188,23 @@ axGetCwd(char *buf, size_t sz)
     buf[0] = '\0';
   return FALSE;
 }
+
+bool_t
+axSettingsSave(char const *name, void const *data, size_t size)
+{
+  (void)name;
+  (void)data;
+  (void)size;
+  return FALSE;
+}
+
+bool_t
+axSettingsLoad(char const *name, void *data, size_t capacity, size_t *out_size)
+{
+  (void)name;
+  (void)data;
+  (void)capacity;
+  if (out_size)
+    *out_size = 0;
+  return FALSE;
+}
