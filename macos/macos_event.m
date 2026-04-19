@@ -117,17 +117,17 @@ GetEventType(NSEvent *event)
   switch (event.type)
   {
     case NSEventTypeLeftMouseDown:
-      return event.clickCount == 2 ? kEventLeftDoubleClick : kEventLeftMouseDown;
+      return event.clickCount == 2 ? kEventLeftDoubleClick : kEventLeftButtonDown;
     case NSEventTypeRightMouseDown:
-      return event.clickCount == 2 ? kEventRightDoubleClick : kEventRightMouseDown;
+      return event.clickCount == 2 ? kEventRightDoubleClick : kEventRightButtonDown;
     case NSEventTypeOtherMouseDown:
-      return event.clickCount == 2 ? kEventOtherDoubleClick : kEventOtherMouseDown;
-    case NSEventTypeLeftMouseUp: return kEventLeftMouseUp;
-    case NSEventTypeRightMouseUp: return kEventRightMouseUp;
-    case NSEventTypeOtherMouseUp: return kEventOtherMouseUp;
-    case NSEventTypeLeftMouseDragged: return kEventLeftMouseDragged;
-    case NSEventTypeRightMouseDragged: return kEventRightMouseDragged;
-    case NSEventTypeOtherMouseDragged: return kEventOtherMouseDragged;
+      return event.clickCount == 2 ? kEventOtherDoubleClick : kEventOtherButtonDown;
+    case NSEventTypeLeftMouseUp: return kEventLeftButtonUp;
+    case NSEventTypeRightMouseUp: return kEventRightButtonUp;
+    case NSEventTypeOtherMouseUp: return kEventOtherButtonUp;
+    case NSEventTypeLeftMouseDragged: return kEventLeftButtonDragged;
+    case NSEventTypeRightMouseDragged: return kEventRightButtonDragged;
+    case NSEventTypeOtherMouseDragged: return kEventOtherButtonDragged;
     case NSEventTypeMouseMoved: return kEventMouseMoved;
     case NSEventTypeScrollWheel: return kEventScrollWheel;
     case NSEventTypeKeyDown: return kEventKeyDown;
@@ -220,9 +220,9 @@ start_over:
    * MouseDown for this call so that handlers which only listen for MouseDown
    * still process the second click (matches SDL and WinAPI behaviour). */
   uint32_t dbl_followup = 0;
-  if      (e->message == kEventLeftDoubleClick)  { dbl_followup = kEventLeftDoubleClick;  e->message = kEventLeftMouseDown;  }
-  else if (e->message == kEventRightDoubleClick) { dbl_followup = kEventRightDoubleClick; e->message = kEventRightMouseDown; }
-  else if (e->message == kEventOtherDoubleClick) { dbl_followup = kEventOtherDoubleClick; e->message = kEventOtherMouseDown; }
+  if      (e->message == kEventLeftDoubleClick)  { dbl_followup = kEventLeftDoubleClick;  e->message = kEventLeftButtonDown;  }
+  else if (e->message == kEventRightDoubleClick) { dbl_followup = kEventRightDoubleClick; e->message = kEventRightButtonDown; }
+  else if (e->message == kEventOtherDoubleClick) { dbl_followup = kEventOtherDoubleClick; e->message = kEventOtherButtonDown; }
   if (dbl_followup)
     axPostMessageW(e->target, dbl_followup, e->wParam, NULL);
   

@@ -92,11 +92,11 @@ pointer_motion(void* data,
 
   uint32_t msg;
   if (events.buttons & 1u)                                   /* BTN_LEFT   */
-    msg = kEventLeftMouseDragged;
+    msg = kEventLeftButtonDragged;
   else if (events.buttons & (1u << (BTN_RIGHT - BTN_LEFT)))  /* BTN_RIGHT  */
-    msg = kEventRightMouseDragged;
+    msg = kEventRightButtonDragged;
   else if (events.buttons & (1u << (BTN_MIDDLE - BTN_LEFT))) /* BTN_MIDDLE */
-    msg = kEventOtherMouseDragged;
+    msg = kEventOtherButtonDragged;
   else
     msg = kEventMouseMoved;
 
@@ -130,18 +130,18 @@ pointer_button(void* data,
   uint32_t down_msg, up_msg, dbl_msg;
   switch (button) {
   case BTN_LEFT:
-    down_msg = kEventLeftMouseDown;
-    up_msg   = kEventLeftMouseUp;
+    down_msg = kEventLeftButtonDown;
+    up_msg   = kEventLeftButtonUp;
     dbl_msg  = kEventLeftDoubleClick;
     break;
   case BTN_RIGHT:
-    down_msg = kEventRightMouseDown;
-    up_msg   = kEventRightMouseUp;
+    down_msg = kEventRightButtonDown;
+    up_msg   = kEventRightButtonUp;
     dbl_msg  = kEventRightDoubleClick;
     break;
   case BTN_MIDDLE:
-    down_msg = kEventOtherMouseDown;
-    up_msg   = kEventOtherMouseUp;
+    down_msg = kEventOtherButtonDown;
+    up_msg   = kEventOtherButtonUp;
     dbl_msg  = kEventOtherDoubleClick;
     break;
   default:

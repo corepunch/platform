@@ -194,14 +194,14 @@ x11_process_events(void)
             msg = kEventLeftDoubleClick;
             last_time = 0; /* reset so triple-click doesn't double-fire */
           } else {
-            msg = kEventLeftMouseDown;
+            msg = kEventLeftButtonDown;
             last_time = xev.xbutton.time;
             last_button = Button1;
             last_x = xev.xbutton.x;
             last_y = xev.xbutton.y;
           }
         } else {
-          msg = kEventLeftMouseUp;
+          msg = kEventLeftButtonUp;
         }
         break;
       case Button2:
@@ -217,14 +217,14 @@ x11_process_events(void)
             msg = kEventOtherDoubleClick;
             last_time = 0;
           } else {
-            msg = kEventOtherMouseDown;
+            msg = kEventOtherButtonDown;
             last_time = xev.xbutton.time;
             last_button = Button2;
             last_x = xev.xbutton.x;
             last_y = xev.xbutton.y;
           }
         } else {
-          msg = kEventOtherMouseUp;
+          msg = kEventOtherButtonUp;
         }
         break;
       case Button3:
@@ -240,14 +240,14 @@ x11_process_events(void)
             msg = kEventRightDoubleClick;
             last_time = 0;
           } else {
-            msg = kEventRightMouseDown;
+            msg = kEventRightButtonDown;
             last_time = xev.xbutton.time;
             last_button = Button3;
             last_x = xev.xbutton.x;
             last_y = xev.xbutton.y;
           }
         } else {
-          msg = kEventRightMouseUp;
+          msg = kEventRightButtonUp;
         }
         break;
       case Button4:
@@ -276,9 +276,9 @@ x11_process_events(void)
          * handlers which only listen for MouseDown still process the second
          * click (matches SDL and WinAPI behaviour). */
         uint32_t down_msg = 0;
-        if      (msg == kEventLeftDoubleClick)  down_msg = kEventLeftMouseDown;
-        else if (msg == kEventRightDoubleClick) down_msg = kEventRightMouseDown;
-        else if (msg == kEventOtherDoubleClick) down_msg = kEventOtherMouseDown;
+        if      (msg == kEventLeftDoubleClick)  down_msg = kEventLeftButtonDown;
+        else if (msg == kEventRightDoubleClick) down_msg = kEventRightButtonDown;
+        else if (msg == kEventOtherDoubleClick) down_msg = kEventOtherButtonDown;
         if (down_msg)
           events.queue[events.write++] = (EVENT){
             .x = (uint16_t)xev.xbutton.x,
@@ -302,11 +302,11 @@ x11_process_events(void)
 
       uint32_t msg;
       if (buttons_held & (1u << Button1))
-        msg = kEventLeftMouseDragged;
+        msg = kEventLeftButtonDragged;
       else if (buttons_held & (1u << Button3))
-        msg = kEventRightMouseDragged;
+        msg = kEventRightButtonDragged;
       else if (buttons_held & (1u << Button2))
-        msg = kEventOtherMouseDragged;
+        msg = kEventOtherButtonDragged;
       else
         msg = kEventMouseMoved;
 

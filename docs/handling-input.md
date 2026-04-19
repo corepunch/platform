@@ -108,11 +108,11 @@ Mouse position is available as `msg.x` / `msg.y` (logical pixels from the
 top-left corner of the client area):
 
 ```c
-case kEventLeftMouseDown:
+case kEventLeftButtonDown:
     start_drag(msg.x, msg.y);
     break;
 
-case kEventLeftMouseUp:
+case kEventLeftButtonUp:
     end_drag(msg.x, msg.y);
     break;
 
@@ -126,7 +126,7 @@ case kEventMouseMoved:
 Drag events fire while a button is held and the cursor moves:
 
 ```c
-case kEventLeftMouseDragged:
+case kEventLeftButtonDragged:
     /* msg.dx / msg.dy are the deltas since the last event */
     pan_camera(msg.dx, msg.dy);
     break;

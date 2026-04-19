@@ -158,10 +158,10 @@ static void test_lparam_roundtrip(void)
 
 /* -------------------------------------------------------------------
  * test_double_click_sequence
- *   On every platform, a double-click emits kEventLeftMouseDown followed
+ *   On every platform, a double-click emits kEventLeftButtonDown followed
  *   by kEventLeftDoubleClick for the second click.  Both events must be
  *   delivered in that order so that handlers which only watch for
- *   kEventLeftMouseDown still see the second click (SDL / WinAPI parity).
+ *   kEventLeftButtonDown still see the second click (SDL / WinAPI parity).
  * ------------------------------------------------------------------- */
 static void test_double_click_sequence(void)
 {
@@ -172,11 +172,11 @@ static void test_double_click_sequence(void)
 
   /* Simulate what the platform backends now emit on the second click of a
    * double-click: MouseDown followed immediately by DoubleClick. */
-  axPostMessageW(handle, kEventLeftMouseDown,  0x0064005A, NULL);
+  axPostMessageW(handle, kEventLeftButtonDown,  0x0064005A, NULL);
   axPostMessageW(handle, kEventLeftDoubleClick, 0x0064005A, NULL);
 
   assert(axPollEvent(&msg) == 1);
-  assert(msg.message == kEventLeftMouseDown);
+  assert(msg.message == kEventLeftButtonDown);
   assert(msg.wParam  == 0x0064005A);
 
   assert(axPollEvent(&msg) == 1);

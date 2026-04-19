@@ -73,11 +73,11 @@ on_mousemove(int eventType, const EmscriptenMouseEvent *e, void *userData)
 
   uint32_t msg;
   if (events.buttons & (1u << 0))
-    msg = kEventLeftMouseDragged;
+    msg = kEventLeftButtonDragged;
   else if (events.buttons & (1u << 2))
-    msg = kEventRightMouseDragged;
+    msg = kEventRightButtonDragged;
   else if (events.buttons & (1u << 1))
-    msg = kEventOtherMouseDragged;
+    msg = kEventOtherButtonDragged;
   else
     msg = kEventMouseMoved;
 
@@ -99,9 +99,9 @@ on_mousedown(int eventType, const EmscriptenMouseEvent *e, void *userData)
   events.buttons |= (1u << e->button);
   uint32_t msg;
   switch (e->button) {
-  case 0:  msg = kEventLeftMouseDown;  break;
-  case 2:  msg = kEventRightMouseDown; break;
-  default: msg = kEventOtherMouseDown; break;
+  case 0:  msg = kEventLeftButtonDown;  break;
+  case 2:  msg = kEventRightButtonDown; break;
+  default: msg = kEventOtherButtonDown; break;
   }
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)e->targetX,
@@ -119,9 +119,9 @@ on_mouseup(int eventType, const EmscriptenMouseEvent *e, void *userData)
   events.buttons &= ~(1u << e->button);
   uint32_t msg;
   switch (e->button) {
-  case 0:  msg = kEventLeftMouseUp;  break;
-  case 2:  msg = kEventRightMouseUp; break;
-  default: msg = kEventOtherMouseUp; break;
+  case 0:  msg = kEventLeftButtonUp;  break;
+  case 2:  msg = kEventRightButtonUp; break;
+  default: msg = kEventOtherButtonUp; break;
   }
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)e->targetX,
@@ -207,7 +207,7 @@ on_touchstart(int eventType, const EmscriptenTouchEvent *e, void *userData)
   events.queue[events.write++] = (EVENT){
     .x = (uint16_t)tx,
     .y = (uint16_t)ty,
-    .message = kEventLeftMouseDown,
+    .message = kEventLeftButtonDown,
   };
   return EM_TRUE;
 }
@@ -225,13 +225,13 @@ on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
   int16_t dy = (int16_t)(ty - (int)events.pointer_y);
   events.pointer_x = (float)tx;
   events.pointer_y = (float)ty;
-  // /* kEventLeftMouseDragged — for drag-responsive UI (tap-to-drag scroll) */
+  // /* kEventLeftButtonDragged — for drag-responsive UI (tap-to-drag scroll) */
   // events.queue[events.write++] = (EVENT){
   //   .x = (uint16_t)tx,
   //   .y = (uint16_t)ty,
   //   .dx = dx,
   //   .dy = dy,
-  //   .message = kEventLeftMouseDragged,
+  //   .message = kEventLeftButtonDragged,
   // };
   int16_t sdx = (int16_t)(dx);
   int16_t sdy = (int16_t)(dy);
@@ -259,7 +259,7 @@ on_touchend(int eventType, const EmscriptenTouchEvent *e, void *userData)
   events.queue[events.write++] = (EVENT){
     .x = x,
     .y = y,
-    .message = kEventLeftMouseUp,
+    .message = kEventLeftButtonUp,
   };
   return EM_TRUE;
 }
