@@ -128,8 +128,9 @@ int main(void) {
     axNetInit();
 
     int server = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
+    if (server < 0) { fputs("socket failed\n", stderr); return 1; }
     axNetSetReuseAddr(server, TRUE);   /* allow immediate rebind after restart */
-    axNetBind(server, 8080);
+    if (!axNetBind(server, 8080)) { fputs("bind failed\n", stderr); return 1; }
     axNetListen(server, 8);
 
     printf("listening on :8080\n");
@@ -187,7 +188,7 @@ if (ready < 0) {
 }
 ```
 
-> **Important:** Call `axNetWouldBlock()` *immediately* after a failed
+> **Note:** Call `axNetWouldBlock()` *immediately* after a failed
 > `axNetSend` or `axNetRecv` — it reads thread-local state (`errno` on
 > POSIX, `WSAGetLastError()` on Windows) that any subsequent network call
 > may overwrite.
