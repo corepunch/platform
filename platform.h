@@ -909,4 +909,313 @@ axCancelTimer(uint32_t timer_id);
 
 /** @} */
 
+/**
+ * @defgroup net Networking
+ * @brief Portable socket, DNS, TLS, and async I/O primitives for HTTP/HTTPS
+ *        and general TCP/UDP networking.
+ *
+ * The API is transport-oriented: it exposes sockets, name resolution, a
+ * readiness-polling helper, and an opaque TLS context.  Higher layers
+ * (e.g. an HTTP client) are built on top of these primitives.
+ *
+ * ### Typical TCP client usage
+ * @code
+ *   axNetInit();
+ *   int sock = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
+ *   axNetConnect(sock, "example.com", 443);
+ *   AXtlsctx *tls = axTlsConnect(sock, "example.com");
+ *   axTlsSend(tls, "GET / HTTP/1.0\r\n\r\n", 18);
+ *   char buf[4096];
+ *   int n = axTlsRecv(tls, buf, sizeof(buf));
+ *   axTlsClose(tls);
+ *   axNetClose(sock);
+ *   axNetShutdown();
+ * @endcode
+ * @{
+ */
+
+/**
+ * @defgroup netaf Address families
+ * @brief Values for the @p af parameter of #axNetSocket.
+ * @{
+ */
+enum {
+  AX_NET_AF_IPV4 = 4, /**< IPv4 (AF_INET). */
+  AX_NET_AF_IPV6 = 6, /**< IPv6 (AF_INET6). */
+};
+/** @} */
+
+/**
+ * @defgroup netsock Socket types
+ * @brief Values for the @p type parameter of #axNetSocket.
+ * @{
+ */
+enum {
+  AX_NET_SOCK_TCP = 1, /**< Reliable, ordered byte stream (SOCK_STREAM). */
+  AX_NET_SOCK_UDP = 2, /**< Unreliable datagrams (SOCK_DGRAM). */
+};
+/** @} */
+
+/**
+ * @defgroup netpoll Poll event flags
+ * @brief Bitmask values for the @p events parameter and return value of
+ *        #axNetPoll.
+ * @{
+ */
+enum {
+  AX_NET_POLL_READ  = 1 << 0, /**< Socket has data ready to read. */
+  AX_NET_POLL_WRITE = 1 << 1, /**< Socket is ready for writing. */
+  AX_NET_POLL_ERR   = 1 << 2, /**< Socket has a pending error. */
+};
+/** @} */
+
+/**
+ * @brief Opaque TLS session context returned by #axTlsConnect.
+ *
+ * Treat as an opaque handle; do not inspect or allocate directly.
+ */
+typedef struct AXtlsctx AXtlsctx;
+
+/**
+ * @brief Initialise the networking subsystem.
+ *
+ * Must be called once before any other `axNet*` or `axTls*` function.
+ * On Windows this calls `WSAStartup`; on POSIX platforms it is a no-op
+ * (but must still be called for portability).
+ *
+ * @return `TRUE` on success, `FALSE` on failure.
+ */
+AX_API bool_t
+axNetInit(void);
+
+/**
+ * @brief Shut down the networking subsystem.
+ *
+ * Releases any resources acquired by #axNetInit.  On Windows this calls
+ * `WSACleanup`; on POSIX platforms it is a no-op.
+ */
+AX_API void
+axNetShutdown(void);
+
+/**
+ * @brief Create a new socket.
+ *
+ * @param af    Address family: #AX_NET_AF_IPV4 or #AX_NET_AF_IPV6.
+ * @param type  Socket type: #AX_NET_SOCK_TCP or #AX_NET_SOCK_UDP.
+ * @return Non-negative socket descriptor on success, -1 on failure.
+ */
+AX_API int
+axNetSocket(int af, int type);
+
+/**
+ * @brief Close a socket and release its resources.
+ *
+ * Passing -1 is safe and has no effect.
+ *
+ * @param sock  Socket descriptor returned by #axNetSocket or #axNetAccept.
+ */
+AX_API void
+axNetClose(int sock);
+
+/**
+ * @brief Switch a socket between blocking and non-blocking I/O modes.
+ *
+ * In non-blocking mode #axNetSend and #axNetRecv return immediately if no
+ * data can be transferred; use #axNetWouldBlock to distinguish that case
+ * from a real error.
+ *
+ * @param sock        Socket descriptor.
+ * @param nonblocking `TRUE` for non-blocking, `FALSE` for blocking.
+ * @return `TRUE` on success, `FALSE` on failure.
+ */
+AX_API bool_t
+axNetSetNonBlocking(int sock, bool_t nonblocking);
+
+/**
+ * @brief Enable or disable the `SO_REUSEADDR` socket option.
+ *
+ * Enabling reuse allows a server to rebind the same address/port immediately
+ * after a previous instance exits.
+ *
+ * @param sock   Socket descriptor.
+ * @param reuse  `TRUE` to enable, `FALSE` to disable.
+ * @return `TRUE` on success, `FALSE` on failure.
+ */
+AX_API bool_t
+axNetSetReuseAddr(int sock, bool_t reuse);
+
+/**
+ * @brief Bind a socket to a local port on all interfaces.
+ *
+ * @param sock  Socket descriptor.
+ * @param port  Local port number in host byte order.
+ * @return `TRUE` on success, `FALSE` on failure.
+ */
+AX_API bool_t
+axNetBind(int sock, uint16_t port);
+
+/**
+ * @brief Mark a bound socket as passive and set the connection backlog.
+ *
+ * @param sock     Socket descriptor (previously bound with #axNetBind).
+ * @param backlog  Maximum length of the pending-connection queue.
+ * @return `TRUE` on success, `FALSE` on failure.
+ */
+AX_API bool_t
+axNetListen(int sock, int backlog);
+
+/**
+ * @brief Accept an incoming connection on a listening socket.
+ *
+ * @param sock  Listening socket descriptor.
+ * @return New connected socket descriptor on success, -1 if no connection
+ *         is pending (non-blocking) or on error.
+ */
+AX_API int
+axNetAccept(int sock);
+
+/**
+ * @brief Resolve @p host and connect the socket to the resulting address.
+ *
+ * Accepts both numeric address literals (`"93.184.216.34"`, `"::1"`) and
+ * DNS hostnames (`"example.com"`).  For non-blocking sockets the function
+ * may return `FALSE` while the connection is still in progress; use
+ * #axNetPoll with #AX_NET_POLL_WRITE to wait for completion.
+ *
+ * @param sock  Connected socket descriptor.
+ * @param host  Null-terminated hostname or numeric address string.
+ * @param port  Destination port in host byte order.
+ * @return `TRUE` if the connection was initiated or completed successfully,
+ *         `FALSE` on hard failure.
+ */
+AX_API bool_t
+axNetConnect(int sock, char const *host, uint16_t port);
+
+/**
+ * @brief Send data on a socket.
+ *
+ * @param sock  Socket descriptor.
+ * @param buf   Pointer to the data to send.
+ * @param len   Number of bytes to send.
+ * @return Number of bytes actually sent (>= 0), or -1 on error.
+ *         In non-blocking mode a return value of 0 means the send buffer is
+ *         full; check #axNetWouldBlock to confirm.
+ */
+AX_API int
+axNetSend(int sock, void const *buf, int len);
+
+/**
+ * @brief Receive data from a socket.
+ *
+ * @param sock  Socket descriptor.
+ * @param buf   Buffer to receive data into.
+ * @param len   Size of @p buf in bytes.
+ * @return Number of bytes received (> 0), 0 on orderly shutdown or if no
+ *         data is available in non-blocking mode (check #axNetWouldBlock),
+ *         or -1 on error.
+ */
+AX_API int
+axNetRecv(int sock, void *buf, int len);
+
+/**
+ * @brief Test whether the last send/receive returned due to no data
+ *        being available rather than a hard error.
+ *
+ * Call this after #axNetSend or #axNetRecv returns 0 or -1 on a
+ * non-blocking socket to distinguish EAGAIN / EWOULDBLOCK / WSAEWOULDBLOCK
+ * from a real error.
+ *
+ * @return `TRUE` if the last network call would have blocked, `FALSE`
+ *         otherwise.
+ */
+AX_API bool_t
+axNetWouldBlock(void);
+
+/**
+ * @brief Resolve a hostname to a numeric IP address string.
+ *
+ * Uses `getaddrinfo` internally; the result prefers IPv4 addresses.
+ *
+ * @param host    Null-terminated hostname to resolve.
+ * @param out     Buffer that receives the null-terminated address string.
+ * @param outlen  Size of @p out in bytes.
+ * @return `TRUE` if resolution succeeded and the result fits in @p out,
+ *         `FALSE` otherwise.
+ */
+AX_API bool_t
+axNetResolve(char const *host, char *out, int outlen);
+
+/**
+ * @brief Wait for I/O readiness on a single socket.
+ *
+ * Equivalent to a single-fd `poll()` / `select()` call.
+ *
+ * @param sock        Socket descriptor to monitor.
+ * @param events      Bitmask of #AX_NET_POLL_READ, #AX_NET_POLL_WRITE,
+ *                    and/or #AX_NET_POLL_ERR to wait for.
+ * @param timeout_ms  Maximum time to wait in milliseconds.  Pass 0 to
+ *                    return immediately without blocking.
+ * @return Bitmask of the ready event flags, 0 on timeout, or -1 on error.
+ */
+AX_API int
+axNetPoll(int sock, int events, int timeout_ms);
+
+/**
+ * @brief Perform a TLS client handshake on an already-connected socket.
+ *
+ * On success the returned context owns the TLS session.  All subsequent
+ * I/O on that connection must go through #axTlsSend and #axTlsRecv rather
+ * than #axNetSend and #axNetRecv.
+ *
+ * Platform backends:
+ * - macOS: Secure Transport (Security.framework)
+ * - Linux: OpenSSL (requires `-DHAVE_OPENSSL` and `-lssl -lcrypto`)
+ * - Windows: Schannel (Security Support Provider Interface)
+ * - WebGL: not supported (returns `NULL`)
+ *
+ * @param sock      Connected socket descriptor.
+ * @param hostname  Server hostname used for SNI and certificate verification.
+ * @return Opaque TLS context on success, `NULL` on failure or if TLS is
+ *         not supported on the current platform.
+ */
+AX_API AXtlsctx *
+axTlsConnect(int sock, char const *hostname);
+
+/**
+ * @brief Send a TLS close_notify alert and free the TLS context.
+ *
+ * The caller is still responsible for closing the underlying socket with
+ * #axNetClose after this call.
+ *
+ * @param ctx  TLS context returned by #axTlsConnect.  Passing `NULL` is
+ *             safe and has no effect.
+ */
+AX_API void
+axTlsClose(AXtlsctx *ctx);
+
+/**
+ * @brief Send data through a TLS session.
+ *
+ * @param ctx  TLS context returned by #axTlsConnect.
+ * @param buf  Pointer to the data to send.
+ * @param len  Number of bytes to send.
+ * @return Number of bytes sent, or -1 on error.
+ */
+AX_API int
+axTlsSend(AXtlsctx *ctx, void const *buf, int len);
+
+/**
+ * @brief Receive data through a TLS session.
+ *
+ * @param ctx  TLS context returned by #axTlsConnect.
+ * @param buf  Buffer to receive data into.
+ * @param len  Size of @p buf in bytes.
+ * @return Number of bytes received (> 0), 0 on orderly TLS shutdown, or
+ *         -1 on error.
+ */
+AX_API int
+axTlsRecv(AXtlsctx *ctx, void *buf, int len);
+
+/** @} */
+
 #endif
