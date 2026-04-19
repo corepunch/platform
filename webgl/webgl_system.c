@@ -157,3 +157,27 @@ axDynlibError(void)
 {
   return "dynamic library loading is not supported on WebGL";
 }
+
+bool_t
+axMkDir(char const *path)
+{
+  (void)path;
+  return FALSE;
+}
+
+bool_t
+axListDir(char const *path, AXDirCallback cb, void *userdata)
+{
+  (void)path;
+  (void)cb;
+  (void)userdata;
+  return FALSE;
+}
+
+bool_t
+axGetCwd(char *buf, size_t sz)
+{
+  if (buf && sz > 0)
+    buf[0] = '\0';
+  return FALSE;
+}

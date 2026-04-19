@@ -1,6 +1,9 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <time.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <errno.h>
 #include <dlfcn.h>
 
 #include "../platform.h"
@@ -185,4 +188,63 @@ char const *
 axDynlibError(void)
 {
   return dlerror();
+}
+
+bool_t
+axMkDir(char const *path)
+{
+  if (mkdir(path, 0777) == 0)
+    return TRUE;
+  
+  if (errno == EEXIST) {
+    /* Verify it's actually a directory, not a file */
+    struct stat st;
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
+      return TRUE;
+  }
+  
+  return FALSE;
+}
+
+bool_t
+axListDir(char const *path, AXDirCallback cb, void *userdata)
+{
+  DIR *dir = opendir(path);
+  if (!dir)
+    return FALSE;
+
+  struct dirent *ent;
+  while ((ent = readdir(dir)) != NULL) {
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+
+    char full[1024];
+    int n = snprintf(full, sizeof(full), "%s/%s", path, ent->d_name);
+    if (n < 0 || (size_t)n >= sizeof(full))
+      continue; /* path too long, skip entry */
+
+    struct stat st;
+    if (stat(full, &st) != 0)
+      continue;
+
+    AXdirent entry;
+    memset(&entry, 0, sizeof(entry));
+    strncpy(entry.name, ent->d_name, sizeof(entry.name) - 1);
+    entry.is_directory = S_ISDIR(st.st_mode) ? TRUE : FALSE;
+    entry.is_hidden    = (ent->d_name[0] == '.') ? TRUE : FALSE;
+    entry.size         = entry.is_directory ? 0 : (size_t)st.st_size;
+    entry.modified     = st.st_mtime;
+
+    if (!cb(&entry, userdata))
+      break;
+  }
+
+  closedir(dir);
+  return TRUE;
+}
+
+bool_t
+axGetCwd(char *buf, size_t sz)
+{
+  return getcwd(buf, sz) != NULL ? TRUE : FALSE;
 }

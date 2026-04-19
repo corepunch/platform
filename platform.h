@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "events.h"
 
@@ -554,6 +555,79 @@ axShareDirectory(void);
  */
 AX_API char const *
 axLibDirectory(void);
+
+/**
+ * @defgroup filesystem Directory and filesystem utilities
+ * @brief Portable directory creation, enumeration, and navigation.
+ *
+ * These functions replace raw POSIX calls (`opendir`/`readdir`/`mkdir`/
+ * `getcwd`) or Win32 equivalents with a single cross-platform API.
+ * @{
+ */
+
+/**
+ * @brief Descriptor for a single directory entry returned by #axListDir.
+ */
+typedef struct {
+  char   name[256];    /**< Entry name (not full path), null-terminated UTF-8. */
+  bool_t is_directory; /**< `TRUE` if the entry is a subdirectory. */
+  bool_t is_hidden;    /**< `TRUE` if the entry is hidden (dot-file on POSIX,
+                            `FILE_ATTRIBUTE_HIDDEN` on Windows). */
+  size_t size;         /**< File size in bytes; 0 for directories. */
+  time_t modified;     /**< Last-modification time as a UTC Unix timestamp. */
+} AXdirent;
+
+/**
+ * @brief Callback invoked once per entry by #axListDir.
+ *
+ * @param entry     Pointer to the current entry descriptor.  The pointer is
+ *                  only valid for the duration of the callback.
+ * @param userdata  Opaque value passed through from #axListDir.
+ * @return `TRUE` to continue iteration; `FALSE` to stop early.
+ */
+typedef bool_t (*AXDirCallback)(AXdirent const *entry, void *userdata);
+
+/**
+ * @brief Create a directory at @p path.
+ *
+ * On POSIX the directory is created with mode 0777 (modified by umask).
+ * Succeeds silently when the directory already exists.
+ *
+ * @param path  Null-terminated UTF-8 path of the directory to create.
+ * @return `TRUE` on success or if the directory already exists; `FALSE`
+ *         if creation failed (e.g. missing parent, permission denied).
+ */
+AX_API bool_t
+axMkDir(char const *path);
+
+/**
+ * @brief List the entries of a directory, calling @p cb for each one.
+ *
+ * The special entries `.` and `..` are always skipped.  The order in which
+ * entries are reported is platform-defined.
+ *
+ * @param path      Null-terminated UTF-8 path of the directory to enumerate.
+ * @param cb        Function called once per entry.  Return `FALSE` to abort.
+ * @param userdata  Passed unchanged to every @p cb invocation.
+ * @return `TRUE` if the directory was opened successfully (even when @p cb
+ *         stopped iteration early), `FALSE` if the directory could not be
+ *         opened.
+ */
+AX_API bool_t
+axListDir(char const *path, AXDirCallback cb, void *userdata);
+
+/**
+ * @brief Get the current working directory.
+ *
+ * @param[out] buf  Buffer that receives the null-terminated UTF-8 path.
+ * @param sz        Size of @p buf in bytes.
+ * @return `TRUE` on success, `FALSE` if the path could not be retrieved
+ *         or the buffer is too small.
+ */
+AX_API bool_t
+axGetCwd(char *buf, size_t sz);
+
+/** @} */
 
 /**
  * @defgroup dynlib Dynamic library loading
