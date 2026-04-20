@@ -8,6 +8,7 @@
   - [OpenGL Rendering](opengl-rendering.md)
 
 - **Features**
+  - [Networking](networking.md)
   - [File Dialogs](file-dialogs.md)
   - [Directory Operations](directory-operations.md)
   - [Joystick & Gamepad](joystick-gamepad.md)

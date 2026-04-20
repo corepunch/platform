@@ -20,7 +20,7 @@ ifdef EMSCRIPTEN
 	LANG = c
 else ifeq ($(UNAME_S),Darwin)
 	CC = clang
-	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION
+	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION -Wno-deprecated-declarations
 	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -framework Security -framework CoreFoundation -install_name @rpath/$(LIBNAME)
 	LIB_EXT = dylib
 	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; )

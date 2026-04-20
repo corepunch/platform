@@ -348,15 +348,12 @@ void axMakeCurrentContext(void) {
 BOOL
 IOSurface_Create(uint32_t w, uint32_t h)
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   NSDictionary* props = [NSDictionary dictionaryWithObjectsAndKeys:
                         [NSNumber numberWithBool:YES], kIOSurfaceIsGlobal,
                         [NSNumber numberWithInt:w], kIOSurfaceWidth,
                         [NSNumber numberWithInt:h], kIOSurfaceHeight,
                         [NSNumber numberWithInt:4], kIOSurfaceBytesPerElement,
                         nil];
-#pragma clang diagnostic pop
   
   wstate.surf = IOSurfaceCreate((__bridge CFDictionaryRef)props);
   if (!wstate.surf) {
