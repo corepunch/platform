@@ -117,22 +117,53 @@ static void test_mkdir_exists_listdir(void)
 
 static void test_listdir_nonexistent(void)
 {
+  char cwd[1024] = {0};
+  char missing[1200] = {0};
   list_ctx_t ctx = {0, 0};
-  /* A path that should never exist on any test machine. */
-  assert(axListDir("/nonexistent_ax_path_xyz_12345", fs_list_cb, &ctx) == FALSE);
+
+  assert(axGetCwd(cwd, sizeof(cwd)) == TRUE);
+  int n = snprintf(missing, sizeof(missing), "%s/nonexistent_ax_path_%lu",
+                   cwd, (unsigned long)axGetMilliseconds());
+  assert(n > 0 && (size_t)n < sizeof(missing));
+  assert(axPathExists(missing) == FALSE);
+  assert(axListDir(missing, fs_list_cb, &ctx) == FALSE);
 }
 
 static void test_listdir_early_stop(void)
 {
   char cwd[1024] = {0};
+  char root[1200] = {0};
+  char file_path[1200] = {0};
+  char subdir_path[1200] = {0};
+  FILE *fp = NULL;
+  early_stop_ctx_t ctx = {0};
+
   assert(axGetCwd(cwd, sizeof(cwd)) == TRUE);
 
-  early_stop_ctx_t ctx = {0};
+  snprintf(root, sizeof(root), "%s/ax_test_early_stop_%lu",
+           cwd, (unsigned long)axGetMilliseconds());
+  snprintf(file_path, sizeof(file_path), "%s/first.txt", root);
+  snprintf(subdir_path, sizeof(subdir_path), "%s/second", root);
+
+  assert(axMkDir(root) == TRUE);
+
+  fp = fopen(file_path, "wb");
+  assert(fp != NULL);
+  fputs("data", fp);
+  fclose(fp);
+
+  assert(axMkDir(subdir_path) == TRUE);
+
   /* axListDir must return TRUE even when the callback stops early. */
-  bool_t result = axListDir(cwd, fs_stop_cb, &ctx);
-  assert(result == TRUE);
-  /* The callback must have been called at most once. */
-  assert(ctx.count <= 1);
+  assert(axListDir(root, fs_stop_cb, &ctx) == TRUE);
+
+  /* The callback must have been invoked exactly once and then stopped enumeration. */
+  assert(ctx.count == 1);
+
+  /* Cleanup */
+  remove(file_path);
+  RMDIR(subdir_path);
+  RMDIR(root);
 }
 
 static void test_path_exists_null(void)
@@ -149,13 +180,17 @@ static void test_settings_roundtrip(void)
     return;
   }
 
-  char const *name = "ax_test_settings_rt.bin";
+  /* Use a unique filename to avoid cross-run interference. */
+  char name[64];
+  snprintf(name, sizeof(name), "ax_test_settings_%lu.bin",
+           (unsigned long)axGetMilliseconds());
+
   char const payload[] = "roundtrip_data_12345";
   size_t payload_len = sizeof(payload) - 1; /* exclude NUL */
 
   assert(axSettingsSave(name, payload, payload_len) == TRUE);
 
-  char   buf[64];
+  char buf[64];
   size_t loaded = 0;
   assert(axSettingsLoad(name, buf, sizeof(buf), &loaded) == TRUE);
   assert(loaded == payload_len);
@@ -170,6 +205,13 @@ static void test_settings_roundtrip(void)
   assert(axSettingsLoad(name, buf, sizeof(buf), &loaded2) == TRUE);
   assert(loaded2 == payload2_len);
   assert(memcmp(buf, payload2, loaded2) == 0);
+
+  /* Clean up: build the full path and remove it. */
+  {
+    char full_path[1024];
+    snprintf(full_path, sizeof(full_path), "%s/%s", dir, name);
+    remove(full_path);
+  }
 }
 
 int main(void)

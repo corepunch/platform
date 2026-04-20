@@ -281,7 +281,9 @@ test_udp_loopback(void)
   assert(sent == 3);
 
   int ready = axNetPoll(server, AX_NET_POLL_READ, 1000);
-  assert(ready > 0);
+  assert(ready >= 0);
+  assert((ready & AX_NET_POLL_READ) != 0);
+  assert((ready & AX_NET_POLL_ERR) == 0);
 
   char buf[16];
   memset(buf, 0, sizeof(buf));
@@ -345,7 +347,9 @@ test_poll_write_ready(void)
 
   /* A fresh, connected socket should be write-ready immediately. */
   int result = axNetPoll(client, AX_NET_POLL_WRITE, 500);
-  assert(result > 0);
+  assert(result >= 0);
+  assert((result & AX_NET_POLL_ERR) == 0);
+  assert((result & AX_NET_POLL_WRITE) != 0);
 
   axNetClose(peer);
   axNetClose(client);
@@ -405,7 +409,15 @@ main(void)
   printf("UDP loopback datagram: OK\n");
 
   test_socket_create_ipv6();
-  printf("IPv6 socket create: OK\n");
+  {
+    int ipv6_probe = axNetSocket(AX_NET_AF_IPV6, AX_NET_SOCK_TCP);
+    if (ipv6_probe >= 0) {
+      axNetClose(ipv6_probe);
+      printf("IPv6 socket create: OK\n");
+    } else {
+      printf("IPv6 socket create: skipped (IPv6 unavailable)\n");
+    }
+  }
 
   test_poll_write_ready();
   printf("axNetPoll write-ready: OK\n");
