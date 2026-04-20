@@ -176,6 +176,15 @@ axNetConnect(int sock, char const *host, uint16_t port)
   char port_str[8];
   snprintf(port_str, sizeof(port_str), "%u", (unsigned)port);
 
+  struct sockaddr_storage ss;
+  socklen_t sslen = sizeof(ss);
+  memset(&ss, 0, sizeof(ss));
+  if (getsockname(sock, (struct sockaddr *)&ss, &sslen) == -1) {
+    perror("axNetConnect: getsockname");
+    return FALSE;
+  }
+  int sock_family = ss.ss_family;
+
   struct addrinfo hints, *res;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family   = AF_UNSPEC;
@@ -190,6 +199,9 @@ axNetConnect(int sock, char const *host, uint16_t port)
 
   bool_t ok = FALSE;
   for (struct addrinfo *p = res; p; p = p->ai_next) {
+    if (sock_family != AF_UNSPEC && p->ai_family != sock_family)
+      continue;
+
     if (connect(sock, p->ai_addr, p->ai_addrlen) == 0) {
       ok = TRUE;
       break;
@@ -326,7 +338,12 @@ struct AXtlsctx
 static OSStatus
 st_read(SSLConnectionRef conn, void *data, size_t *len)
 {
-  int fd = (int)(intptr_t)conn;
+  AXtlsctx const *ctx = (AXtlsctx const *)conn;
+  int fd = ctx ? ctx->fd : -1;
+  if (fd < 0) {
+    *len = 0;
+    return errSecParam;
+  }
   ssize_t n;
   do {
     n = read(fd, data, *len);
@@ -341,7 +358,12 @@ st_read(SSLConnectionRef conn, void *data, size_t *len)
 static OSStatus
 st_write(SSLConnectionRef conn, void const *data, size_t *len)
 {
-  int fd = (int)(intptr_t)conn;
+  AXtlsctx const *ctx = (AXtlsctx const *)conn;
+  int fd = ctx ? ctx->fd : -1;
+  if (fd < 0) {
+    *len = 0;
+    return errSecParam;
+  }
   ssize_t n;
   do {
     n = write(fd, data, *len);
@@ -379,7 +401,7 @@ axTlsConnect(int sock, char const *hostname)
     return NULL;
   }
 
-  status = SSLSetConnection(ctx->ssl, (SSLConnectionRef)(intptr_t)ctx->fd);
+  status = SSLSetConnection(ctx->ssl, (SSLConnectionRef)ctx);
   if (status != noErr) {
     fprintf(stderr, "axTlsConnect: SSLSetConnection failed (%d)\n", (int)status);
     CFRelease(ctx->ssl);
@@ -447,6 +469,8 @@ axTlsRecv(AXtlsctx *ctx, void *buf, int len)
 #pragma clang diagnostic pop
   if (status == noErr || status == errSSLWouldBlock)
     return (int)processed;
+  if (status == errSecParam && processed == 0)
+    return 0;
   if (status == errSSLClosedGraceful || status == errSSLClosedNoNotify ||
       status == errSSLClosedAbort)
     return 0;
