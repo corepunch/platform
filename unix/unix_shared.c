@@ -297,6 +297,11 @@ axBuildSettingsPath(char *out, size_t out_sz, char const *name)
   if (!base || !base[0])
     return FALSE;
 
+  /* Best-effort: create the settings directory if it doesn't exist yet.
+   * Windowing backends (x11, wayland) return the path but don't mkdir it,
+   * unlike the headless fallback and the Windows backend (CreateDirectoryA). */
+  (void)mkdir(base, 0755);
+
   int n = snprintf(out, out_sz, "%s/%s", base, name);
   return (n > 0 && (size_t)n < out_sz) ? TRUE : FALSE;
 }
