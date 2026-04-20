@@ -163,7 +163,7 @@ GetKeyCode(NSEvent *event)
 }
 
 int
-axPollEvent(struct AXmessage * e)
+axPeekMessage(struct AXmessage * e)
 {
   NSEvent *event;
   
@@ -265,18 +265,35 @@ axWaitEvent(longTime_t msec)
       if (!event)
         return 0;
       /* ApplicationDefined events carry AXmessage payloads — put it back so
-       axPollEvent can dequeue and decode it. */
+       axPeekMessage can dequeue and decode it. */
       if (event.type == NSEventTypeApplicationDefined) {
         [NSApp postEvent:event atStart:YES];
         return 1;
       }
-      /* Other meaningful events (mouse, key, window) — put back for axPollEvent. */
+      /* Other meaningful events (mouse, key, window) — put back for axPeekMessage. */
       if (GetEventType(event)) {
         [NSApp postEvent:event atStart:YES];
         return 1;
       }
       /* Internal Cocoa events (NSEventTypePeriodic, etc.) — discard and keep waiting. */
       [NSApp sendEvent:event];
+    }
+  }
+}
+
+int
+axGetMessage(struct AXmessage *e)
+{
+  if (axPeekMessage(e)) {
+    return 1;
+  }
+
+  for (;;) {
+    if (axWaitEvent(0) <= 0) {
+      continue;
+    }
+    if (axPeekMessage(e)) {
+      return 1;
     }
   }
 }

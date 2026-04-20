@@ -7,7 +7,7 @@
  * joystick API stubs instead.
  *
  * On Linux, events are read from the first available joystick device in
- * non-blocking mode.  joy_poll() should be called from axPollEvent() and
+ * non-blocking mode.  joy_poll() should be called from axPeekMessage() and
  * axWaitEvent() in the platform backend (wayland_event.c / x11_event.c) so
  * that joystick events are mixed into the same queue as keyboard/mouse events.
  * joy_get_fd() exposes the open device fd so it can be added to poll() sets in
@@ -82,7 +82,7 @@ joy_get_fd(void)
   return g_joy_fd;
 }
 
-/* Called from axPollEvent() and axWaitEvent() in each Linux backend to
+/* Called from axPeekMessage() and axWaitEvent() in each Linux backend to
  * drain pending joystick events.  Detects device disconnection via errno. */
 void
 joy_poll(void)

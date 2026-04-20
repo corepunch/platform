@@ -1,7 +1,7 @@
 # Joystick & Gamepad
 
 The library detects the first connected joystick or gamepad and delivers axis
-and button changes as events through the normal `axPollEvent` queue.
+and button changes as events through the normal `axPeekMessage` queue.
 
 On **Windows** XInput (Xbox-compatible controllers) is used.  On **Linux** the
 `/dev/input/js0` joystick device is read.  Other platforms expose the same API
@@ -121,7 +121,7 @@ float player_x = 400, player_y = 300;
 
 while (running) {
     axWaitEvent(16);
-    while (axPollEvent(&msg)) {
+    while (axPeekMessage(&msg)) {
         switch (msg.message) {
         case kEventWindowClosed:
             running = 0;

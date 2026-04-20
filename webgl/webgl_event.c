@@ -328,13 +328,20 @@ axWaitEvent(TIME time)
 }
 
 int
-axPollEvent(PEVENT pEvent)
+axPeekMessage(PEVENT pEvent)
 {
   if (events.read != events.write) {
     *pEvent = events.queue[events.read++];
     return 1;
   }
   return 0;
+}
+
+int
+axGetMessage(PEVENT pEvent)
+{
+  /* Browsers cannot block the main thread event loop. */
+  return axPeekMessage(pEvent);
 }
 
 void

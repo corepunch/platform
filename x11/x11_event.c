@@ -439,7 +439,7 @@ axWaitEvent(TIME timeout_ms)
 }
 
 int
-axPollEvent(PEVENT pEvent)
+axPeekMessage(PEVENT pEvent)
 {
   joy_poll();
   x11_process_events();
@@ -450,6 +450,23 @@ axPollEvent(PEVENT pEvent)
     return 1;
   }
   return 0;
+}
+
+int
+axGetMessage(PEVENT pEvent)
+{
+  if (axPeekMessage(pEvent)) {
+    return 1;
+  }
+
+  for (;;) {
+    if (axWaitEvent(0) <= 0) {
+      continue;
+    }
+    if (axPeekMessage(pEvent)) {
+      return 1;
+    }
+  }
 }
 
 void

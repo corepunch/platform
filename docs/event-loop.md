@@ -7,12 +7,12 @@ push events in, and your code pulls them out.
 
 ## Poll vs. wait
 
-`axPollEvent` returns immediately — `1` if an event was written into `msg`,
+`axPeekMessage` returns immediately — `1` if an event was written into `msg`,
 `0` if the queue is empty:
 
 ```c
 struct AXmessage msg;
-while (axPollEvent(&msg)) {
+while (axPeekMessage(&msg)) {
     handle_event(&msg);
 }
 ```
@@ -22,13 +22,23 @@ returns `1` if there is at least one event ready, `0` on timeout:
 
 ```c
 axWaitEvent(16);   /* sleep up to ~16 ms → ~60 FPS cap */
-while (axPollEvent(&msg)) {
+while (axPeekMessage(&msg)) {
     handle_event(&msg);
 }
 ```
 
 Pass `0` to `axWaitEvent` to block indefinitely until any event arrives —
 useful for editor-style apps that do not need to re-draw every frame.
+
+`axGetMessage` combines the two patterns and returns the next event,
+blocking until one is available (except on WebGL, where blocking the browser
+main thread is not supported):
+
+```c
+while (axGetMessage(&msg)) {
+    handle_event(&msg);
+}
+```
 
 ### Typical game loop
 
@@ -42,7 +52,7 @@ int running = 1;
 while (running) {
     axWaitEvent(16);
 
-    while (axPollEvent(&msg)) {
+    while (axPeekMessage(&msg)) {
         switch (msg.message) {
         case kEventWindowClosed:
             running = 0;

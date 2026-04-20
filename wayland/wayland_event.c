@@ -469,7 +469,7 @@ axWaitEvent(TIME time)
 }
 
 int
-axPollEvent(PEVENT pEvent)
+axPeekMessage(PEVENT pEvent)
 {
   joy_poll();
   timers_poll();
@@ -478,6 +478,21 @@ axPollEvent(PEVENT pEvent)
     return 1;
   } else {
     return 0;
+  }
+}
+
+int
+axGetMessage(PEVENT pEvent)
+{
+  if (axPeekMessage(pEvent)) {
+    return 1;
+  }
+
+  for (;;) {
+    axWaitEvent(16);
+    if (axPeekMessage(pEvent)) {
+      return 1;
+    }
   }
 }
 

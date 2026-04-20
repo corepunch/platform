@@ -286,7 +286,7 @@ struct AXbuffer
 /**
  * @brief Platform-independent event message.
  *
- * Dispatched by #axPollEvent.  The @p message field identifies the event
+ * Dispatched by #axPeekMessage.  The @p message field identifies the event
  * type (one of the `kEvent*` constants from events.h) and determines how the
  * parameter unions should be interpreted.
  *
@@ -350,7 +350,22 @@ axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
  * @return 1 if an event was written to @p msg, 0 if the queue is empty.
  */
 AX_API int
-axPollEvent(struct AXmessage* msg);
+axPeekMessage(struct AXmessage* msg);
+
+/**
+ * @brief Retrieve the next event from the queue, blocking until one is available.
+ *
+ * Behaves like WinAPI `GetMessage`: returns only after an event has been
+ * written to @p msg, except on platforms that cannot block the main thread
+ * event loop (for example WebGL), where it falls back to non-blocking queue
+ * polling semantics.
+ *
+ * @param[out] msg  Filled with the next available event.
+ * @return 1 if an event was written to @p msg, 0 if blocking is unsupported
+ *         and no event is currently available.
+ */
+AX_API int
+axGetMessage(struct AXmessage* msg);
 
 /**
  * @brief Remove all queued events whose target matches @p target.
@@ -368,7 +383,7 @@ axRemoveFromQueue(void* target);
  *
  * This is called internally by platform-specific drag-and-drop handlers.
  * Applications should not normally call this directly; instead listen for
- * #kEventDragDrop messages via #axPollEvent.
+ * #kEventDragDrop messages via #axPeekMessage.
  *
  * @param filename  Null-terminated UTF-8 path of the dropped file.
  * @param x         Horizontal drop position in window coordinates.
@@ -944,7 +959,7 @@ axKeynumToString(uint32_t keynum);
  * @brief Functions for enumerating and reading joystick / gamepad devices.
  *
  * Joystick events are delivered through the standard event queue via
- * #axPollEvent.  The event fields carry the device data as follows:
+ * #axPeekMessage.  The event fields carry the device data as follows:
  *
  * - #kEventJoyAxisMotion:  @p wParam = axis index (0-based),
  *                          @p lParam = axis value as @c int16_t cast to @c void*.

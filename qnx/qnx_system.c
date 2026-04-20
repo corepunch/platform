@@ -352,7 +352,7 @@ axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 }
 
 int
-axPollEvent(struct AXmessage *e)
+axPeekMessage(struct AXmessage *e)
 {
   qnx_process_screen_events();
   if (queue.read == queue.write)
@@ -388,6 +388,23 @@ axWaitEvent(longTime_t msec)
 
   sem_wait(&event_sem);
   return 1;
+}
+
+int
+axGetMessage(struct AXmessage *e)
+{
+  if (axPeekMessage(e)) {
+    return 1;
+  }
+
+  for (;;) {
+    if (axWaitEvent(0) <= 0) {
+      continue;
+    }
+    if (axPeekMessage(e)) {
+      return 1;
+    }
+  }
 }
 
 void

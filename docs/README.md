@@ -20,7 +20,7 @@ int main(void) {
     struct AXmessage msg;
     while (1) {
         axWaitEvent(16);
-        while (axPollEvent(&msg)) {
+        while (axPeekMessage(&msg)) {
             if (msg.message == kEventWindowClosed) goto done;
         }
         axBeginPaint();

@@ -43,7 +43,7 @@ int main(void) {
         axWaitEvent(16);
         
         // Process all pending events
-        while (axPollEvent(&msg)) {
+        while (axPeekMessage(&msg)) {
             switch (msg.message) {
                 case kEventWindowClosed:
                     running = 0;
@@ -138,7 +138,8 @@ float axGetScaling(void);             // Get display scaling factor
 ### Event Processing
 
 ```c
-int axPollEvent(struct AXmessage* msg);          // Poll for next event (non-blocking)
+int axPeekMessage(struct AXmessage* msg);          // Poll for next event (non-blocking)
+int axGetMessage(struct AXmessage* msg);           // Get next event (blocking where supported)
 int axWaitEvent(longTime_t timeout_ms);           // Wait for events with timeout
 void axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
 ```

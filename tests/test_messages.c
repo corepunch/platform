@@ -1,12 +1,12 @@
 /*
  * test_messages.c – behavioral tests for the platform event-queue API.
  *
- * Tests AX_PostMessageW, axPollEvent, and AX_RemoveFromQueue without
+ * Tests AX_PostMessageW, axPeekMessage, and AX_RemoveFromQueue without
  * requiring a live display server or windowing context.
  *
  * On macOS the internal queue is coupled to NSApp, so message-delivery tests
  * are skipped there; only build-time linkage and safety of the non-blocking
- * axPollEvent path are exercised.
+ * axPeekMessage path are exercised.
  */
 
 #include "platform.h"
@@ -19,19 +19,19 @@
 static void drain_queue(void)
 {
   struct AXmessage msg;
-  while (axPollEvent(&msg))
+  while (axPeekMessage(&msg))
     ;
 }
 
 /* -------------------------------------------------------------------
  * test_empty_queue
- *   axPollEvent must return 0 on an empty queue.
+ *   axPeekMessage must return 0 on an empty queue.
  * ------------------------------------------------------------------- */
 static void test_empty_queue(void)
 {
   struct AXmessage msg;
   drain_queue();
-  assert(axPollEvent(&msg) == 0);
+  assert(axPeekMessage(&msg) == 0);
 }
 
 /* -------------------------------------------------------------------
@@ -47,14 +47,14 @@ static void test_post_and_poll(void)
 
   axPostMessageW(handle, kEventWindowPaint, 0x1234, NULL);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.target  == handle);
   assert(msg.message == kEventWindowPaint);
   assert(msg.wParam  == 0x1234);
   assert(msg.lParam  == NULL);
 
   /* Queue must be empty afterwards */
-  assert(axPollEvent(&msg) == 0);
+  assert(axPeekMessage(&msg) == 0);
 }
 
 /* -------------------------------------------------------------------
@@ -72,16 +72,16 @@ static void test_fifo_ordering(void)
   axPostMessageW(handle, kEventKeyUp,      2, NULL);
   axPostMessageW(handle, kEventMouseMoved, 3, NULL);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.message == kEventKeyDown    && msg.wParam == 1);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.message == kEventKeyUp      && msg.wParam == 2);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.message == kEventMouseMoved && msg.wParam == 3);
 
-  assert(axPollEvent(&msg) == 0);
+  assert(axPeekMessage(&msg) == 0);
 }
 
 /* -------------------------------------------------------------------
@@ -105,13 +105,13 @@ static void test_remove_from_queue(void)
   axRemoveFromQueue(handle_a);
 
   /* Only handle_b's events should remain, in original order */
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.target == handle_b && msg.wParam == 20);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.target == handle_b && msg.wParam == 40);
 
-  assert(axPollEvent(&msg) == 0);
+  assert(axPeekMessage(&msg) == 0);
 }
 
 /* -------------------------------------------------------------------
@@ -130,10 +130,10 @@ static void test_remove_nonexistent_target(void)
   /* Removing a different handle must be a no-op */
   axRemoveFromQueue((void *)0xDDDD);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.wParam == 99);
 
-  assert(axPollEvent(&msg) == 0);
+  assert(axPeekMessage(&msg) == 0);
 }
 
 /* -------------------------------------------------------------------
@@ -150,7 +150,7 @@ static void test_lparam_roundtrip(void)
 
   axPostMessageW(handle, kEventKeyDown, 0, payload);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.lParam == payload);
 
   drain_queue();
@@ -175,15 +175,36 @@ static void test_double_click_sequence(void)
   axPostMessageW(handle, kEventLeftButtonDown,  0x0064005A, NULL);
   axPostMessageW(handle, kEventLeftDoubleClick, 0x0064005A, NULL);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.message == kEventLeftButtonDown);
   assert(msg.wParam  == 0x0064005A);
 
-  assert(axPollEvent(&msg) == 1);
+  assert(axPeekMessage(&msg) == 1);
   assert(msg.message == kEventLeftDoubleClick);
   assert(msg.wParam  == 0x0064005A);
 
-  assert(axPollEvent(&msg) == 0);
+  assert(axPeekMessage(&msg) == 0);
+}
+
+/* -------------------------------------------------------------------
+ * test_get_message
+ *   AX_GetMessage should return the next queued event.
+ * ------------------------------------------------------------------- */
+static void test_get_message(void)
+{
+  struct AXmessage msg;
+  void *handle = (void *)0xABCD;
+
+  drain_queue();
+
+  axPostMessageW(handle, kEventWindowPaint, 0x55AA, NULL);
+
+  assert(axGetMessage(&msg) == 1);
+  assert(msg.target  == handle);
+  assert(msg.message == kEventWindowPaint);
+  assert(msg.wParam  == 0x55AA);
+
+  assert(axPeekMessage(&msg) == 0);
 }
 
 int main(void)
@@ -192,7 +213,7 @@ int main(void)
   /*
    * On macOS the message queue is coupled to NSApp: AX_PostMessageW posts to
    * both the internal ring-buffer and to NSApp's event queue.  Without calling
-   * AX_Init (which sets up NSApp), axPollEvent cannot retrieve events from
+   * AX_Init (which sets up NSApp), axPeekMessage cannot retrieve events from
    * the ring-buffer because the NSApp-based delivery path is not available.
    *
    * The behavioral tests below require a live NSApp and are therefore skipped
@@ -211,6 +232,7 @@ int main(void)
   test_remove_nonexistent_target();
   test_lparam_roundtrip();
   test_double_click_sequence();
+  test_get_message();
 
   printf("All message queue tests passed.\n");
   return 0;
