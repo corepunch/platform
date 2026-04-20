@@ -320,7 +320,7 @@ webgl_register_callbacks(void)
 }
 
 int
-axWaitEvent(TIME time)
+axWaitMessage(TIME time)
 {
   (void)time;
   // In the browser all events arrive via registered callbacks; nothing to block on.

@@ -889,7 +889,7 @@ axGetSize(struct AXsize* size);
  * @return 1 if at least one event is ready, 0 if the timeout expired.
  */
 AX_API int
-axWaitEvent(longTime_t msec);
+axWaitMessage(longTime_t msec);
 
 /**
  * @brief Make the platform OpenGL/EGL context current on the calling thread.

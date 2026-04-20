@@ -251,7 +251,7 @@ start_over:
 }
 
 int
-axWaitEvent(longTime_t msec)
+axWaitMessage(longTime_t msec)
 {
   @autoreleasepool {
     NSDate *date = msec > 0
@@ -289,7 +289,7 @@ axGetMessage(struct AXmessage *e)
   }
 
   for (;;) {
-    if (axWaitEvent(0) <= 0) {
+    if (axWaitMessage(0) <= 0) {
       continue;
     }
     if (axPeekMessage(e)) {

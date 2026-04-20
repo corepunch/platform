@@ -19,7 +19,7 @@ int main(void) {
 
     struct AXmessage msg;
     while (1) {
-        axWaitEvent(16);
+        axWaitMessage(16);
         while (axPeekMessage(&msg)) {
             if (msg.message == kEventWindowClosed) goto done;
         }

@@ -40,7 +40,7 @@ int main(void) {
     
     while (running) {
         // Wait for events (with 16ms timeout for ~60 FPS)
-        axWaitEvent(16);
+        axWaitMessage(16);
         
         // Process all pending events
         while (axPeekMessage(&msg)) {
@@ -140,7 +140,7 @@ float axGetScaling(void);             // Get display scaling factor
 ```c
 int axPeekMessage(struct AXmessage* msg);          // Poll for next event (non-blocking)
 int axGetMessage(struct AXmessage* msg);           // Get next event (blocking where supported)
-int axWaitEvent(longTime_t timeout_ms);           // Wait for events with timeout
+int axWaitMessage(longTime_t timeout_ms);           // Wait for events with timeout
 void axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
 ```
 

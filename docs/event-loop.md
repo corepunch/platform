@@ -17,17 +17,17 @@ while (axPeekMessage(&msg)) {
 }
 ```
 
-`axWaitEvent` blocks until an event arrives or the timeout expires.  It
+`axWaitMessage` blocks until an event arrives or the timeout expires.  It
 returns `1` if there is at least one event ready, `0` on timeout:
 
 ```c
-axWaitEvent(16);   /* sleep up to ~16 ms → ~60 FPS cap */
+axWaitMessage(16);   /* sleep up to ~16 ms → ~60 FPS cap */
 while (axPeekMessage(&msg)) {
     handle_event(&msg);
 }
 ```
 
-Pass `0` to `axWaitEvent` to block indefinitely until any event arrives —
+Pass `0` to `axWaitMessage` to block indefinitely until any event arrives —
 useful for editor-style apps that do not need to re-draw every frame.
 
 `axGetMessage` combines the two patterns and returns the next event,
@@ -50,7 +50,7 @@ struct AXmessage msg;
 int running = 1;
 
 while (running) {
-    axWaitEvent(16);
+    axWaitMessage(16);
 
     while (axPeekMessage(&msg)) {
         switch (msg.message) {

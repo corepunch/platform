@@ -375,7 +375,7 @@ win32_process_messages(void)
 extern void joy_poll(void);
 
 int
-axWaitEvent(longTime_t timeout_ms)
+axWaitMessage(longTime_t timeout_ms)
 {
   if (timeout_ms == 0) {
     /* Block indefinitely, but wake on joystick input too.  Poll joystick
@@ -421,7 +421,7 @@ axGetMessage(PEVENT pEvent)
   }
 
   for (;;) {
-    if (axWaitEvent(0) <= 0) {
+    if (axWaitMessage(0) <= 0) {
       continue;
     }
     if (axPeekMessage(pEvent)) {

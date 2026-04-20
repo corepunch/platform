@@ -421,7 +421,7 @@ get_xdg_surface_listener(void)
 }
 
 int
-axWaitEvent(TIME time)
+axWaitMessage(TIME time)
 {
   extern struct wl_display* display;
 
@@ -489,7 +489,7 @@ axGetMessage(PEVENT pEvent)
   }
 
   for (;;) {
-    axWaitEvent(16);
+    axWaitMessage(16);
     if (axPeekMessage(pEvent)) {
       return 1;
     }

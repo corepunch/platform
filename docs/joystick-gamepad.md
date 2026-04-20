@@ -120,7 +120,7 @@ int running = 1;
 float player_x = 400, player_y = 300;
 
 while (running) {
-    axWaitEvent(16);
+    axWaitMessage(16);
     while (axPeekMessage(&msg)) {
         switch (msg.message) {
         case kEventWindowClosed:

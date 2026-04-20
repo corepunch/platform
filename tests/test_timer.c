@@ -51,7 +51,7 @@ static void test_sleep_accuracy(void)
 
 /* -------------------------------------------------------------------
  * test_wait_event_timeout
- *   axWaitEvent(timeout) with no display connected must return within a
+ *   axWaitMessage(timeout) with no display connected must return within a
  *   reasonable wall-clock time and must not crash.
  *
  *   Return value:
@@ -65,7 +65,7 @@ static void test_wait_event_timeout(void)
   const longTime_t max_elapsed = timeout_ms * 5;
 
   longTime_t t1  = axGetMilliseconds();
-  int        ret = axWaitEvent(timeout_ms);
+  int        ret = axWaitMessage(timeout_ms);
   longTime_t t2  = axGetMilliseconds();
 
   longTime_t elapsed = t2 - t1;

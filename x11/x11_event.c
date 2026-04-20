@@ -397,7 +397,7 @@ x11_build_poll_fds(struct pollfd fds[2 + MAX_TIMERS])
 }
 
 int
-axWaitEvent(TIME timeout_ms)
+axWaitMessage(TIME timeout_ms)
 {
   if (!x_display) {
     return 0;
@@ -460,7 +460,7 @@ axGetMessage(PEVENT pEvent)
   }
 
   for (;;) {
-    if (axWaitEvent(0) <= 0) {
+    if (axWaitMessage(0) <= 0) {
       continue;
     }
     if (axPeekMessage(pEvent)) {
