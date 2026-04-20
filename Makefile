@@ -74,7 +74,7 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	# Put the test binary next to the DLL so Windows finds it at runtime
 	TEST_SRC = $(OUTDIR)/test_platform_api_tmp.c
 	TEST_BIN = $(OUTDIR)/test_platform_api.exe
-	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform
+	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -lws2_32
 	TEST_MSG_BIN   = $(OUTDIR)/test_messages.exe
 	TEST_TIMER_BIN = $(OUTDIR)/test_timer.exe
 	TEST_NET_BIN   = $(OUTDIR)/test_net.exe

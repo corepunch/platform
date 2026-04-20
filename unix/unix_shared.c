@@ -257,6 +257,27 @@ axGetCwd(char *buf, size_t sz)
   return getcwd(buf, sz) != NULL ? TRUE : FALSE;
 }
 
+/* Weak fallback: used only in headless builds where no windowing backend
+ * provides a strong definition.  Returns $HOME/.config, or /tmp if $HOME is
+ * unset.  Windowing backends (wayland, x11, macOS) supply a strong override.
+ */
+__attribute__((weak))
+char const *
+axSettingsDirectory(void)
+{
+  static char dir[512] = {0};
+  if (dir[0] == '\0') {
+    char const *home = getenv("HOME");
+    if (home && home[0])
+      snprintf(dir, sizeof(dir), "%s/.config", home);
+    else
+      snprintf(dir, sizeof(dir), "/tmp");
+    /* Ensure the directory exists. */
+    mkdir(dir, 0755);
+  }
+  return dir;
+}
+
 static bool_t
 axBuildSettingsPath(char *out, size_t out_sz, char const *name)
 {

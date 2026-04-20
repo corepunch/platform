@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #if defined(_WIN32) || defined(__MINGW32__)
 #  include <direct.h>
@@ -25,6 +26,21 @@ typedef struct {
   int saw_file;
   int saw_dir;
 } list_ctx_t;
+
+/* Callback that counts entries and stops after the first one. */
+typedef struct {
+  int count;
+} early_stop_ctx_t;
+
+static bool_t fs_stop_cb(AXdirent const *entry, void *userdata)
+{
+  early_stop_ctx_t *ctx = (early_stop_ctx_t *)userdata;
+  (void)entry;
+  if (!ctx)
+    return FALSE;
+  ctx->count++;
+  return FALSE; /* request early stop */
+}
 
 static bool_t fs_list_cb(AXdirent const *entry, void *userdata)
 {
@@ -99,10 +115,71 @@ static void test_mkdir_exists_listdir(void)
   RMDIR(root);
 }
 
+static void test_listdir_nonexistent(void)
+{
+  list_ctx_t ctx = {0, 0};
+  /* A path that should never exist on any test machine. */
+  assert(axListDir("/nonexistent_ax_path_xyz_12345", fs_list_cb, &ctx) == FALSE);
+}
+
+static void test_listdir_early_stop(void)
+{
+  char cwd[1024] = {0};
+  assert(axGetCwd(cwd, sizeof(cwd)) == TRUE);
+
+  early_stop_ctx_t ctx = {0};
+  /* axListDir must return TRUE even when the callback stops early. */
+  bool_t result = axListDir(cwd, fs_stop_cb, &ctx);
+  assert(result == TRUE);
+  /* The callback must have been called at most once. */
+  assert(ctx.count <= 1);
+}
+
+static void test_path_exists_null(void)
+{
+  /* NULL path must return FALSE without crashing. */
+  assert(axPathExists(NULL) == FALSE);
+}
+
+static void test_settings_roundtrip(void)
+{
+  char const *dir = axSettingsDirectory();
+  if (!dir || !dir[0]) {
+    printf("  (axSettingsDirectory unavailable – settings round-trip skipped)\n");
+    return;
+  }
+
+  char const *name    = "ax_test_settings_rt.bin";
+  char const  payload[] = "roundtrip_data_12345";
+  size_t      payload_len = sizeof(payload) - 1; /* exclude NUL */
+
+  assert(axSettingsSave(name, payload, payload_len) == TRUE);
+
+  char   buf[64];
+  size_t loaded = 0;
+  assert(axSettingsLoad(name, buf, sizeof(buf), &loaded) == TRUE);
+  assert(loaded == payload_len);
+  assert(memcmp(buf, payload, loaded) == 0);
+
+  /* Overwrite with different content and verify it replaces the old file. */
+  char const  payload2[] = "new_data";
+  size_t      payload2_len = sizeof(payload2) - 1;
+  assert(axSettingsSave(name, payload2, payload2_len) == TRUE);
+
+  size_t loaded2 = 0;
+  assert(axSettingsLoad(name, buf, sizeof(buf), &loaded2) == TRUE);
+  assert(loaded2 == payload2_len);
+  assert(memcmp(buf, payload2, loaded2) == 0);
+}
+
 int main(void)
 {
   test_cwd_nonempty();
   test_mkdir_exists_listdir();
+  test_listdir_nonexistent();
+  test_listdir_early_stop();
+  test_path_exists_null();
+  test_settings_roundtrip();
   printf("All filesystem tests passed.\n");
   return 0;
 }
