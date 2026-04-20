@@ -161,9 +161,9 @@ static void test_listdir_early_stop(void)
   assert(ctx.count == 1);
 
   /* Cleanup */
-  remove(file_path);
-  RMDIR(subdir_path);
-  RMDIR(root);
+  assert(remove(file_path) == 0);
+  assert(RMDIR(subdir_path) == 0);
+  assert(RMDIR(root) == 0);
 }
 
 static void test_path_exists_null(void)
