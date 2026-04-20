@@ -1,7 +1,7 @@
 /*
  * test_messages.c – behavioral tests for the platform event-queue API.
  *
- * Tests AX_PostMessageW, axPeekMessage, and AX_RemoveFromQueue without
+ * Tests axPostMessageW, axPeekMessage, and axRemoveFromQueue without
  * requiring a live display server or windowing context.
  *
  * On macOS the internal queue is coupled to NSApp, so message-delivery tests
@@ -188,7 +188,7 @@ static void test_double_click_sequence(void)
 
 /* -------------------------------------------------------------------
  * test_get_message
- *   AX_GetMessage should return the next queued event.
+ *   axGetMessage should return the next queued event.
  * ------------------------------------------------------------------- */
 static void test_get_message(void)
 {
@@ -211,9 +211,9 @@ int main(void)
 {
 #ifdef __APPLE__
   /*
-   * On macOS the message queue is coupled to NSApp: AX_PostMessageW posts to
+  * On macOS the message queue is coupled to NSApp: axPostMessageW posts to
    * both the internal ring-buffer and to NSApp's event queue.  Without calling
-   * AX_Init (which sets up NSApp), axPeekMessage cannot retrieve events from
+  * axInit (which sets up NSApp), axPeekMessage cannot retrieve events from
    * the ring-buffer because the NSApp-based delivery path is not available.
    *
    * The behavioral tests below require a live NSApp and are therefore skipped

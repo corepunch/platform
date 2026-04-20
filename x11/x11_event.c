@@ -461,7 +461,7 @@ axGetMessage(PEVENT pEvent)
 
   for (;;) {
     if (axWaitMessage(0) <= 0) {
-      continue;
+      return 0;
     }
     if (axPeekMessage(pEvent)) {
       return 1;

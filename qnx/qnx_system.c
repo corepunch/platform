@@ -383,11 +383,19 @@ axWaitMessage(longTime_t msec)
       ts.tv_sec++;
       ts.tv_nsec -= 1000000000;
     }
-    return sem_timedwait(&event_sem, &ts) == 0 ? 1 : 0;
+    int rc;
+    do {
+      rc = sem_timedwait(&event_sem, &ts);
+    } while (rc == -1 && errno == EINTR);
+    return rc == 0 ? 1 : 0;
   }
 
-  sem_wait(&event_sem);
-  return 1;
+  for (;;) {
+    if (sem_wait(&event_sem) == 0)
+      return 1;
+    if (errno != EINTR)
+      return 0;
+  }
 }
 
 int
@@ -399,7 +407,7 @@ axGetMessage(struct AXmessage *e)
 
   for (;;) {
     if (axWaitMessage(0) <= 0) {
-      continue;
+      return 0;
     }
     if (axPeekMessage(e)) {
       return 1;

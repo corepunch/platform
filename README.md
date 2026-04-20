@@ -38,46 +38,40 @@ int main(void) {
     struct AXmessage msg;
     int running = 1;
     
-    while (running) {
-        // Wait for events (with 16ms timeout for ~60 FPS)
-        axWaitMessage(16);
-        
-        // Process all pending events
-        while (axPeekMessage(&msg)) {
-            switch (msg.message) {
-                case kEventWindowClosed:
+    while (running && axGetMessage(&msg)) {
+        switch (msg.message) {
+            case kEventWindowClosed:
+                running = 0;
+                break;
+
+            case kEventKeyDown:
+                printf("Key pressed: %d (modifiers: 0x%x)\n",
+                       msg.keyCode, msg.modflags);
+
+                // Exit on ESC key
+                if (msg.keyCode == AX_KEY_ESCAPE) {
                     running = 0;
-                    break;
-                    
-                case kEventKeyDown:
-                    printf("Key pressed: %d (modifiers: 0x%x)\n", 
-                           msg.keyCode, msg.modflags);
-                    
-                    // Exit on ESC key
-                    if (msg.keyCode == AX_KEY_ESCAPE) {
-                        running = 0;
-                    }
-                    break;
-                    
-                case kEventLeftButtonDown:
-                    printf("Mouse clicked at: %d, %d\n", msg.x, msg.y);
-                    break;
-                    
-                case kEventMouseMoved:
-                    // Mouse position in msg.x, msg.y
-                    break;
-                    
-                case kEventWindowResized:
-                    printf("Window resized\n");
-                    break;
-            }
+                }
+                break;
+
+            case kEventLeftButtonDown:
+                printf("Mouse clicked at: %d, %d\n", msg.x, msg.y);
+                break;
+
+            case kEventMouseMoved:
+                // Mouse position in msg.x, msg.y
+                break;
+
+            case kEventWindowResized:
+                printf("Window resized\n");
+                break;
         }
-        
+
         // Render your frame here
         axBeginPaint();
-        
+
         // ... OpenGL rendering calls ...
-        
+
         axEndPaint();
     }
     
@@ -86,6 +80,9 @@ int main(void) {
     return 0;
 }
 ```
+
+For non-blocking event loops with `axPeekMessage`, see
+[`docs/event-loop.md`](docs/event-loop.md).
 
 ### Compiling the Example
 

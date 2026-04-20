@@ -3,6 +3,7 @@
 #include "wayland_local.h"
 #include <unistd.h>
 #include <poll.h>
+#include <errno.h>
 #include <linux/input-event-codes.h>
 #include <sys/timerfd.h>
 
@@ -428,8 +429,8 @@ axWaitMessage(TIME time)
   if (!display)
     return 0;
 
-  if (time > 0) {
-    /* Include the joystick fd and timerfd descriptors in the poll set. */
+  for (;;) {
+    /* Include the Wayland display fd, joystick fd, and timerfd descriptors. */
     struct pollfd fds[2 + MAX_TIMERS];
     int nfds = 0;
     fds[nfds].fd     = wl_display_get_fd(display);
@@ -449,23 +450,28 @@ axWaitMessage(TIME time)
       }
     }
 
-    int ret = poll(fds, nfds, (int)time);
+    int timeout = (time > 0) ? (int)time : -1;
+    int ret = poll(fds, nfds, timeout);
     if (ret > 0) {
       if (fds[0].revents & POLLIN) {
         wl_display_dispatch(display);
+      } else {
+        wl_display_dispatch_pending(display);
       }
       joy_poll();
       timers_poll();
       return 1;
     }
-    return 0;
+    if (ret == 0) {
+      return 0;
+    }
+    if (errno != EINTR) {
+      return 0;
+    }
+    if (time > 0) {
+      return 0;
+    }
   }
-
-  // No timeout, just dispatch pending events
-  wl_display_dispatch_pending(display);
-  joy_poll();
-  timers_poll();
-  return 0;
 }
 
 int
@@ -484,12 +490,20 @@ axPeekMessage(PEVENT pEvent)
 int
 axGetMessage(PEVENT pEvent)
 {
+  extern struct wl_display* display;
+
   if (axPeekMessage(pEvent)) {
     return 1;
   }
 
+  if (!display) {
+    return 0;
+  }
+
   for (;;) {
-    axWaitMessage(16);
+    if (axWaitMessage(0) <= 0) {
+      return 0;
+    }
     if (axPeekMessage(pEvent)) {
       return 1;
     }

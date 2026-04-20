@@ -1,7 +1,7 @@
 /*
  * test_timer.c – behavioral tests for platform timing and wait functions.
  *
- * Tests AX_GetMilliseconds, AX_Sleep, and AX_WaitEvent without requiring a
+ * Tests axGetMilliseconds, axSleep, and axWaitMessage without requiring a
  * live display server or windowing context.
  */
 
@@ -11,7 +11,7 @@
 
 /* -------------------------------------------------------------------
  * test_get_milliseconds_non_negative
- *   AX_GetMilliseconds must return a non-negative monotonic timestamp.
+ *   axGetMilliseconds must return a non-negative monotonic timestamp.
  * ------------------------------------------------------------------- */
 static void test_get_milliseconds_non_negative(void)
 {
@@ -50,7 +50,7 @@ static void test_sleep_accuracy(void)
 }
 
 /* -------------------------------------------------------------------
- * test_wait_event_timeout
+ * test_wait_message_timeout
  *   axWaitMessage(timeout) with no display connected must return within a
  *   reasonable wall-clock time and must not crash.
  *
@@ -58,7 +58,7 @@ static void test_sleep_accuracy(void)
  *     0 – timeout (expected on all headless platforms)
  *     1 – an event became ready (e.g. a spurious Win32 message); also OK
  * ------------------------------------------------------------------- */
-static void test_wait_event_timeout(void)
+static void test_wait_message_timeout(void)
 {
   const longTime_t timeout_ms = 50;
   /* Allow 5× the requested timeout to account for CI scheduling jitter */
@@ -79,7 +79,7 @@ int main(void)
   test_get_milliseconds_non_negative();
   test_get_milliseconds_monotonic();
   test_sleep_accuracy();
-  test_wait_event_timeout();
+  test_wait_message_timeout();
 
   printf("All timer tests passed.\n");
   return 0;

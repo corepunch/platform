@@ -290,7 +290,7 @@ axGetMessage(struct AXmessage *e)
 
   for (;;) {
     if (axWaitMessage(0) <= 0) {
-      continue;
+      return 0;
     }
     if (axPeekMessage(e)) {
       return 1;
