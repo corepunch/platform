@@ -257,15 +257,18 @@ axGetCwd(char *buf, size_t sz)
   return getcwd(buf, sz) != NULL ? TRUE : FALSE;
 }
 
-/* Weak fallback: used only in headless builds where no windowing backend
- * provides a strong definition.  Returns $HOME/.config, or /tmp if $HOME is
- * unset.  Windowing backends (wayland, x11, macOS) supply a strong override.
+/* Headless fallback: compiled only when no windowing backend is present
+ * (i.e. HAVE_WINDOWING is not defined).  Windowing backends (wayland, x11,
+ * macOS, Windows) define axSettingsDirectory themselves; including both in
+ * the same single-TU build would cause a redefinition error.
+ *
+ * Returns $HOME/.config, or /tmp if $HOME is unset.
  *
  * Note: initialisation races are benign here (worst case: the snprintf runs
  * twice and produces the same result) – matching the pattern used by the
  * windowing backends that share the same read-then-write pattern.
  */
-__attribute__((weak))
+#ifndef HAVE_WINDOWING
 char const *
 axSettingsDirectory(void)
 {
@@ -282,6 +285,7 @@ axSettingsDirectory(void)
   }
   return dir;
 }
+#endif /* !HAVE_WINDOWING */
 
 static bool_t
 axBuildSettingsPath(char *out, size_t out_sz, char const *name)

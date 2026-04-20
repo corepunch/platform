@@ -86,6 +86,10 @@ endif
 
 all: $(TARGET)
 
+ifeq ($(HAS_WINDOWING),1)
+CFLAGS += -DHAVE_WINDOWING
+endif
+
 $(TARGET):
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
 
