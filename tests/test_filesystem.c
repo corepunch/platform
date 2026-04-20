@@ -149,9 +149,9 @@ static void test_settings_roundtrip(void)
     return;
   }
 
-  char const *name    = "ax_test_settings_rt.bin";
-  char const  payload[] = "roundtrip_data_12345";
-  size_t      payload_len = sizeof(payload) - 1; /* exclude NUL */
+  char const *name = "ax_test_settings_rt.bin";
+  char const payload[] = "roundtrip_data_12345";
+  size_t payload_len = sizeof(payload) - 1; /* exclude NUL */
 
   assert(axSettingsSave(name, payload, payload_len) == TRUE);
 
@@ -162,8 +162,8 @@ static void test_settings_roundtrip(void)
   assert(memcmp(buf, payload, loaded) == 0);
 
   /* Overwrite with different content and verify it replaces the old file. */
-  char const  payload2[] = "new_data";
-  size_t      payload2_len = sizeof(payload2) - 1;
+  char const payload2[] = "new_data";
+  size_t payload2_len = sizeof(payload2) - 1;
   assert(axSettingsSave(name, payload2, payload2_len) == TRUE);
 
   size_t loaded2 = 0;

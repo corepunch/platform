@@ -255,17 +255,18 @@ test_udp_loopback(void)
 
   /* Discover the assigned port. */
 #if defined(_WIN32) || defined(__MINGW32__)
-  int slen = sizeof(struct sockaddr_in);
-  struct sockaddr_in srv;
-  memset(&srv, 0, sizeof(srv));
-  getsockname((SOCKET)server, (struct sockaddr *)&srv, (socklen_t *)&slen);
+  int udp_addr_len = sizeof(struct sockaddr_in);
+  struct sockaddr_in udp_srv_addr;
+  memset(&udp_srv_addr, 0, sizeof(udp_srv_addr));
+  getsockname((SOCKET)server, (struct sockaddr *)&udp_srv_addr,
+              (socklen_t *)&udp_addr_len);
 #else
-  struct sockaddr_in srv;
-  socklen_t slen = sizeof(srv);
-  memset(&srv, 0, sizeof(srv));
-  getsockname(server, (struct sockaddr *)&srv, &slen);
+  struct sockaddr_in udp_srv_addr;
+  socklen_t udp_addr_len = sizeof(udp_srv_addr);
+  memset(&udp_srv_addr, 0, sizeof(udp_srv_addr));
+  getsockname(server, (struct sockaddr *)&udp_srv_addr, &udp_addr_len);
 #endif
-  uint16_t port = ntohs(srv.sin_port);
+  uint16_t port = ntohs(udp_srv_addr.sin_port);
   assert(port > 0);
 
   /* ------ client socket (connected UDP) ------ */
@@ -321,17 +322,18 @@ test_poll_write_ready(void)
   assert(axNetListen(server, 1) == TRUE);
 
 #if defined(_WIN32) || defined(__MINGW32__)
-  int wlen = sizeof(struct sockaddr_in);
-  struct sockaddr_in wa;
-  memset(&wa, 0, sizeof(wa));
-  getsockname((SOCKET)server, (struct sockaddr *)&wa, (socklen_t *)&wlen);
-  uint16_t wport = ntohs(wa.sin_port);
+  int write_addr_len = sizeof(struct sockaddr_in);
+  struct sockaddr_in write_addr;
+  memset(&write_addr, 0, sizeof(write_addr));
+  getsockname((SOCKET)server, (struct sockaddr *)&write_addr,
+              (socklen_t *)&write_addr_len);
+  uint16_t wport = ntohs(write_addr.sin_port);
 #else
-  struct sockaddr_in wa;
-  socklen_t wlen = sizeof(wa);
-  memset(&wa, 0, sizeof(wa));
-  getsockname(server, (struct sockaddr *)&wa, &wlen);
-  uint16_t wport = ntohs(wa.sin_port);
+  struct sockaddr_in write_addr;
+  socklen_t write_addr_len = sizeof(write_addr);
+  memset(&write_addr, 0, sizeof(write_addr));
+  getsockname(server, (struct sockaddr *)&write_addr, &write_addr_len);
+  uint16_t wport = ntohs(write_addr.sin_port);
 #endif
 
   int client = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);

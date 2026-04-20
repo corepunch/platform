@@ -260,6 +260,10 @@ axGetCwd(char *buf, size_t sz)
 /* Weak fallback: used only in headless builds where no windowing backend
  * provides a strong definition.  Returns $HOME/.config, or /tmp if $HOME is
  * unset.  Windowing backends (wayland, x11, macOS) supply a strong override.
+ *
+ * Note: initialisation races are benign here (worst case: the snprintf runs
+ * twice and produces the same result) – matching the pattern used by the
+ * windowing backends that share the same read-then-write pattern.
  */
 __attribute__((weak))
 char const *
@@ -272,8 +276,9 @@ axSettingsDirectory(void)
       snprintf(dir, sizeof(dir), "%s/.config", home);
     else
       snprintf(dir, sizeof(dir), "/tmp");
-    /* Ensure the directory exists. */
-    mkdir(dir, 0755);
+    /* Best-effort: ignore return value; save/load will fail meaningfully if
+     * the directory cannot be created. */
+    (void)mkdir(dir, 0755);
   }
   return dir;
 }
