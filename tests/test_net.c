@@ -240,6 +240,123 @@ test_nonblocking_wouldblock(void)
 }
 
 /* -------------------------------------------------------------------------
+ * test_udp_loopback
+ *   Bind a UDP socket to an ephemeral port.  Connect a second UDP socket to
+ *   that port (sets the default destination) then exchange a short datagram.
+ * ---------------------------------------------------------------------- */
+static void
+test_udp_loopback(void)
+{
+  /* ------ server socket (bound) ------ */
+  int server = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_UDP);
+  assert(server >= 0);
+  assert(axNetSetReuseAddr(server, TRUE) == TRUE);
+  assert(axNetBind(server, 0) == TRUE);
+
+  /* Discover the assigned port. */
+#if defined(_WIN32) || defined(__MINGW32__)
+  int udp_addr_len = sizeof(struct sockaddr_in);
+  struct sockaddr_in udp_srv_addr;
+  memset(&udp_srv_addr, 0, sizeof(udp_srv_addr));
+  getsockname((SOCKET)server, (struct sockaddr *)&udp_srv_addr,
+              (socklen_t *)&udp_addr_len);
+#else
+  struct sockaddr_in udp_srv_addr;
+  socklen_t udp_addr_len = sizeof(udp_srv_addr);
+  memset(&udp_srv_addr, 0, sizeof(udp_srv_addr));
+  getsockname(server, (struct sockaddr *)&udp_srv_addr, &udp_addr_len);
+#endif
+  uint16_t port = ntohs(udp_srv_addr.sin_port);
+  assert(port > 0);
+
+  /* ------ client socket (connected UDP) ------ */
+  int client = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_UDP);
+  assert(client >= 0);
+  /* axNetConnect on a UDP socket sets the default peer address so that
+   * axNetSend / axNetRecv work without sendto / recvfrom. */
+  assert(axNetConnect(client, "127.0.0.1", port) == TRUE);
+
+  char const *msg = "udp";
+  int sent = axNetSend(client, msg, 3);
+  assert(sent == 3);
+
+  int ready = axNetPoll(server, AX_NET_POLL_READ, 1000);
+  assert(ready >= 0);
+  assert((ready & AX_NET_POLL_READ) != 0);
+  assert((ready & AX_NET_POLL_ERR) == 0);
+
+  char buf[16];
+  memset(buf, 0, sizeof(buf));
+  int received = axNetRecv(server, buf, (int)sizeof(buf) - 1);
+  assert(received == 3);
+  assert(memcmp(buf, msg, 3) == 0);
+
+  axNetClose(client);
+  axNetClose(server);
+}
+
+/* -------------------------------------------------------------------------
+ * test_socket_create_ipv6
+ *   Creating and closing an IPv6 TCP socket must not crash.
+ *   IPv6 is optional in some CI environments, so failure is tolerated.
+ * ---------------------------------------------------------------------- */
+static void
+test_socket_create_ipv6(void)
+{
+  int s = axNetSocket(AX_NET_AF_IPV6, AX_NET_SOCK_TCP);
+  /* Skip gracefully when IPv6 is unavailable. */
+  if (s >= 0)
+    axNetClose(s);
+}
+
+/* -------------------------------------------------------------------------
+ * test_poll_write_ready
+ *   A connected socket that has not sent anything must be immediately ready
+ *   for writing.
+ * ---------------------------------------------------------------------- */
+static void
+test_poll_write_ready(void)
+{
+  int server = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
+  assert(server >= 0);
+  assert(axNetSetReuseAddr(server, TRUE) == TRUE);
+  assert(axNetBind(server, 0) == TRUE);
+  assert(axNetListen(server, 1) == TRUE);
+
+#if defined(_WIN32) || defined(__MINGW32__)
+  int write_addr_len = sizeof(struct sockaddr_in);
+  struct sockaddr_in write_addr;
+  memset(&write_addr, 0, sizeof(write_addr));
+  getsockname((SOCKET)server, (struct sockaddr *)&write_addr,
+              (socklen_t *)&write_addr_len);
+  uint16_t wport = ntohs(write_addr.sin_port);
+#else
+  struct sockaddr_in write_addr;
+  socklen_t write_addr_len = sizeof(write_addr);
+  memset(&write_addr, 0, sizeof(write_addr));
+  getsockname(server, (struct sockaddr *)&write_addr, &write_addr_len);
+  uint16_t wport = ntohs(write_addr.sin_port);
+#endif
+
+  int client = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
+  assert(client >= 0);
+  assert(axNetConnect(client, "127.0.0.1", wport) == TRUE);
+
+  int peer = axNetAccept(server);
+  assert(peer >= 0);
+
+  /* A fresh, connected socket should be write-ready immediately. */
+  int result = axNetPoll(client, AX_NET_POLL_WRITE, 500);
+  assert(result >= 0);
+  assert((result & AX_NET_POLL_ERR) == 0);
+  assert((result & AX_NET_POLL_WRITE) != 0);
+
+  axNetClose(peer);
+  axNetClose(client);
+  axNetClose(server);
+}
+
+/* -------------------------------------------------------------------------
  * test_tls_api_available
  *   Verify the TLS function pointers are non-NULL.
  *   axTlsConnect on an invalid socket must return NULL without crashing.
@@ -287,6 +404,23 @@ main(void)
 
   test_nonblocking_wouldblock();
   printf("non-blocking + axNetWouldBlock: OK\n");
+
+  test_udp_loopback();
+  printf("UDP loopback datagram: OK\n");
+
+  test_socket_create_ipv6();
+  {
+    int ipv6_probe = axNetSocket(AX_NET_AF_IPV6, AX_NET_SOCK_TCP);
+    if (ipv6_probe >= 0) {
+      axNetClose(ipv6_probe);
+      printf("IPv6 socket create: OK\n");
+    } else {
+      printf("IPv6 socket create: skipped (IPv6 unavailable)\n");
+    }
+  }
+
+  test_poll_write_ready();
+  printf("axNetPoll write-ready: OK\n");
 
   test_tls_api_available();
   printf("TLS API symbols: OK\n");

@@ -257,6 +257,36 @@ axGetCwd(char *buf, size_t sz)
   return getcwd(buf, sz) != NULL ? TRUE : FALSE;
 }
 
+/* Headless fallback: compiled only when no windowing backend is present
+ * (i.e. HAVE_WINDOWING is not defined).  Windowing backends (wayland, x11,
+ * macOS, Windows) define axSettingsDirectory themselves; including both in
+ * the same single-TU build would cause a redefinition error.
+ *
+ * Returns $HOME/.config, or /tmp if $HOME is unset.
+ *
+ * Note: initialisation races are benign here (worst case: the snprintf runs
+ * twice and produces the same result) – matching the pattern used by the
+ * windowing backends that share the same read-then-write pattern.
+ */
+#ifndef HAVE_WINDOWING
+char const *
+axSettingsDirectory(void)
+{
+  static char dir[512] = {0};
+  if (dir[0] == '\0') {
+    char const *home = getenv("HOME");
+    if (home && home[0])
+      snprintf(dir, sizeof(dir), "%s/.config", home);
+    else
+      snprintf(dir, sizeof(dir), "/tmp");
+    /* Best-effort: ignore return value; save/load will fail meaningfully if
+     * the directory cannot be created. */
+    (void)mkdir(dir, 0755);
+  }
+  return dir;
+}
+#endif /* !HAVE_WINDOWING */
+
 static bool_t
 axBuildSettingsPath(char *out, size_t out_sz, char const *name)
 {
@@ -266,6 +296,11 @@ axBuildSettingsPath(char *out, size_t out_sz, char const *name)
   char const *base = axSettingsDirectory();
   if (!base || !base[0])
     return FALSE;
+
+  /* Best-effort: create the settings directory if it doesn't exist yet.
+   * Windowing backends (x11, wayland) return the path but don't mkdir it,
+   * unlike the headless fallback and the Windows backend (CreateDirectoryA). */
+  (void)mkdir(base, 0755);
 
   int n = snprintf(out, out_sz, "%s/%s", base, name);
   return (n > 0 && (size_t)n < out_sz) ? TRUE : FALSE;
