@@ -1,6 +1,6 @@
 # Handling Input
 
-All input arrives as `AXmessage` events via `axPollEvent`.  The `wParam`
+All input arrives as `AXmessage` events via `axPeekMessage`.  The `wParam`
 union gives you either a packed `(x, y)` point for mouse events or a
 `(keyCode, modflags)` pair for keyboard events.
 

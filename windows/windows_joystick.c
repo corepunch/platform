@@ -2,7 +2,8 @@
  * windows_joystick.c – Joystick support and swap interval for Windows.
  *
  * Joystick input is implemented using XInput, which supports Xbox-compatible
- * controllers.  State is polled each time axPollEvent() is called and
+ * controllers.  State is polled from the Windows message retrieval paths
+ * (including axPeekMessage(), axWaitMessage(), and axGetMessage()) and
  * compared against the previous snapshot; changes generate kEventJoyAxisMotion
  * and kEventJoyButton* events that are pushed to the event queue.
  *
@@ -97,7 +98,7 @@ axtrigger_to_axis(BYTE trigger)
   return (int16_t)(((int)trigger * 32767 + 127) / 255);
 }
 
-/* Called from axPollEvent() in windows_event.c */
+/* Called from axPeekMessage() in windows_event.c */
 void
 joy_poll(void)
 {

@@ -352,7 +352,7 @@ axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 }
 
 int
-axPollEvent(struct AXmessage *e)
+axPeekMessage(struct AXmessage *e)
 {
   qnx_process_screen_events();
   if (queue.read == queue.write)
@@ -370,7 +370,7 @@ axRemoveFromQueue(void *target)
 }
 
 int
-axWaitEvent(longTime_t msec)
+axWaitMessage(longTime_t msec)
 {
   init_event_sem();
 
@@ -383,11 +383,36 @@ axWaitEvent(longTime_t msec)
       ts.tv_sec++;
       ts.tv_nsec -= 1000000000;
     }
-    return sem_timedwait(&event_sem, &ts) == 0 ? 1 : 0;
+    int rc;
+    do {
+      rc = sem_timedwait(&event_sem, &ts);
+    } while (rc == -1 && errno == EINTR);
+    return rc == 0 ? 1 : 0;
   }
 
-  sem_wait(&event_sem);
-  return 1;
+  for (;;) {
+    if (sem_wait(&event_sem) == 0)
+      return 1;
+    if (errno != EINTR)
+      return 0;
+  }
+}
+
+int
+axGetMessage(struct AXmessage *e)
+{
+  if (axPeekMessage(e)) {
+    return 1;
+  }
+
+  for (;;) {
+    if (axWaitMessage(0) <= 0) {
+      return 0;
+    }
+    if (axPeekMessage(e)) {
+      return 1;
+    }
+  }
 }
 
 void

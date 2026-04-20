@@ -397,7 +397,7 @@ x11_build_poll_fds(struct pollfd fds[2 + MAX_TIMERS])
 }
 
 int
-axWaitEvent(TIME timeout_ms)
+axWaitMessage(TIME timeout_ms)
 {
   if (!x_display) {
     return 0;
@@ -439,7 +439,7 @@ axWaitEvent(TIME timeout_ms)
 }
 
 int
-axPollEvent(PEVENT pEvent)
+axPeekMessage(PEVENT pEvent)
 {
   joy_poll();
   x11_process_events();
@@ -450,6 +450,23 @@ axPollEvent(PEVENT pEvent)
     return 1;
   }
   return 0;
+}
+
+int
+axGetMessage(PEVENT pEvent)
+{
+  if (axPeekMessage(pEvent)) {
+    return 1;
+  }
+
+  for (;;) {
+    if (axWaitMessage(0) <= 0) {
+      return 0;
+    }
+    if (axPeekMessage(pEvent)) {
+      return 1;
+    }
+  }
 }
 
 void
