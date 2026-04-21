@@ -416,6 +416,17 @@ axTlsConnect(int sock, char const *hostname)
 
   do {
     status = SSLHandshake(ctx->ssl);
+    if (status == errSSLWouldBlock) {
+      struct pollfd pfd;
+      pfd.fd      = sock;
+      pfd.events  = POLLIN | POLLOUT;
+      pfd.revents = 0;
+      int rc = poll(&pfd, 1, 10000);
+      if (rc <= 0) {
+        status = errSecIO; /* timeout or poll error */
+        break;
+      }
+    }
   } while (status == errSSLWouldBlock);
 
   if (status != noErr) {
