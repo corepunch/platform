@@ -3,6 +3,7 @@ LIBNAME = libplatform.$(LIB_EXT)
 TARGET = $(OUTDIR)/$(LIBNAME)
 UNAME_S := $(shell uname -s)
 HASH := \#
+ARCH_FLAGS ?=
 
 TEST_SRC = /tmp/test_platform_api.c
 TEST_BIN = /tmp/test_platform_api
@@ -89,6 +90,9 @@ all: $(TARGET)
 ifeq ($(HAS_WINDOWING),1)
 CFLAGS += -DHAVE_WINDOWING
 endif
+
+CFLAGS += $(ARCH_FLAGS)
+LDFLAGS += $(ARCH_FLAGS)
 
 $(TARGET):
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
