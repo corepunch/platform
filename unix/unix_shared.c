@@ -268,7 +268,10 @@ axGetCwd(char *buf, size_t sz)
  * twice and produces the same result) – matching the pattern used by the
  * windowing backends that share the same read-then-write pattern.
  */
+char const *
+axSettingsDirectory(void);
 #ifndef HAVE_WINDOWING
+#ifndef __APPLE__
 char const *
 axSettingsDirectory(void)
 {
@@ -285,6 +288,7 @@ axSettingsDirectory(void)
   }
   return dir;
 }
+#endif
 #endif /* !HAVE_WINDOWING */
 
 static bool_t
