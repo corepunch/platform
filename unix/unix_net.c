@@ -14,6 +14,11 @@
  * #ifdef __APPLE__ / #else.
  */
 
+#ifdef __APPLE__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -609,3 +614,7 @@ axTlsRecv(AXtlsctx *ctx, void *buf, int len)
 }
 
 #endif /* TLS backend */
+
+#ifdef __APPLE__
+#pragma clang diagnostic pop
+#endif
