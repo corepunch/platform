@@ -79,17 +79,11 @@ axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 void
 axNotifyFileDropEvent(char const *filename, float x, float y)
 {
-  //  struct AXmessage * ev       = malloc(sizeof(EVENT));
-  //  ev->type               = ;
-  //  ev->windowNumber       = (int)windowNumber;
-  //  ev->next               = window_events;
-  //  ev->location.x = x;
-  //  ev->location.y = y;
-  //  strcpy(ev->filename, filename);
-  //  window_events = ev;
-  (void)filename;
-  (void)x;
-  (void)y;
+  if (!filename || !filename[0]) return;
+  char *path = strdup(filename);
+  if (!path) return;
+  axPostMessageW(NULL, kEventDragDrop,
+                 MAKEDWORD((uint16_t)x, (uint16_t)y), path);
 }
 
 static uint32_t
