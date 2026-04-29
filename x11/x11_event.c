@@ -28,6 +28,193 @@ static struct {
 } s_timers[MAX_TIMERS];
 static uint32_t s_next_timer_id = 1;
 
+/* --------------------------------------------------------------------------
+ * XDND drag-and-drop state
+ * -------------------------------------------------------------------------- */
+
+#define DND_PATH_BUFFER_SIZE 4096
+
+static Atom xdnd_enter;
+static Atom xdnd_position;
+static Atom xdnd_status;
+static Atom xdnd_leave;
+static Atom xdnd_drop;
+static Atom xdnd_finished;
+static Atom xdnd_action_copy;
+static Atom xdnd_selection;
+static Atom xdnd_type_list;
+static Atom xa_uri_list;
+
+static Window xdnd_source = None;
+static Time   xdnd_drop_time = CurrentTime;
+static float  xdnd_x = 0, xdnd_y = 0;
+static bool_t xdnd_has_uri = FALSE;
+
+static void
+x11_dnd_init(void)
+{
+  static bool_t done = FALSE;
+  if (done || !x_display) return;
+  done = TRUE;
+  xdnd_enter       = XInternAtom(x_display, "XdndEnter",      False);
+  xdnd_position    = XInternAtom(x_display, "XdndPosition",   False);
+  xdnd_status      = XInternAtom(x_display, "XdndStatus",     False);
+  xdnd_leave       = XInternAtom(x_display, "XdndLeave",      False);
+  xdnd_drop        = XInternAtom(x_display, "XdndDrop",       False);
+  xdnd_finished    = XInternAtom(x_display, "XdndFinished",   False);
+  xdnd_action_copy = XInternAtom(x_display, "XdndActionCopy", False);
+  xdnd_selection   = XInternAtom(x_display, "XdndSelection",  False);
+  xdnd_type_list   = XInternAtom(x_display, "XdndTypeList",   False);
+  xa_uri_list      = XInternAtom(x_display, "text/uri-list",  False);
+}
+
+/* Decode percent-encoded characters in a URI path component into dst. */
+static void
+uri_decode(char *dst, char const *src, size_t dstlen)
+{
+  size_t di = 0;
+  while (*src && di + 1 < dstlen) {
+    if (src[0] == '%' && src[1] != '\0' && src[2] != '\0') {
+      int hi = -1, lo = -1;
+      char c1 = src[1], c2 = src[2];
+      if (c1 >= '0' && c1 <= '9') hi = c1 - '0';
+      else if (c1 >= 'a' && c1 <= 'f') hi = c1 - 'a' + 10;
+      else if (c1 >= 'A' && c1 <= 'F') hi = c1 - 'A' + 10;
+      if (c2 >= '0' && c2 <= '9') lo = c2 - '0';
+      else if (c2 >= 'a' && c2 <= 'f') lo = c2 - 'a' + 10;
+      else if (c2 >= 'A' && c2 <= 'F') lo = c2 - 'A' + 10;
+      if (hi >= 0 && lo >= 0) {
+        dst[di++] = (char)((hi << 4) | lo);
+        src += 3;
+        continue;
+      }
+    }
+    dst[di++] = *src++;
+  }
+  dst[di] = '\0';
+}
+
+/* Parse a text/uri-list payload and post kEventDragDrop for each file URI. */
+static void
+xdnd_process_uri_list(char const *data, float drop_x, float drop_y)
+{
+  char const *line = data;
+  while (line && *line) {
+    char const *end = strchr(line, '\n');
+    /* length of this line (without \n) */
+    size_t len = end ? (size_t)(end - line) : strlen(line);
+    /* strip trailing \r */
+    while (len > 0 && line[len - 1] == '\r') len--;
+    /* skip blank lines and comments */
+    if (len == 0 || line[0] == '#') {
+      line = end ? end + 1 : NULL;
+      continue;
+    }
+    /* only handle file:// URIs */
+    if (len > 7 && strncmp(line, "file://", 7) == 0) {
+      char const *path = line + 7;
+      size_t path_len = len - 7;
+      /* skip optional hostname: file://hostname/path → find first '/' */
+      if (*path != '/') {
+        char const *slash = memchr(path, '/', path_len);
+        if (!slash) { line = end ? end + 1 : NULL; continue; }
+        path_len -= (size_t)(slash - path);
+        path = slash;
+      }
+      char raw[DND_PATH_BUFFER_SIZE];
+      if (path_len >= sizeof(raw)) path_len = sizeof(raw) - 1;
+      memcpy(raw, path, path_len);
+      raw[path_len] = '\0';
+      char decoded[DND_PATH_BUFFER_SIZE];
+      uri_decode(decoded, raw, sizeof(decoded));
+      axNotifyFileDropEvent(decoded, drop_x, drop_y);
+    }
+    line = end ? end + 1 : NULL;
+  }
+}
+
+/* Handle XDND-related ClientMessage events. */
+static void
+xdnd_handle_client_message(XEvent const *xev)
+{
+  Atom msg = xev->xclient.message_type;
+
+  if (msg == xdnd_enter) {
+    xdnd_source = (Window)xev->xclient.data.l[0];
+    bool_t has_more = (xev->xclient.data.l[1] & 1) != 0;
+    xdnd_has_uri = FALSE;
+
+    if (has_more) {
+      /* More than 3 types: read XdndTypeList property from source. */
+      Atom actual_type;
+      int actual_format;
+      unsigned long nitems, bytes_after;
+      unsigned char *prop = NULL;
+      XGetWindowProperty(x_display, xdnd_source, xdnd_type_list,
+                         0, 65536, False, XA_ATOM,
+                         &actual_type, &actual_format,
+                         &nitems, &bytes_after, &prop);
+      if (prop) {
+        Atom const *types = (Atom const *)prop;
+        for (unsigned long j = 0; j < nitems; j++) {
+          if (types[j] == xa_uri_list) { xdnd_has_uri = TRUE; break; }
+        }
+        XFree(prop);
+      }
+    } else {
+      for (int j = 2; j <= 4; j++) {
+        if ((Atom)xev->xclient.data.l[j] == xa_uri_list) {
+          xdnd_has_uri = TRUE;
+          break;
+        }
+      }
+    }
+
+  } else if (msg == xdnd_position) {
+    Window src = (Window)xev->xclient.data.l[0];
+    int root_x = (int)((xev->xclient.data.l[2] >> 16) & 0xffff);
+    int root_y = (int)(xev->xclient.data.l[2] & 0xffff);
+    xdnd_drop_time = (Time)xev->xclient.data.l[3];
+
+    /* Convert root coordinates to window-local coordinates. */
+    Window child;
+    int win_x = 0, win_y = 0;
+    XTranslateCoordinates(x_display, DefaultRootWindow(x_display), x_window,
+                          root_x, root_y, &win_x, &win_y, &child);
+    xdnd_x = (float)win_x;
+    xdnd_y = (float)win_y;
+
+    /* Reply with XdndStatus – accept if we support text/uri-list. */
+    XEvent reply;
+    memset(&reply, 0, sizeof(reply));
+    reply.type                 = ClientMessage;
+    reply.xclient.window       = src;
+    reply.xclient.message_type = xdnd_status;
+    reply.xclient.format       = 32;
+    reply.xclient.data.l[0]   = (long)x_window;
+    reply.xclient.data.l[1]   = xdnd_has_uri ? 1 : 0;
+    reply.xclient.data.l[4]   = (long)(xdnd_has_uri ? xdnd_action_copy : 0);
+    XSendEvent(x_display, src, False, NoEventMask, &reply);
+    XFlush(x_display);
+
+  } else if (msg == xdnd_leave) {
+    xdnd_source = None;
+    xdnd_has_uri = FALSE;
+
+  } else if (msg == xdnd_drop) {
+    if (xdnd_source == None || !xdnd_has_uri) {
+      xdnd_source = None;
+      return;
+    }
+    Time ts = (Time)xev->xclient.data.l[2];
+    if (ts != CurrentTime) xdnd_drop_time = ts;
+    /* Request the selection data as text/uri-list. */
+    XConvertSelection(x_display, xdnd_selection, xa_uri_list,
+                      xdnd_selection, x_window, xdnd_drop_time);
+    XFlush(x_display);
+  }
+}
+
 /* Check all timerfd descriptors for readability and post kEventTimer */
 static void
 timers_poll(void)
@@ -140,6 +327,8 @@ x11_process_events(void)
   if (!x_display) {
     return;
   }
+
+  x11_dnd_init();
 
   /* State for double-click detection */
   static uint32_t last_button = 0;
@@ -359,8 +548,70 @@ x11_process_events(void)
         events.queue[events.write++] = (EVENT){
           .message = kEventWindowClosed,
         };
+      } else {
+        xdnd_handle_client_message(&xev);
       }
       break;
+
+    case SelectionNotify: {
+      if (xev.xselection.selection != xdnd_selection) break;
+      if (xev.xselection.property == None) {
+        /* Conversion failed – send XdndFinished with accepted=0 */
+        if (xdnd_source != None) {
+          XEvent reply;
+          memset(&reply, 0, sizeof(reply));
+          reply.type                 = ClientMessage;
+          reply.xclient.window       = xdnd_source;
+          reply.xclient.message_type = xdnd_finished;
+          reply.xclient.format       = 32;
+          reply.xclient.data.l[0]   = (long)x_window;
+          reply.xclient.data.l[1]   = 0;
+          XSendEvent(x_display, xdnd_source, False, NoEventMask, &reply);
+          XFlush(x_display);
+          xdnd_source = None;
+        }
+        break;
+      }
+      Atom actual_type;
+      int actual_format;
+      unsigned long nitems, bytes_after;
+      unsigned char *prop = NULL;
+      XGetWindowProperty(x_display, x_window, xev.xselection.property,
+                         0, 65536, True, AnyPropertyType,
+                         &actual_type, &actual_format,
+                         &nitems, &bytes_after, &prop);
+      bool_t drop_accepted = FALSE;
+      if (prop) {
+        if (nitems > 0 && actual_format == 8) {
+          /* X11 property data is not NUL-terminated – copy into own buffer. */
+          char *buf = malloc(nitems + 1);
+          if (buf) {
+            memcpy(buf, prop, nitems);
+            buf[nitems] = '\0';
+            xdnd_process_uri_list(buf, xdnd_x, xdnd_y);
+            drop_accepted = TRUE;
+            free(buf);
+          }
+        }
+        XFree(prop);
+      }
+      /* Send XdndFinished */
+      if (xdnd_source != None) {
+        XEvent reply;
+        memset(&reply, 0, sizeof(reply));
+        reply.type                 = ClientMessage;
+        reply.xclient.window       = xdnd_source;
+        reply.xclient.message_type = xdnd_finished;
+        reply.xclient.format       = 32;
+        reply.xclient.data.l[0]   = (long)x_window;
+        reply.xclient.data.l[1]   = drop_accepted ? 1 : 0;
+        reply.xclient.data.l[2]   = (long)xdnd_action_copy;
+        XSendEvent(x_display, xdnd_source, False, NoEventMask, &reply);
+        XFlush(x_display);
+        xdnd_source = None;
+      }
+      break;
+    }
 
     default:
       break;
@@ -517,9 +768,10 @@ axRemoveFromQueue(void* hobj)
 void
 axNotifyFileDropEvent(char const* filename, float x, float y)
 {
-  (void)filename;
-  (void)x;
-  (void)y;
+  if (!filename || !filename[0]) return;
+  char *path = strdup(filename);
+  if (!path) return;
+  axPostMessageW(NULL, kEventDragDrop, MAKEDWORD((uint16_t)x, (uint16_t)y), path);
 }
 
 uint32_t

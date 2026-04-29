@@ -75,6 +75,14 @@ create_window(struct _WND* win, int32_t width, int32_t height)
   wm_delete_window = XInternAtom(x_display, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(x_display, x_window, &wm_delete_window, 1);
 
+  /* Register window as an XDND drop target (version 5) */
+  {
+    Atom xdnd_aware = XInternAtom(x_display, "XdndAware", False);
+    Atom xdnd_version = 5;
+    XChangeProperty(x_display, x_window, xdnd_aware, XA_ATOM, 32,
+                    PropModeReplace, (unsigned char *)&xdnd_version, 1);
+  }
+
   XMapWindow(x_display, x_window);
   XFlush(x_display);
 

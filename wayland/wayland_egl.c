@@ -7,6 +7,7 @@ struct wl_display* display;
 struct wl_compositor* compositor = NULL;
 struct wl_seat* seat = NULL;
 struct xdg_wm_base* xdg_wm_base = NULL;
+static struct wl_data_device_manager* data_device_manager = NULL;
 struct xkb_context* xkb_ctx;
 struct xkb_keymap* xkb_keymap;
 struct xkb_state* xkb_state;
@@ -18,6 +19,8 @@ struct wl_seat_listener*
 get_seat_listener(void);
 struct xdg_surface_listener*
 get_xdg_surface_listener(void);
+void
+wayland_init_dnd(struct wl_seat *seat, struct wl_data_device_manager *mgr);
 
 static void
 xdg_wm_base_ping(void* data, struct xdg_wm_base* wm_base, uint32_t serial)
@@ -44,6 +47,9 @@ registry_add_object(void* data,
   } else if (strcmp(interface, "wl_seat") == 0) {
     seat = wl_registry_bind(registry, name, &wl_seat_interface, 1);
     wl_seat_add_listener(seat, get_seat_listener(), NULL);
+  } else if (strcmp(interface, "wl_data_device_manager") == 0) {
+    data_device_manager =
+      wl_registry_bind(registry, name, &wl_data_device_manager_interface, 1);
   }
 }
 static void
@@ -170,6 +176,9 @@ axInit(void)
   struct wl_registry* registry = wl_display_get_registry(display);
   wl_registry_add_listener(registry, &registry_listener, NULL);
   wl_display_roundtrip(display);
+
+  if (seat && data_device_manager)
+    wayland_init_dnd(seat, data_device_manager);
 
   egl_display = eglGetDisplay(display);
   eglInitialize(egl_display, NULL, NULL);
