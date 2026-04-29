@@ -11,6 +11,195 @@
 extern void joy_poll(void);
 extern int  joy_get_fd(void);
 
+/* --------------------------------------------------------------------------
+ * Wayland drag-and-drop implementation
+ * -------------------------------------------------------------------------- */
+
+/* Decode percent-encoded characters in a URI path into dst. */
+static void
+uri_decode(char *dst, char const *src, size_t dstlen)
+{
+  size_t di = 0;
+  while (*src && di + 1 < dstlen) {
+    if (src[0] == '%') {
+      int hi = -1, lo = -1;
+      char c1 = src[1], c2 = src[2];
+      if (c1 >= '0' && c1 <= '9') hi = c1 - '0';
+      else if (c1 >= 'a' && c1 <= 'f') hi = c1 - 'a' + 10;
+      else if (c1 >= 'A' && c1 <= 'F') hi = c1 - 'A' + 10;
+      if (c2 >= '0' && c2 <= '9') lo = c2 - '0';
+      else if (c2 >= 'a' && c2 <= 'f') lo = c2 - 'a' + 10;
+      else if (c2 >= 'A' && c2 <= 'F') lo = c2 - 'A' + 10;
+      if (hi >= 0 && lo >= 0) {
+        dst[di++] = (char)((hi << 4) | lo);
+        src += 3;
+        continue;
+      }
+    }
+    dst[di++] = *src++;
+  }
+  dst[di] = '\0';
+}
+
+/* Parse a text/uri-list payload and post kEventDragDrop for each file URI. */
+static void
+wl_process_uri_list(char const *data, float drop_x, float drop_y)
+{
+  char const *line = data;
+  while (line && *line) {
+    char const *end = strchr(line, '\n');
+    size_t len = end ? (size_t)(end - line) : strlen(line);
+    while (len > 0 && line[len - 1] == '\r') len--;
+    if (len == 0 || line[0] == '#') {
+      line = end ? end + 1 : NULL;
+      continue;
+    }
+    if (len > 7 && strncmp(line, "file://", 7) == 0) {
+      char const *path = line + 7;
+      size_t path_len = len - 7;
+      if (*path != '/') {
+        char const *slash = memchr(path, '/', path_len);
+        if (!slash) { line = end ? end + 1 : NULL; continue; }
+        path_len -= (size_t)(slash - path);
+        path = slash;
+      }
+      char raw[4096];
+      if (path_len >= sizeof(raw)) path_len = sizeof(raw) - 1;
+      memcpy(raw, path, path_len);
+      raw[path_len] = '\0';
+      char decoded[4096];
+      uri_decode(decoded, raw, sizeof(decoded));
+      axNotifyFileDropEvent(decoded, drop_x, drop_y);
+    }
+    line = end ? end + 1 : NULL;
+  }
+}
+
+/* Per-offer state: tracks whether the offer supports text/uri-list */
+static struct wl_data_offer *s_pending_offer = NULL;  /* most-recent from data_offer */
+static bool_t                s_pending_has_uri = FALSE;
+static struct wl_data_offer *s_active_offer = NULL;   /* offer accepted in enter */
+static bool_t                s_active_has_uri = FALSE;
+static float                 s_dnd_x = 0, s_dnd_y = 0;
+
+static void
+offer_mime(void *data, struct wl_data_offer *offer, char const *mime_type)
+{
+  (void)data;
+  if (offer == s_pending_offer && strcmp(mime_type, "text/uri-list") == 0)
+    s_pending_has_uri = TRUE;
+}
+
+static struct wl_data_offer_listener s_offer_listener = {
+  .offer = offer_mime,
+};
+
+static void
+dd_data_offer(void *data, struct wl_data_device *device,
+              struct wl_data_offer *offer)
+{
+  (void)data; (void)device;
+  s_pending_offer = offer;
+  s_pending_has_uri = FALSE;
+  wl_data_offer_add_listener(offer, &s_offer_listener, NULL);
+}
+
+static void
+dd_enter(void *data, struct wl_data_device *device,
+         uint32_t serial, struct wl_surface *surface,
+         wl_fixed_t x, wl_fixed_t y, struct wl_data_offer *offer)
+{
+  (void)data; (void)device; (void)surface;
+  s_active_offer = offer;
+  s_active_has_uri = s_pending_has_uri;
+  s_dnd_x = (float)wl_fixed_to_double(x);
+  s_dnd_y = (float)wl_fixed_to_double(y);
+  if (offer) {
+    wl_data_offer_accept(offer, serial,
+                         s_active_has_uri ? "text/uri-list" : NULL);
+  }
+}
+
+static void
+dd_leave(void *data, struct wl_data_device *device)
+{
+  (void)data; (void)device;
+  if (s_active_offer) {
+    wl_data_offer_destroy(s_active_offer);
+    s_active_offer = NULL;
+  }
+  s_active_has_uri = FALSE;
+}
+
+static void
+dd_motion(void *data, struct wl_data_device *device,
+          uint32_t time, wl_fixed_t x, wl_fixed_t y)
+{
+  (void)data; (void)device; (void)time;
+  s_dnd_x = (float)wl_fixed_to_double(x);
+  s_dnd_y = (float)wl_fixed_to_double(y);
+}
+
+static void
+dd_drop(void *data, struct wl_data_device *device)
+{
+  extern struct wl_display *display;
+  (void)data; (void)device;
+
+  if (!s_active_offer || !s_active_has_uri)
+    return;
+
+  int pipe_fds[2];
+  if (pipe(pipe_fds) < 0)
+    return;
+
+  wl_data_offer_receive(s_active_offer, "text/uri-list", pipe_fds[1]);
+  wl_display_flush(display);
+  close(pipe_fds[1]);
+
+  /* Read the URI list from the pipe. */
+  char buf[65536];
+  ssize_t total = 0, n;
+  while ((n = read(pipe_fds[0], buf + total,
+                   sizeof(buf) - 1 - (size_t)total)) > 0)
+    total += n;
+  buf[total] = '\0';
+  close(pipe_fds[0]);
+
+  wl_process_uri_list(buf, s_dnd_x, s_dnd_y);
+
+  wl_data_offer_destroy(s_active_offer);
+  s_active_offer = NULL;
+}
+
+static void
+dd_selection(void *data, struct wl_data_device *device,
+             struct wl_data_offer *offer)
+{
+  (void)data; (void)device;
+  /* Clipboard selection – destroy if not our active DnD offer. */
+  if (offer && offer != s_active_offer)
+    wl_data_offer_destroy(offer);
+}
+
+static struct wl_data_device_listener s_data_device_listener = {
+  .data_offer = dd_data_offer,
+  .enter      = dd_enter,
+  .leave      = dd_leave,
+  .motion     = dd_motion,
+  .drop       = dd_drop,
+  .selection  = dd_selection,
+};
+
+void
+wayland_init_dnd(struct wl_seat *seat, struct wl_data_device_manager *mgr)
+{
+  struct wl_data_device *dev =
+    wl_data_device_manager_get_data_device(mgr, seat);
+  if (dev)
+    wl_data_device_add_listener(dev, &s_data_device_listener, NULL);
+}
+
 static struct
 {
   EVENT queue[0x10000];
@@ -554,11 +743,10 @@ axRemoveFromQueue(void* hobj)
 void
 axNotifyFileDropEvent(char const* filename, float x, float y)
 {
-  // File drop not fully implemented yet
-  // Would need to allocate and copy filename string
-  (void)filename;
-  (void)x;
-  (void)y;
+  if (!filename || !filename[0]) return;
+  char *path = strdup(filename);
+  if (!path) return;
+  axPostMessageW(NULL, kEventDragDrop, MAKEDWORD((uint16_t)x, (uint16_t)y), path);
 }
 
 uint32_t

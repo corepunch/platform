@@ -161,6 +161,8 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   g_win_width  = (int)width;
   g_win_height = (int)height;
 
+  DragAcceptFiles(g_hwnd, TRUE);
+
   if (!(flags & AX_WINDOW_HIDDEN)) {
     ShowWindow(g_hwnd, SW_SHOW);
     UpdateWindow(g_hwnd);

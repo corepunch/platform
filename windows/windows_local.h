@@ -6,6 +6,7 @@
 #endif
 
 #include <windows.h>
+#include <shellapi.h>
 #include <GL/gl.h>
 #include <string.h>
 #include <stdlib.h>
