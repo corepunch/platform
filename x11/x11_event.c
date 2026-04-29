@@ -32,6 +32,8 @@ static uint32_t s_next_timer_id = 1;
  * XDND drag-and-drop state
  * -------------------------------------------------------------------------- */
 
+#define DND_PATH_BUFFER_SIZE 4096
+
 static Atom xdnd_enter;
 static Atom xdnd_position;
 static Atom xdnd_status;
@@ -119,11 +121,11 @@ xdnd_process_uri_list(char const *data, float drop_x, float drop_y)
         path_len -= (size_t)(slash - path);
         path = slash;
       }
-      char raw[4096];
+      char raw[DND_PATH_BUFFER_SIZE];
       if (path_len >= sizeof(raw)) path_len = sizeof(raw) - 1;
       memcpy(raw, path, path_len);
       raw[path_len] = '\0';
-      char decoded[4096];
+      char decoded[DND_PATH_BUFFER_SIZE];
       uri_decode(decoded, raw, sizeof(decoded));
       axNotifyFileDropEvent(decoded, drop_x, drop_y);
     }

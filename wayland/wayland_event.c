@@ -15,6 +15,9 @@ extern int  joy_get_fd(void);
  * Wayland drag-and-drop implementation
  * -------------------------------------------------------------------------- */
 
+#define DND_PATH_BUFFER_SIZE 4096
+#define DND_URI_LIST_BUFFER_SIZE 65536
+
 /* Decode percent-encoded characters in a URI path into dst. */
 static void
 uri_decode(char *dst, char const *src, size_t dstlen)
@@ -63,11 +66,11 @@ wl_process_uri_list(char const *data, float drop_x, float drop_y)
         path_len -= (size_t)(slash - path);
         path = slash;
       }
-      char raw[4096];
+      char raw[DND_PATH_BUFFER_SIZE];
       if (path_len >= sizeof(raw)) path_len = sizeof(raw) - 1;
       memcpy(raw, path, path_len);
       raw[path_len] = '\0';
-      char decoded[4096];
+      char decoded[DND_PATH_BUFFER_SIZE];
       uri_decode(decoded, raw, sizeof(decoded));
       axNotifyFileDropEvent(decoded, drop_x, drop_y);
     }
@@ -158,7 +161,7 @@ dd_drop(void *data, struct wl_data_device *device)
   close(pipe_fds[1]);
 
   /* Read the URI list from the pipe. */
-  char buf[65536];
+  char buf[DND_URI_LIST_BUFFER_SIZE];
   ssize_t total = 0, n;
   while ((n = read(pipe_fds[0], buf + total,
                    sizeof(buf) - 1 - (size_t)total)) > 0)
