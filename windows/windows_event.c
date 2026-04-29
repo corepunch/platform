@@ -357,11 +357,18 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     HDROP hdrop = (HDROP)wparam;
     UINT count = DragQueryFileA(hdrop, 0xFFFFFFFF, NULL, 0);
     POINT pt;
-    DragQueryPoint(hdrop, &pt);
+    if (!DragQueryPoint(hdrop, &pt)) {
+      /* DragQueryPoint returns FALSE when coordinates are in screen space */
+      ScreenToClient(hwnd, &pt);
+    }
     for (UINT i = 0; i < count; i++) {
-      char path[MAX_PATH];
-      if (DragQueryFileA(hdrop, i, path, sizeof(path))) {
-        axNotifyFileDropEvent(path, (float)pt.x, (float)pt.y);
+      UINT len = DragQueryFileA(hdrop, i, NULL, 0);
+      char *path = (char *)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)len + 1);
+      if (path) {
+        if (DragQueryFileA(hdrop, i, path, len + 1)) {
+          axNotifyFileDropEvent(path, (float)pt.x, (float)pt.y);
+        }
+        HeapFree(GetProcessHeap(), 0, path);
       }
     }
     DragFinish(hdrop);

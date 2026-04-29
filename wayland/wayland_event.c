@@ -24,7 +24,7 @@ uri_decode(char *dst, char const *src, size_t dstlen)
 {
   size_t di = 0;
   while (*src && di + 1 < dstlen) {
-    if (src[0] == '%') {
+    if (src[0] == '%' && src[1] != '\0' && src[2] != '\0') {
       int hi = -1, lo = -1;
       char c1 = src[1], c2 = src[2];
       if (c1 >= '0' && c1 <= '9') hi = c1 - '0';
@@ -78,10 +78,61 @@ wl_process_uri_list(char const *data, float drop_x, float drop_y)
   }
 }
 
-/* Per-offer state: tracks whether the offer supports text/uri-list */
-static struct wl_data_offer *s_pending_offer = NULL;  /* most-recent from data_offer */
-static bool_t                s_pending_has_uri = FALSE;
-static struct wl_data_offer *s_active_offer = NULL;   /* offer accepted in enter */
+/* Per-offer URI flag table – avoids clipboard offers clobbering DnD state.
+ * Each wl_data_offer is registered here when created, looked up in dd_enter,
+ * and removed when the offer is destroyed. */
+#define MAX_DND_OFFERS 8
+static struct {
+  struct wl_data_offer *offer;
+  bool_t                has_uri;
+} s_offer_table[MAX_DND_OFFERS];
+
+static void
+offer_table_register(struct wl_data_offer *offer)
+{
+  for (int i = 0; i < MAX_DND_OFFERS; i++) {
+    if (s_offer_table[i].offer == NULL) {
+      s_offer_table[i].offer   = offer;
+      s_offer_table[i].has_uri = FALSE;
+      return;
+    }
+  }
+}
+
+static void
+offer_table_set_uri(struct wl_data_offer *offer)
+{
+  for (int i = 0; i < MAX_DND_OFFERS; i++) {
+    if (s_offer_table[i].offer == offer) {
+      s_offer_table[i].has_uri = TRUE;
+      return;
+    }
+  }
+}
+
+static bool_t
+offer_table_has_uri(struct wl_data_offer *offer)
+{
+  for (int i = 0; i < MAX_DND_OFFERS; i++) {
+    if (s_offer_table[i].offer == offer)
+      return s_offer_table[i].has_uri;
+  }
+  return FALSE;
+}
+
+static void
+offer_table_remove(struct wl_data_offer *offer)
+{
+  for (int i = 0; i < MAX_DND_OFFERS; i++) {
+    if (s_offer_table[i].offer == offer) {
+      s_offer_table[i].offer   = NULL;
+      s_offer_table[i].has_uri = FALSE;
+      return;
+    }
+  }
+}
+
+static struct wl_data_offer *s_active_offer = NULL;
 static bool_t                s_active_has_uri = FALSE;
 static float                 s_dnd_x = 0, s_dnd_y = 0;
 
@@ -89,8 +140,8 @@ static void
 offer_mime(void *data, struct wl_data_offer *offer, char const *mime_type)
 {
   (void)data;
-  if (offer == s_pending_offer && strcmp(mime_type, "text/uri-list") == 0)
-    s_pending_has_uri = TRUE;
+  if (strcmp(mime_type, "text/uri-list") == 0)
+    offer_table_set_uri(offer);
 }
 
 static struct wl_data_offer_listener s_offer_listener = {
@@ -102,8 +153,7 @@ dd_data_offer(void *data, struct wl_data_device *device,
               struct wl_data_offer *offer)
 {
   (void)data; (void)device;
-  s_pending_offer = offer;
-  s_pending_has_uri = FALSE;
+  offer_table_register(offer);
   wl_data_offer_add_listener(offer, &s_offer_listener, NULL);
 }
 
@@ -113,8 +163,8 @@ dd_enter(void *data, struct wl_data_device *device,
          wl_fixed_t x, wl_fixed_t y, struct wl_data_offer *offer)
 {
   (void)data; (void)device; (void)surface;
-  s_active_offer = offer;
-  s_active_has_uri = s_pending_has_uri;
+  s_active_offer   = offer;
+  s_active_has_uri = offer_table_has_uri(offer);
   s_dnd_x = (float)wl_fixed_to_double(x);
   s_dnd_y = (float)wl_fixed_to_double(y);
   if (offer) {
@@ -128,6 +178,7 @@ dd_leave(void *data, struct wl_data_device *device)
 {
   (void)data; (void)device;
   if (s_active_offer) {
+    offer_table_remove(s_active_offer);
     wl_data_offer_destroy(s_active_offer);
     s_active_offer = NULL;
   }
@@ -171,6 +222,7 @@ dd_drop(void *data, struct wl_data_device *device)
 
   wl_process_uri_list(buf, s_dnd_x, s_dnd_y);
 
+  offer_table_remove(s_active_offer);
   wl_data_offer_destroy(s_active_offer);
   s_active_offer = NULL;
 }
@@ -181,8 +233,10 @@ dd_selection(void *data, struct wl_data_device *device,
 {
   (void)data; (void)device;
   /* Clipboard selection – destroy if not our active DnD offer. */
-  if (offer && offer != s_active_offer)
+  if (offer && offer != s_active_offer) {
+    offer_table_remove(offer);
     wl_data_offer_destroy(offer);
+  }
 }
 
 static struct wl_data_device_listener s_data_device_listener = {

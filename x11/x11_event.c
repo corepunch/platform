@@ -74,7 +74,7 @@ uri_decode(char *dst, char const *src, size_t dstlen)
 {
   size_t di = 0;
   while (*src && di + 1 < dstlen) {
-    if (src[0] == '%') {
+    if (src[0] == '%' && src[1] != '\0' && src[2] != '\0') {
       int hi = -1, lo = -1;
       char c1 = src[1], c2 = src[2];
       if (c1 >= '0' && c1 <= '9') hi = c1 - '0';
@@ -580,8 +580,19 @@ x11_process_events(void)
                          0, 65536, True, AnyPropertyType,
                          &actual_type, &actual_format,
                          &nitems, &bytes_after, &prop);
-      if (prop && nitems > 0) {
-        xdnd_process_uri_list((char const *)prop, xdnd_x, xdnd_y);
+      bool_t drop_accepted = FALSE;
+      if (prop) {
+        if (nitems > 0 && actual_format == 8) {
+          /* X11 property data is not NUL-terminated – copy into own buffer. */
+          char *buf = malloc(nitems + 1);
+          if (buf) {
+            memcpy(buf, prop, nitems);
+            buf[nitems] = '\0';
+            xdnd_process_uri_list(buf, xdnd_x, xdnd_y);
+            drop_accepted = TRUE;
+            free(buf);
+          }
+        }
         XFree(prop);
       }
       /* Send XdndFinished */
@@ -593,7 +604,7 @@ x11_process_events(void)
         reply.xclient.message_type = xdnd_finished;
         reply.xclient.format       = 32;
         reply.xclient.data.l[0]   = (long)x_window;
-        reply.xclient.data.l[1]   = (prop && nitems > 0) ? 1 : 0;
+        reply.xclient.data.l[1]   = drop_accepted ? 1 : 0;
         reply.xclient.data.l[2]   = (long)xdnd_action_copy;
         XSendEvent(x_display, xdnd_source, False, NoEventMask, &reply);
         XFlush(x_display);
