@@ -126,11 +126,11 @@ GetEventType(NSEvent *event)
     case NSEventTypeScrollWheel: return kEventScrollWheel;
     case NSEventTypeKeyDown: return kEventKeyDown;
     case NSEventTypeKeyUp: return kEventKeyUp;
+    case NSEventTypeFlagsChanged: return kEventModifiersChanged;
     case NSEventTypeApplicationDefined:
       return queue.data[(uint16_t)event.subtype].message;
       // case NSEventTypeMouseEntered:
       // case NSEventTypeMouseExited:
-      // case NSEventTypeFlagsChanged:
       // case NSEventTypeAppKitDefined:
       // case NSEventTypeSystemDefined:
       // case NSEventTypeApplicationDefined:
@@ -234,6 +234,9 @@ start_over:
     case NSEventTypeKeyUp:
       e->wParam = KEY_GetKeyName(GetKeyCode(event)) | modkey(event.modifierFlags);
       strncpy((char *)&e->lParam, event.characters.UTF8String, sizeof(e->lParam));
+      break;
+    case NSEventTypeFlagsChanged:
+      e->wParam = modkey(event.modifierFlags);
       break;
     default:
       break;

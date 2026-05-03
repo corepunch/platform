@@ -19,6 +19,7 @@
 #define kEventDragEnter 0xc0e97a77
 #define kEventKeyDown 0x83b19b78
 #define kEventKeyUp 0xfca37d71
+#define kEventModifiersChanged 0x416d6f64
 #define kEventChar 0x2879e23d
 #define kEventWindowPaint 0x7ef9e53b
 #define kEventWindowClosed 0x7268e69d
