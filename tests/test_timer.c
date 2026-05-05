@@ -61,7 +61,7 @@ static void test_sleep_accuracy(void)
 static void test_wait_message_timeout(void)
 {
   const longTime_t timeout_ms = 50;
-  /* Allow 5× the requested timeout to account for CI scheduling jitter */
+  /* Allow 5x the requested timeout to account for CI scheduling jitter */
   const longTime_t max_elapsed = timeout_ms * 5;
 
   longTime_t t1  = axGetMilliseconds();

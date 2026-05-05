@@ -96,7 +96,7 @@ glViewport(0, 0, (GLsizei)fbw, (GLsizei)fbh);
 ## Resizing after creation
 
 ```c
-/* Resize to 1024×768, re-centred on screen */
+/* Resize to 1024x768, re-centred on screen */
 axSetSize(1024, 768, TRUE);
 
 /* Query the current size */

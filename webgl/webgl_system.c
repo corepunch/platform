@@ -4,7 +4,7 @@
 void
 axInit(void)
 {
-  /* Size the canvas drawing buffer to CSS size × DPR before creating context
+  /* Size the canvas drawing buffer to CSS size x DPR before creating context
    * so iOS Safari allocates the correct framebuffer on the first frame. */
   double css_width, css_height;
   emscripten_get_element_css_size("#canvas", &css_width, &css_height);
