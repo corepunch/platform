@@ -89,10 +89,15 @@ static NSRect
 GetScreenFrame(uint32_t width)
 {
   (void)width;
+  NSScreen *mainScreen = [NSScreen mainScreen];
+  if (mainScreen)
+    return [mainScreen frame];
 	NSArray   *screens    = [NSScreen screens];
+  if ([screens count] > 0)
+    return [[screens objectAtIndex:0] frame];
+  return NSMakeRect(0, 0, MAX(width, (uint32_t)1024), 768);
 //	NSUInteger numScreens = [screens count];
 //	return [[screens objectAtIndex:(numScreens-1)] frame];
-  return [[screens objectAtIndex:0] frame];
 	//    FOR_LOOP(index, (int)numScreens) {
 	//        NSScreen *screen = [screens objectAtIndex:index];
 	//        NSRect    frame  = [screen visibleFrame];
