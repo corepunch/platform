@@ -1,9 +1,30 @@
 OUTDIR ?= .
 LIBNAME = libplatform.$(LIB_EXT)
 TARGET = $(OUTDIR)/$(LIBNAME)
-UNAME_S := $(shell uname -s)
 HASH := \#
-ARCH_FLAGS ?=
+ARCH ?= $(shell uname -m)
+
+# Platform detection
+ifdef EMSCRIPTEN
+PLATFORM_OS := emscripten
+PLATFORM_UNAME_S := Emscripten
+else ifeq ($(OS),Windows_NT)
+PLATFORM_OS := windows
+PLATFORM_UNAME_S := Windows_NT
+else
+PLATFORM_UNAME_S := $(shell uname -s)
+ifeq ($(PLATFORM_UNAME_S),Darwin)
+PLATFORM_OS := darwin
+else ifeq ($(PLATFORM_UNAME_S),Linux)
+PLATFORM_OS := linux
+else ifneq (,$(findstring MINGW,$(PLATFORM_UNAME_S))$(findstring MSYS,$(PLATFORM_UNAME_S)))
+PLATFORM_OS := windows
+else
+$(error Unsupported platform: $(PLATFORM_UNAME_S))
+endif
+endif
+
+UNAME_S := $(PLATFORM_UNAME_S)
 
 TEST_SRC = /tmp/test_platform_api.c
 TEST_BIN = /tmp/test_platform_api
@@ -19,7 +40,7 @@ ifdef EMSCRIPTEN
 	LIB_EXT = wasm
 	FIND_SOURCES = find webgl -name "*.c"
 	LANG = c
-else ifeq ($(UNAME_S),Darwin)
+else ifeq ($(PLATFORM_OS),darwin)
 	CC = clang
 	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION -Wno-deprecated-declarations
 	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -framework Security -framework CoreFoundation -install_name @rpath/$(LIBNAME)
@@ -28,7 +49,7 @@ else ifeq ($(UNAME_S),Darwin)
 	LANG = objective-c
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -rpath $(abspath $(OUTDIR))
 	HAS_WINDOWING := 1
-else ifeq ($(UNAME_S),Linux)
+else ifeq ($(PLATFORM_OS),linux)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
 	LDFLAGS = -shared -ldl
@@ -62,7 +83,7 @@ else ifeq ($(UNAME_S),Linux)
 	endif
 	LANG = c
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -Wl,-rpath,$(abspath $(OUTDIR)) -Wl,--allow-shlib-undefined
-else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
+else ifeq ($(PLATFORM_OS),windows)
 	CC = gcc
 	CFLAGS = -Wall -Wextra -I. -DPLATFORM_BUILD
 	LDFLAGS = -shared \
@@ -82,7 +103,7 @@ else ifneq (,$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 	TEST_FS_BIN    = $(OUTDIR)/test_filesystem.exe
 	HAS_WINDOWING := 1
 else
-	$(error Unsupported OS: $(UNAME_S))
+	$(error Unsupported OS: $(PLATFORM_UNAME_S))
 endif
 
 all: $(TARGET)
@@ -91,8 +112,10 @@ ifeq ($(HAS_WINDOWING),1)
 CFLAGS += -DHAVE_WINDOWING
 endif
 
-CFLAGS += $(ARCH_FLAGS)
-LDFLAGS += $(ARCH_FLAGS)
+ifeq ($(PLATFORM_OS),darwin)
+CFLAGS += -arch $(ARCH)
+LDFLAGS += -arch $(ARCH)
+endif
 
 $(TARGET):
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
