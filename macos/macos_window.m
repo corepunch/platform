@@ -67,6 +67,8 @@ BuildPixelFormatAttributes(uint32_t flags)
 
 struct wstate {
   NSWindow *Window;
+  WindowDelegate *Delegate;
+  id DarkModeObserver;
   CGLContextObj ctx;
   IOSurfaceRef surf;
   GLuint texnum, framebuffer;
@@ -125,12 +127,12 @@ static bool IsDarkMode(NSWindow *window) {
   return [match isEqualToString:NSAppearanceNameDarkAqua];
 }
 
-static void ListenForDarkModeChanges(NSWindow *window) {
-  [[NSDistributedNotificationCenter defaultCenter]
-   addObserverForName:@"AppleInterfaceThemeChangedNotification"
-   object:nil
-   queue:[NSOperationQueue mainQueue]
-   usingBlock:^(NSNotification * _Nonnull note) {
+static id ListenForDarkModeChanges(NSWindow *window) {
+  return [[NSDistributedNotificationCenter defaultCenter]
+          addObserverForName:@"AppleInterfaceThemeChangedNotification"
+          object:nil
+          queue:[NSOperationQueue mainQueue]
+          usingBlock:^(NSNotification * _Nonnull note) {
     (void)note;
     if (IsDarkMode(window)) {
       NSLog(@"Switched to Dark Mode");
@@ -228,6 +230,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   
 	[window setFrameOrigin:windowRect.origin];
 	[window setTitle:windowTitle];
+  [window setReleasedWhenClosed:NO];
 	[window orderFront:nil];
 	[window setAcceptsMouseMovedEvents:YES];
 	[window setContentView:openGLView];
@@ -249,7 +252,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   }
   
   ConfigureOpenGLView(openGLView);
-  ListenForDarkModeChanges(window);
+  wstate.DarkModeObserver = ListenForDarkModeChanges(window);
   
   if (wstate.width != width || wstate.height != height) {
     axNotifySizeChanged(width, height);
@@ -258,12 +261,16 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   assert(!wstate.surf);
   
   wstate.Window = window;
+  wstate.Delegate = delegate;
   
   if ([openGLView wantsBestResolutionOpenGLSurface]) {
     wstate.backingScale = [wstate.Window backingScaleFactor];
   } else {
     wstate.backingScale = 1;
   }
+
+  [openGLView release];
+  [windowTitle release];
     
 	return TRUE;
 }
@@ -276,6 +283,42 @@ void axShutdown(void) {
 	[window close];
 	[window release];
   free(hWnd);
+#else
+  if (wstate.Window) {
+    NSWindow *window = wstate.Window;
+    NSView *contentView = [window contentView];
+    if ([contentView isKindOfClass:[NSOpenGLView class]]) {
+      NSOpenGLContext *context = [(NSOpenGLView *)contentView openGLContext];
+      if ([NSOpenGLContext currentContext] == context) {
+        [NSOpenGLContext clearCurrentContext];
+      }
+      [context clearDrawable];
+      [(NSOpenGLView *)contentView setOpenGLContext:nil];
+    }
+
+    if (wstate.DarkModeObserver) {
+      [[NSDistributedNotificationCenter defaultCenter] removeObserver:wstate.DarkModeObserver];
+      wstate.DarkModeObserver = nil;
+    }
+
+    [window orderOut:nil];
+    [window setInitialFirstResponder:nil];
+    [window setContentView:nil];
+    [window setDelegate:nil];
+    [window close];
+    [window release];
+    wstate.Window = nil;
+  }
+
+  if (wstate.Delegate) {
+    [wstate.Delegate release];
+    wstate.Delegate = nil;
+  }
+
+  wstate.width = 0;
+  wstate.height = 0;
+  wstate.backingScale = 0;
+  wstate.flags = 0;
 #endif
 }
 
