@@ -111,6 +111,22 @@ modkey(NSEventModifierFlags modifierFlags)
   return flags;
 }
 
+static int16_t
+normalize_scroll_delta(NSEvent *event, double delta)
+{
+  /* Precise wheel devices can emit tiny fractions that get lost once the rest
+   * of the pipeline converts scroll input into integer steps. */
+  if (event.hasPreciseScrollingDeltas && fabs(delta) < 1.0) {
+    delta *= 16.0;
+  }
+
+  int16_t scaled = (int16_t)lround(delta);
+  if (scaled == 0 && delta != 0.0) {
+    return delta > 0.0 ? 1 : -1;
+  }
+  return scaled;
+}
+
 static uint32_t
 GetEventType(NSEvent *event)
 {
@@ -228,8 +244,8 @@ start_over:
   
   switch([event type]) {
     case NSEventTypeScrollWheel:
-      e->lParam = (void*)(intptr_t)MAKEDWORD((int)event.scrollingDeltaX,
-                                             (int)event.scrollingDeltaY);
+      e->lParam = (void*)(intptr_t)MAKEDWORD(normalize_scroll_delta(event, event.scrollingDeltaX),
+                                             normalize_scroll_delta(event, event.scrollingDeltaY));
       break;
     case NSEventTypeLeftMouseDragged:
     case NSEventTypeRightMouseDragged:
