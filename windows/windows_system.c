@@ -384,3 +384,19 @@ axSettingsLoad(char const *name, void *data, size_t capacity, size_t *out_size)
     *out_size = got;
   return TRUE;
 }
+
+void axSetCursor(int cursor_id) {
+  LPCTSTR id;
+  switch (cursor_id) {
+    case curIBeam:      id = IDC_IBEAM; break;
+    case curResizeH:    id = IDC_SIZEWE; break;
+    case curResizeV:    id = IDC_SIZENS; break;
+    case curResizeNESW: id = IDC_SIZENESW; break;
+    case curResizeNWSE: id = IDC_SIZENWSE; break;
+    case curCrosshair:  id = IDC_CROSS; break;
+    case curWait:       id = IDC_WAIT; break;
+    case curNotAllowed: id = IDC_NO; break;
+    default:            id = IDC_ARROW; break;
+  }
+  SetCursor(LoadCursor(NULL, id));
+}

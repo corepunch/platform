@@ -227,6 +227,22 @@ int axExecuteProcess(char const *process) {
 	return 0;
 }
 
+void axSetCursor(int cursor_id) {
+  NSCursor *cursor;
+  switch (cursor_id) {
+    case curIBeam:      cursor = [NSCursor IBeamCursor]; break;
+    case curResizeH:    cursor = [NSCursor resizeLeftRightCursor]; break;
+    case curResizeV:    cursor = [NSCursor resizeUpDownCursor]; break;
+    case curResizeNESW: cursor = [NSCursor closedHandCursor]; break;
+    case curResizeNWSE: cursor = [NSCursor closedHandCursor]; break;
+    case curCrosshair:  cursor = [NSCursor crosshairCursor]; break;
+    case curWait:       cursor = [NSCursor operationNotAllowedCursor]; break;
+    case curNotAllowed: cursor = [NSCursor operationNotAllowedCursor]; break;
+    default:            cursor = [NSCursor arrowCursor]; break;
+  }
+  [cursor set];
+}
+
 void axInit(void) {
   //    id menubar     = [[NSMenu new] autorelease];
   //    id appMenuItem = [[NSMenuItem new] autorelease];

@@ -259,6 +259,24 @@ enum
 /** @} */
 
 /**
+ * @defgroup cursors Cursor shapes
+ * @brief Cursor shape constants for #axSetCursor.
+ * @{
+ */
+enum {
+  curArrow,      /**< Default arrow pointer. */
+  curIBeam,      /**< Text insertion (I-beam). */
+  curResizeH,    /**< Horizontal resize (left-right arrow). */
+  curResizeV,    /**< Vertical resize (up-down arrow). */
+  curResizeNESW, /**< Diagonal resize top-right / bottom-left. */
+  curResizeNWSE, /**< Diagonal resize top-left / bottom-right. */
+  curCrosshair,  /**< Crosshair / precision select. */
+  curWait,       /**< Busy / wait cursor. */
+  curNotAllowed, /**< Operation not allowed (slashed circle). */
+};
+/** @} */
+
+/**
  * @defgroup modifiers Modifier key flags
  * @brief Bit flags ORed into #AX_Message::wParam for keyboard and mouse events.
  * @{
@@ -562,6 +580,14 @@ axGetMilliseconds(void);
  */
 AX_API void
 axSleep(longTime_t msec);
+
+/**
+ * @brief Set the mouse cursor shape.
+ *
+ * @param cursor_id  One of the #curArrow .. #curNotAllowed constants.
+ */
+AX_API void
+axSetCursor(int cursor_id);
 
 /**
  * @brief Test whether the system is currently using a dark colour scheme.
