@@ -115,6 +115,13 @@ axGetFolderName(struct _AXopenfilename const* ofn)
   return FALSE;
 }
 
+void
+axSetCursor(int cursor_id)
+{
+  (void)cursor_id;
+  // TODO: implement XCursor cursor shapes
+}
+
 char const*
 KEY_GetKeyName(uint32_t keycode)
 {
