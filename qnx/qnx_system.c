@@ -656,3 +656,4 @@ axGetCwd(char *buf, size_t sz)
 {
   return getcwd(buf, sz) != NULL ? TRUE : FALSE;
 }
+void axSetCursor(int cursor_id) { (void)cursor_id; }

@@ -208,3 +208,4 @@ axSettingsLoad(char const *name, void *data, size_t capacity, size_t *out_size)
     *out_size = 0;
   return FALSE;
 }
+void axSetCursor(int cursor_id) { (void)cursor_id; }
