@@ -41,6 +41,21 @@ static NSOpenGLPixelFormatAttribute attributes[16] = {
   0
 };
 
+static CGLPixelFormatAttribute surface_attributes[16] = {
+  NSOpenGLPFAOpenGLProfile,
+  NSOpenGLProfileVersion3_2Core,
+  NSOpenGLPFAColorSize,
+  24,
+  NSOpenGLPFAAlphaSize,
+  8,
+  NSOpenGLPFADepthSize,
+  24,
+  NSOpenGLPFAStencilSize,
+  8,
+  NSOpenGLPFAAllowOfflineRenderers,
+  0
+};
+
 static void
 BuildPixelFormatAttributes(uint32_t flags)
 {
@@ -60,18 +75,38 @@ BuildPixelFormatAttributes(uint32_t flags)
     attributes[i++] = NSOpenGLPFADoubleBuffer;
   }
   
+  attributes[i++] = NSOpenGLPFAAllowOfflineRenderers;
   attributes[i++] = NSOpenGLPFAAccelerated;
   attributes[i++] = NSOpenGLPFANoRecovery;
   attributes[i] = 0;
+}
+
+static void
+BuildSurfacePixelFormatAttributes(void)
+{
+  int i = 0;
+  surface_attributes[i++] = NSOpenGLPFAOpenGLProfile;
+  surface_attributes[i++] = NSOpenGLProfileVersion3_2Core;
+  surface_attributes[i++] = NSOpenGLPFAColorSize;
+  surface_attributes[i++] = 24;
+  surface_attributes[i++] = NSOpenGLPFAAlphaSize;
+  surface_attributes[i++] = 8;
+  surface_attributes[i++] = NSOpenGLPFADepthSize;
+  surface_attributes[i++] = 24;
+  surface_attributes[i++] = NSOpenGLPFAStencilSize;
+  surface_attributes[i++] = 8;
+  surface_attributes[i++] = NSOpenGLPFAAllowOfflineRenderers;
+  surface_attributes[i] = 0;
 }
 
 struct wstate {
   NSWindow *Window;
   WindowDelegate *Delegate;
   id DarkModeObserver;
+  NSOpenGLContext *windowCtx;
   CGLContextObj ctx;
   IOSurfaceRef surf;
-  GLuint texnum, framebuffer;
+  GLuint texnum, framebuffer, depth;
   GLuint width, height;
   GLfloat backingScale;
   uint32_t flags;
@@ -160,30 +195,50 @@ static NSWindow *MakeWindow(NSRect windowRect, uint32_t flags) {
                                          defer:NO];
 }
 
+static NSOpenGLPixelFormat *MakeOpenGLPixelFormat(void) {
+  NSOpenGLPixelFormat *pf = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
+  if (pf) return pf;
+
+  NSOpenGLPixelFormatAttribute legacy[] = {
+    NSOpenGLPFAColorSize, 24,
+    NSOpenGLPFAAlphaSize, 8,
+    NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersionLegacy,
+    NSOpenGLPFAAllowOfflineRenderers,
+    NSOpenGLPFANoRecovery,
+    0
+  };
+  return [[NSOpenGLPixelFormat alloc] initWithAttributes:legacy];
+}
+
 static NSOpenGLContext *MakeOpenGLContext(void) {
-  NSOpenGLPixelFormat *pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
-  NSOpenGLContext *context = [[NSOpenGLContext alloc] initWithFormat: pixelFormat shareContext: nil];
+  NSOpenGLPixelFormat *pixelFormat = MakeOpenGLPixelFormat();
+  if (!pixelFormat) {
+    printf("Failed to create NSOpenGLPixelFormat\n");
+    fflush(stdout);
+    return nil;
+  }
+  NSOpenGLContext *context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
+  if (!context) {
+    printf("Failed to create NSOpenGLContext\n");
+    fflush(stdout);
+  }
   [pixelFormat release];
   return context;
 }
 
 static void ConfigureOpenGLView(NSOpenGLView *openglView) {
   GLint            interval = 0;
-  NSOpenGLContext *context  = MakeOpenGLContext();
-
-  [openglView setOpenGLContext:context];
   [openglView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
   /* HiDPI is on by default (backward-compatible).  AX_WINDOW_HIGHDPI makes
    * the request explicit; it is honoured either way. */
   [openglView setWantsBestResolutionOpenGLSurface:YES];
-  
+
+  NSOpenGLContext *context = MakeOpenGLContext();
+  [openglView setOpenGLContext:context];
+  wstate.windowCtx = [context retain];
+  [context update];
   [context makeCurrentContext];
-  [context setValues:&interval
-        forParameter:NSOpenGLContextParameterSwapInterval];
-  
-  // Under manual retain/release, NSOpenGLView retains the context when set.
-  // Release our local ownership to avoid a leak reported by the analyzer.
-  [context release];
+  [context setValues:&interval forParameter:NSOpenGLContextParameterSwapInterval];
 }
 
 bool_t
@@ -210,8 +265,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   if (wstate.Window) {
 //    [g_window setContentSize:NSMakeSize(width, height)];
 //    [g_window setFrameOrigin:CenterOnScreen(width, height).origin];
-    NSOpenGLView *view = [wstate.Window contentView];
-    [[view openGLContext] makeCurrentContext];
+    [wstate.windowCtx makeCurrentContext];
     return TRUE;
   }
 
@@ -221,37 +275,40 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 
 	NSRect           windowRect  = CenterOnScreen(width, height);
 	NSRect           viewRect    = CGRectMake(0, 0, width, height);
-	NSOpenGLView    *openGLView  = [[NSOpenGLView alloc] initWithFrame:viewRect];
+	NSOpenGLPixelFormat *pf      = MakeOpenGLPixelFormat();
+	NSOpenGLView    *openGLView  = [[NSOpenGLView alloc] initWithFrame:viewRect pixelFormat:pf];
 	NSString        *windowTitle = [[NSString alloc] initWithUTF8String:title];
 	NSWindow        *window      = MakeWindow(windowRect, flags);
 	WindowDelegate  *delegate    = [[WindowDelegate alloc] init];
+  [pf release];
 
   [delegate setWindow:window];
   
 	[window setFrameOrigin:windowRect.origin];
 	[window setTitle:windowTitle];
   [window setReleasedWhenClosed:NO];
-	[window orderFront:nil];
 	[window setAcceptsMouseMovedEvents:YES];
 	[window setContentView:openGLView];
 	[window setDelegate:delegate];
 	[window setInitialFirstResponder:openGLView];
 	[window setContentSize:NSMakeSize(width, height)];
-	[window orderOut:nil];
 	[window display];
 	[window setFrameOrigin:CenterOnScreen(width, height).origin];
 	[window registerForDraggedTypes:[NSArray arrayWithObject:NSPasteboardTypeFileURL]];
 
+  ConfigureOpenGLView(openGLView);
+
   if (!(flags & AX_WINDOW_HIDDEN)) {
     [window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
+  } else {
+    [window orderOut:nil];
   }
 
   if (flags & AX_WINDOW_FULLSCREEN) {
     [window toggleFullScreen:nil];
   }
-  
-  ConfigureOpenGLView(openGLView);
+
   wstate.DarkModeObserver = ListenForDarkModeChanges(window);
   
   if (wstate.width != width || wstate.height != height) {
@@ -288,7 +345,7 @@ void axShutdown(void) {
     NSWindow *window = wstate.Window;
     NSView *contentView = [window contentView];
     if ([contentView isKindOfClass:[NSOpenGLView class]]) {
-      NSOpenGLContext *context = [(NSOpenGLView *)contentView openGLContext];
+      NSOpenGLContext *context = wstate.windowCtx ? wstate.windowCtx : [(NSOpenGLView *)contentView openGLContext];
       if ([NSOpenGLContext currentContext] == context) {
         [NSOpenGLContext clearCurrentContext];
       }
@@ -308,6 +365,25 @@ void axShutdown(void) {
     [window close];
     [window release];
     wstate.Window = nil;
+    if (wstate.windowCtx) {
+      [wstate.windowCtx release];
+      wstate.windowCtx = nil;
+    }
+  } else if (wstate.surf) {
+    if (wstate.ctx && [NSOpenGLContext currentContext] == (NSOpenGLContext *)wstate.ctx) {
+      [NSOpenGLContext clearCurrentContext];
+    }
+    if (wstate.framebuffer) glDeleteFramebuffers(1, &wstate.framebuffer);
+    if (wstate.texnum) glDeleteTextures(1, &wstate.texnum);
+    if (wstate.depth) glDeleteRenderbuffers(1, &wstate.depth);
+    wstate.framebuffer = 0;
+    wstate.texnum = 0;
+    wstate.depth = 0;
+    wstate.surf = NULL;
+    if (wstate.ctx) {
+      CGLReleaseContext(wstate.ctx);
+      wstate.ctx = NULL;
+    }
   }
 
   if (wstate.Delegate) {
@@ -365,7 +441,13 @@ void axBindFramebuffer(void) {
 void axBeginPaint(void) {
   if (wstate.Window) {
     NSOpenGLView *view = [wstate.Window contentView];
-    [[view openGLContext] makeCurrentContext];
+    NSOpenGLContext *context = wstate.windowCtx ? wstate.windowCtx : [view openGLContext];
+    [context update];
+    [context makeCurrentContext];
+    if (!glGetString(GL_VERSION)) {
+      printf("OpenGL context not current in axBeginPaint: view=%p ctx=%p current=%p\n", view, context, [NSOpenGLContext currentContext]);
+      fflush(stdout);
+    }
   } else if (wstate.surf) {
     CGLSetCurrentContext(wstate.ctx);
   }
@@ -377,15 +459,22 @@ void axEndPaint(void) {
     if (!(wstate.flags & AX_WINDOW_DOUBLEBUFFER)) {
       glFlush();
     } else {
-      [[[wstate.Window contentView] openGLContext] flushBuffer];
+      [wstate.windowCtx flushBuffer];
     }
   }
 }
 
+void axHideWindow(void) {
+  if (wstate.Window) [wstate.Window orderOut:nil];
+}
+
 void axMakeCurrentContext(void) {
   if (wstate.Window) {
-    NSOpenGLView *view = [wstate.Window contentView];
-    [[view openGLContext] makeCurrentContext];
+    NSOpenGLContext *context = wstate.windowCtx;
+    [context update];
+    [context makeCurrentContext];
+  } else if (wstate.surf) {
+    CGLSetCurrentContext(wstate.ctx);
   }
 }
 
@@ -396,40 +485,41 @@ void axMakeCurrentContext(void) {
 BOOL
 IOSurface_Create(uint32_t w, uint32_t h)
 {
-  NSDictionary* props = [NSDictionary dictionaryWithObjectsAndKeys:
-                        [NSNumber numberWithBool:YES], kIOSurfaceIsGlobal,
-                        [NSNumber numberWithInt:w], kIOSurfaceWidth,
-                        [NSNumber numberWithInt:h], kIOSurfaceHeight,
-                        [NSNumber numberWithInt:4], kIOSurfaceBytesPerElement,
-                        nil];
-  
-  wstate.surf = IOSurfaceCreate((__bridge CFDictionaryRef)props);
-  if (!wstate.surf) {
-    NSLog(@"Can't create IOSurface");
-    return NO;
-  }
-  CGLContextObj ctx = CGLGetCurrentContext();
+  (void)CGLGetCurrentContext();
   glGenTextures(1, &wstate.texnum);
   glGenFramebuffers(1, &wstate.framebuffer);
+  glGenRenderbuffers(1, &wstate.depth);
   glBindFramebuffer(GL_FRAMEBUFFER, wstate.framebuffer);
-  // Attach IOSurface to OpenGL texture
-  glBindTexture(GL_TEXTURE_RECTANGLE_EXT, wstate.texnum);
-  CGLTexImageIOSurface2D(ctx, GL_TEXTURE_RECTANGLE_EXT, GL_RGBA, w, h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, wstate.surf, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE_EXT, wstate.texnum, 0);
-  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glBindTexture(GL_TEXTURE_RECTANGLE_EXT, 0);
+  glBindTexture(GL_TEXTURE_2D, wstate.texnum);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, wstate.texnum, 0);
+  glBindRenderbuffer(GL_RENDERBUFFER, wstate.depth);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, wstate.depth);
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    NSLog(@"Can't create offscreen framebuffer");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (wstate.framebuffer) glDeleteFramebuffers(1, &wstate.framebuffer);
+    if (wstate.texnum) glDeleteTextures(1, &wstate.texnum);
+    if (wstate.depth) glDeleteRenderbuffers(1, &wstate.depth);
+    wstate.framebuffer = 0;
+    wstate.texnum = 0;
+    wstate.depth = 0;
+    return NO;
+  }
+  glBindTexture(GL_TEXTURE_2D, 0);
   
+  wstate.surf = (IOSurfaceRef)1;
   wstate.width = w;
   wstate.height = h;
   wstate.backingScale = 1;
 
   axPostMessageW(NULL, kEventWindowPaint, MAKEDWORD(w, h), 0);
-  
-  _IOSurface = IOSurfaceGetID(wstate.surf);
-  fprintf(stderr, "IOSurface ID: %u\n", _IOSurface);  // Share this ID with the other app
   return YES;
 }
 
@@ -450,10 +540,18 @@ axCreateSurface(uint32_t width, uint32_t height)
   if (wstate.surf) {
     return TRUE;
   }
+  BuildSurfacePixelFormatAttributes();
   CGLPixelFormatObj pix;
   GLint npix;
-  CGLChoosePixelFormat(attributes, &pix, &npix);
-  CGLCreateContext(pix, NULL, &wstate.ctx);
+  if (CGLChoosePixelFormat(surface_attributes, &pix, &npix) != kCGLNoError || !pix) {
+    NSLog(@"Failed to choose offscreen pixel format");
+    return FALSE;
+  }
+  if (CGLCreateContext(pix, NULL, &wstate.ctx) != kCGLNoError || !wstate.ctx) {
+    NSLog(@"Failed to create offscreen GL context");
+    CGLDestroyPixelFormat(pix);
+    return FALSE;
+  }
   CGLDestroyPixelFormat(pix);
   CGLSetCurrentContext(wstate.ctx);
  
