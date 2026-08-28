@@ -120,7 +120,7 @@ axNetSetReuseAddr(int sock, bool_t reuse)
 }
 
 bool_t
-axNetBind(int sock, uint16_t port)
+axNetBind(int sock, char const *host, uint16_t port)
 {
   /* Detect the socket's address family via getsockname so we can bind
    * both IPv4 and IPv6 sockets correctly. */
@@ -136,7 +136,12 @@ axNetBind(int sock, uint16_t port)
     struct sockaddr_in6 addr6;
     memset(&addr6, 0, sizeof(addr6));
     addr6.sin6_family = AF_INET6;
-    addr6.sin6_addr   = in6addr_any;
+    if (!host) {
+      addr6.sin6_addr = in6addr_any;
+    } else if (inet_pton(AF_INET6, host, &addr6.sin6_addr) != 1) {
+      fprintf(stderr, "axNetBind: invalid IPv6 address: %s\n", host);
+      return FALSE;
+    }
     addr6.sin6_port   = htons(port);
     if (bind(sock, (struct sockaddr *)&addr6, sizeof(addr6)) == -1) {
       perror("axNetBind");
@@ -146,7 +151,12 @@ axNetBind(int sock, uint16_t port)
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family      = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (!host) {
+      addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    } else if (inet_pton(AF_INET, host, &addr.sin_addr) != 1) {
+      fprintf(stderr, "axNetBind: invalid IPv4 address: %s\n", host);
+      return FALSE;
+    }
     addr.sin_port        = htons(port);
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
       perror("axNetBind");

@@ -1114,6 +1114,139 @@ axCancelTimer(uint32_t timer_id);
 /** @} */
 
 /**
+ * @defgroup threads Threads and mutexes
+ * @brief Minimal cross-platform threading primitives.
+ *
+ * Opaque handles keep platform types out of public headers.  The thread
+ * function receives the @p arg pointer and may call any platform API;
+ * the handle must be passed to #axThreadJoin before the process exits.
+ * @{
+ */
+
+/** @brief Opaque thread handle returned by #axThreadCreate. */
+typedef void *axthread_t;
+
+/** @brief Opaque mutex handle returned by #axMutexCreate. */
+typedef void *axmutex_t;
+
+/**
+ * @brief Spawn a new thread that calls @p fn(arg).
+ *
+ * @param fn   Function the thread executes.
+ * @param arg  Passed unchanged to @p fn.
+ * @return Thread handle on success, `NULL` on failure.
+ */
+AX_API axthread_t
+axThreadCreate(void (*fn)(void *), void *arg);
+
+/**
+ * @brief Wait for @p thread to finish and release its resources.
+ *
+ * @param thread  Handle returned by #axThreadCreate.  Passing `NULL` is safe.
+ */
+AX_API void
+axThreadJoin(axthread_t thread);
+
+/**
+ * @brief Create a non-recursive mutex.
+ *
+ * @return Mutex handle on success, `NULL` on failure.
+ */
+AX_API axmutex_t
+axMutexCreate(void);
+
+/**
+ * @brief Acquire @p mutex, blocking until it is available.
+ *
+ * @param mutex  Handle returned by #axMutexCreate.
+ */
+AX_API void
+axMutexLock(axmutex_t mutex);
+
+/**
+ * @brief Release @p mutex.
+ *
+ * @param mutex  Handle returned by #axMutexCreate.
+ */
+AX_API void
+axMutexUnlock(axmutex_t mutex);
+
+/**
+ * @brief Destroy @p mutex and free its resources.
+ *
+ * The mutex must not be held when this is called.
+ *
+ * @param mutex  Handle returned by #axMutexCreate.  Passing `NULL` is safe.
+ */
+AX_API void
+axMutexDestroy(axmutex_t mutex);
+
+/** @} */
+
+/**
+ * @defgroup rc Remote Control
+ * @brief TCP-based remote-control server for test automation.
+ *
+ * Start the server with #axRCStart (typically triggered by a `-rc` flag).
+ * An external test harness connects on the given port and sends newline-
+ * terminated text commands; each command receives an `ok` or `err` reply.
+ *
+ * ### Protocol
+ * | Command | Effect |
+ * |---------|--------|
+ * | `click <x> <y>`     | Left button down + up at (x, y) |
+ * | `rclick <x> <y>`    | Right button down + up at (x, y) |
+ * | `move <x> <y>`      | Mouse moved to (x, y) |
+ * | `scroll <x> <y> <dx> <dy>` | Scroll at (x, y) by the given wheel delta |
+ * | `key <code>`        | Key down + key up (virtual key code integer) |
+ * | `keydown <code>`    | Key down only |
+ * | `keyup <code>`      | Key up only |
+ * | `screenshot <path>` | Schedule screenshot; taken on the next painted frame |
+ * | `stop`              | Post a window-close event to quit the application |
+ * | `quit`              | Close the connection only |
+ *
+ * Responses are `ok\n` or `err <reason>\n`.
+ * @{
+ */
+
+/**
+ * @brief Start the remote-control TCP server on @p port.
+ *
+ * Spawns a background thread that accepts one client at a time and
+ * processes commands via #axPostMessageW.  Call once after #axInit.
+ *
+ * @param port  TCP port to listen on (1024–65535).
+ * @return `TRUE` on success, `FALSE` if the socket could not be bound.
+ */
+AX_API bool_t
+axRCStart(uint16_t port);
+
+/**
+ * @brief Stop the remote-control server and join its thread.
+ *
+ * Safe to call even if #axRCStart was never called.
+ */
+AX_API void
+axRCStop(void);
+
+/**
+ * @brief Remove a pending screenshot request, if one exists.
+ *
+ * When a `screenshot <path>` command is received the path is stored here.
+ * The main event loop should call this each iteration, take the screenshot
+ * via the UI layer, then call #axRCClearPendingScreenshot.
+ *
+ * @param path    Buffer receiving the null-terminated path.
+ * @param pathlen Size of @p path in bytes.
+ * @return `TRUE` when a path was copied, `FALSE` when no request is pending
+ *         or the buffer is too small.
+ */
+AX_API bool_t
+axRCPopScreenshot(char *path, int pathlen);
+
+/** @} */
+
+/**
  * @defgroup net Networking
  * @brief Portable socket, DNS, TLS, and async I/O primitives for HTTP/HTTPS
  *        and general TCP/UDP networking.
@@ -1249,14 +1382,16 @@ AX_API bool_t
 axNetSetReuseAddr(int sock, bool_t reuse);
 
 /**
- * @brief Bind a socket to a local port on all interfaces.
+ * @brief Bind a socket to a local host and port.
  *
  * @param sock  Socket descriptor.
- * @param port  Local port number in host byte order.
+ * @param host  Numeric local address, or `NULL` for all local interfaces.
+ *              The address family must match the socket.
+ * @param port  Local port number in host byte order.  Pass 0 to select one.
  * @return `TRUE` on success, `FALSE` on failure.
  */
 AX_API bool_t
-axNetBind(int sock, uint16_t port);
+axNetBind(int sock, char const *host, uint16_t port);
 
 /**
  * @brief Mark a bound socket as passive and set the connection backlog.

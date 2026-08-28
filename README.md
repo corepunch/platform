@@ -181,7 +181,7 @@ int    axNetRecv(int sock, void* buf, int len);                   // Receive dat
 bool_t axNetWouldBlock(void);                                     // Test for EAGAIN/EWOULDBLOCK
 bool_t axNetResolve(const char* host, char* out, int outlen);     // DNS lookup to IP string
 int    axNetPoll(int sock, int events, int timeout_ms);           // Wait for I/O readiness
-bool_t axNetBind(int sock, uint16_t port);                        // Bind to a local port
+bool_t axNetBind(int sock, const char* host, uint16_t port);      // Bind to a local address
 bool_t axNetListen(int sock, int backlog);                        // Mark socket as passive
 int    axNetAccept(int sock);                                     // Accept an incoming connection
 
@@ -193,6 +193,25 @@ int       axTlsRecv(AXtlsctx* ctx, void* buf, int len);          // Receive thro
 ```
 
 See [`docs/networking.md`](docs/networking.md) for full examples.
+
+### Remote Control
+
+Standalone applications using `GEM_STANDALONE_MAIN` can be started with
+`-rc` to expose a localhost TCP control socket on port `17777`:
+
+```sh
+build/bin/helloworld -rc
+printf 'click 120 80\n' | nc 127.0.0.1 17777
+printf 'screenshot /tmp/helloworld.jpg\n' | nc 127.0.0.1 17777
+```
+
+Use `-rc PORT` to select another port. Commands are newline-delimited and
+receive `ok` or `err` replies. The supported commands are `click x y`,
+`rclick x y`, `move x y`, `scroll x y dx dy`, `key code`, `keydown code`,
+`keyup code`, `screenshot path`, `stop`, and `quit`. Coordinates and key codes
+use the same logical coordinate and platform key-code conventions as native
+events. The server binds to IPv4 localhost traffic only through the platform
+socket API and runs its accept loop on a background platform thread.
 
 ### System Utilities
 

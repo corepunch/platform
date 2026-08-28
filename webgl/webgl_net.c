@@ -53,8 +53,9 @@ axNetSetReuseAddr(int sock, bool_t reuse)
 }
 
 bool_t
-axNetBind(int sock, uint16_t port)
+axNetBind(int sock, char const *host, uint16_t port)
 {
+  (void)host;
   (void)sock;
   (void)port;
   return FALSE;

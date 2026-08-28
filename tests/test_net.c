@@ -101,7 +101,7 @@ test_loopback_echo(void)
   assert(axNetSetReuseAddr(server, TRUE) == TRUE);
 
   /* Bind to port 0 so the OS assigns a free port. */
-  assert(axNetBind(server, 0) == TRUE);
+  assert(axNetBind(server, NULL, 0) == TRUE);
   assert(axNetListen(server, 1) == TRUE);
 
   /* Discover the assigned port. */
@@ -160,7 +160,7 @@ test_poll_timeout(void)
 {
   int s = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
   assert(s >= 0);
-  assert(axNetBind(s, 0) == TRUE);
+  assert(axNetBind(s, NULL, 0) == TRUE);
   assert(axNetListen(s, 1) == TRUE);
 
   /* No client connects: expect timeout (0). */
@@ -201,7 +201,7 @@ test_nonblocking_wouldblock(void)
   int server = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
   assert(server >= 0);
   assert(axNetSetReuseAddr(server, TRUE) == TRUE);
-  assert(axNetBind(server, 0) == TRUE);
+  assert(axNetBind(server, NULL, 0) == TRUE);
   assert(axNetListen(server, 1) == TRUE);
 
 #if defined(_WIN32) || defined(__MINGW32__)
@@ -251,7 +251,7 @@ test_udp_loopback(void)
   int server = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_UDP);
   assert(server >= 0);
   assert(axNetSetReuseAddr(server, TRUE) == TRUE);
-  assert(axNetBind(server, 0) == TRUE);
+  assert(axNetBind(server, NULL, 0) == TRUE);
 
   /* Discover the assigned port. */
 #if defined(_WIN32) || defined(__MINGW32__)
@@ -320,7 +320,7 @@ test_poll_write_ready(void)
   int server = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
   assert(server >= 0);
   assert(axNetSetReuseAddr(server, TRUE) == TRUE);
-  assert(axNetBind(server, 0) == TRUE);
+  assert(axNetBind(server, NULL, 0) == TRUE);
   assert(axNetListen(server, 1) == TRUE);
 
 #if defined(_WIN32) || defined(__MINGW32__)
