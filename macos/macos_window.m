@@ -226,14 +226,11 @@ static NSOpenGLContext *MakeOpenGLContext(void) {
   return context;
 }
 
-static void ConfigureOpenGLView(NSOpenGLView *openglView) {
+static void ConfigureOpenGLView(NSOpenGLView *openglView, uint32_t flags) {
   GLint            interval = 0;
   [openglView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
-#ifdef ORION_FORCE_NON_RETINA
-  [openglView setWantsBestResolutionOpenGLSurface:NO];
-#else
-  [openglView setWantsBestResolutionOpenGLSurface:YES];
-#endif
+  [openglView setWantsBestResolutionOpenGLSurface:
+    (flags & AX_WINDOW_HIGHDPI) ? YES : NO];
 
   NSOpenGLContext *context = MakeOpenGLContext();
   [openglView setOpenGLContext:context];
@@ -298,7 +295,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 	[window setFrameOrigin:CenterOnScreen(width, height).origin];
 	[window registerForDraggedTypes:[NSArray arrayWithObject:NSPasteboardTypeFileURL]];
 
-  ConfigureOpenGLView(openGLView);
+  ConfigureOpenGLView(openGLView, flags);
 
   if (!(flags & AX_WINDOW_HIDDEN)) {
     [window makeKeyAndOrderFront:nil];
