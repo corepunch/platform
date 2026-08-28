@@ -3,6 +3,7 @@ LIBNAME = libplatform.$(LIB_EXT)
 TARGET = $(OUTDIR)/$(LIBNAME)
 HASH := \#
 ARCH ?= $(shell uname -m)
+FORCE_NON_RETINA ?= 0
 
 # Platform detection
 ifdef EMSCRIPTEN
@@ -104,6 +105,10 @@ else ifeq ($(PLATFORM_OS),windows)
 	HAS_WINDOWING := 1
 else
 	$(error Unsupported OS: $(PLATFORM_UNAME_S))
+endif
+
+ifeq ($(FORCE_NON_RETINA),1)
+CFLAGS += -DORION_FORCE_NON_RETINA
 endif
 
 all: $(TARGET)

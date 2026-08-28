@@ -229,9 +229,11 @@ static NSOpenGLContext *MakeOpenGLContext(void) {
 static void ConfigureOpenGLView(NSOpenGLView *openglView) {
   GLint            interval = 0;
   [openglView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
-  /* HiDPI is on by default (backward-compatible).  AX_WINDOW_HIGHDPI makes
-   * the request explicit; it is honoured either way. */
+#ifdef ORION_FORCE_NON_RETINA
+  [openglView setWantsBestResolutionOpenGLSurface:NO];
+#else
   [openglView setWantsBestResolutionOpenGLSurface:YES];
+#endif
 
   NSOpenGLContext *context = MakeOpenGLContext();
   [openglView setOpenGLContext:context];
