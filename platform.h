@@ -1198,10 +1198,14 @@ axMutexDestroy(axmutex_t mutex);
  * | `rclick <x> <y>`    | Right button down + up at (x, y) |
  * | `move <x> <y>`      | Mouse moved to (x, y) |
  * | `scroll <x> <y> <dx> <dy>` | Scroll at (x, y) by the given wheel delta |
- * | `key <code>`        | Key down + key up (virtual key code integer) |
- * | `keydown <code>`    | Key down only |
- * | `keyup <code>`      | Key up only |
+ * | `key <code> [mods]`     | Key down + key up (virtual key code integer) |
+ * | `keydown <code> [mods]` | Key down only |
+ * | `keyup <code> [mods]`   | Key up only |
+ * | `type <text>`       | Send each character of text as a key down/up pair |
  * | `screenshot <path>` | Schedule screenshot; taken on the next painted frame |
+ *
+ * `mods` is an optional bitmask (1=Shift, 2=Ctrl, 4=Alt, 8=Cmd) needed to
+ * trigger accelerator-bound commands such as Ctrl+K.
  * | `stop`              | Post a window-close event to quit the application |
  * | `quit`              | Close the connection only |
  *

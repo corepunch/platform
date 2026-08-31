@@ -9,6 +9,7 @@
  * See platform.h @defgroup rc for the full command reference.
  */
 
+#include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -39,7 +40,7 @@ rc_reply(int conn, const char *msg)
 static bool_t
 rc_dispatch(int conn, const char *line)
 {
-  int x, y, code, dx, dy;
+  int x, y, code, dx, dy, mods;
   char path[512];
 
   if (sscanf(line, "click %d %d", &x, &y) == 2) {
@@ -61,12 +62,25 @@ rc_dispatch(int conn, const char *line)
                    (void *)(intptr_t)MAKEDWORD(dx, dy));
     rc_reply(conn, "ok\n");
 
+  } else if (sscanf(line, "keydown %d %d", &code, &mods) == 2) {
+    axPostMessageW(NULL, kEventKeyDown, MAKEDWORD(code, mods), NULL);
+    rc_reply(conn, "ok\n");
+
   } else if (sscanf(line, "keydown %d", &code) == 1) {
     axPostMessageW(NULL, kEventKeyDown, (uint32_t)code, NULL);
     rc_reply(conn, "ok\n");
 
+  } else if (sscanf(line, "keyup %d %d", &code, &mods) == 2) {
+    axPostMessageW(NULL, kEventKeyUp, MAKEDWORD(code, mods), NULL);
+    rc_reply(conn, "ok\n");
+
   } else if (sscanf(line, "keyup %d", &code) == 1) {
     axPostMessageW(NULL, kEventKeyUp, (uint32_t)code, NULL);
+    rc_reply(conn, "ok\n");
+
+  } else if (sscanf(line, "key %d %d", &code, &mods) == 2) {
+    axPostMessageW(NULL, kEventKeyDown, MAKEDWORD(code, mods), NULL);
+    axPostMessageW(NULL, kEventKeyUp,   MAKEDWORD(code, mods), NULL);
     rc_reply(conn, "ok\n");
 
   } else if (sscanf(line, "key %d", &code) == 1) {
@@ -74,10 +88,26 @@ rc_dispatch(int conn, const char *line)
     axPostMessageW(NULL, kEventKeyUp,   (uint32_t)code, NULL);
     rc_reply(conn, "ok\n");
 
+  } else if (strncmp(line, "type ", 5) == 0) {
+    /* Each character round-trips through kEventKeyDown/Up the same way a
+     * real keypress does: keyCode = uppercase ASCII, lParam's low byte
+     * carries the literal character for text-input handlers. */
+    for (const char *p = line + 5; *p; p++) {
+      unsigned char ch = (unsigned char)*p;
+      uint32_t key_code = (uint32_t)toupper(ch);
+      axPostMessageW(NULL, kEventKeyDown, key_code, (void *)(intptr_t)ch);
+      axPostMessageW(NULL, kEventKeyUp,   key_code, NULL);
+    }
+    rc_reply(conn, "ok\n");
+
   } else if (sscanf(line, "screenshot %511s", path) == 1) {
     axMutexLock(s_mutex);
     strncpy(s_screenshot_path, path, sizeof(s_screenshot_path) - 1);
     axMutexUnlock(s_mutex);
+    /* The main loop only polls for a pending screenshot between blocking
+     * axGetMessage() calls, so wake it with a message the dispatcher
+     * already treats as a no-op. */
+    axPostMessageW(NULL, kEventModifiersChanged, 0, NULL);
     rc_reply(conn, "ok\n");
 
   } else if (strcmp(line, "stop") == 0) {
