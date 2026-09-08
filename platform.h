@@ -1191,27 +1191,54 @@ axMutexDestroy(axmutex_t mutex);
  * An external test harness connects on the given port and sends newline-
  * terminated text commands; each command receives an `ok` or `err` reply.
  *
- * ### Protocol
+ * ### Input commands
  * | Command | Effect |
  * |---------|--------|
- * | `click <x> <y>`     | Left button down + up at (x, y) |
- * | `rclick <x> <y>`    | Right button down + up at (x, y) |
- * | `move <x> <y>`      | Mouse moved to (x, y) |
- * | `scroll <x> <y> <dx> <dy>` | Scroll at (x, y) by the given wheel delta |
- * | `key <code> [mods]`     | Key down + key up (virtual key code integer) |
- * | `keydown <code> [mods]` | Key down only |
- * | `keyup <code> [mods]`   | Key up only |
- * | `type <text>`       | Send each character of text as a key down/up pair |
- * | `screenshot <path>` | Schedule screenshot; taken on the next painted frame |
+ * | `click <x> <y>`              | Left button down + up at (x, y) |
+ * | `rclick <x> <y>`             | Right button down + up at (x, y) |
+ * | `dblclick <x> <y>`           | Left down + up + double-click at (x, y) |
+ * | `drag <x1> <y1> <x2> <y2>`   | Press at (x1,y1), drag to (x2,y2), release |
+ * | `move <x> <y>`               | Mouse moved to (x, y) |
+ * | `scroll <x> <y> <dx> <dy>`   | Scroll at (x, y) by the given wheel delta |
+ * | `key <code> [mods]`          | Key down + key up (virtual key code integer) |
+ * | `keydown <code> [mods]`      | Key down only |
+ * | `keyup <code> [mods]`        | Key up only |
+ * | `type <text>`                | Send each character as a key down/up pair |
+ * | `screenshot <path>`          | Schedule screenshot on the next painted frame |
+ * | `stop`                       | Post a window-close event to quit the app |
+ * | `quit`                       | Close the TCP connection only |
  *
- * `mods` is an optional bitmask (1=Shift, 2=Ctrl, 4=Alt, 8=Cmd) needed to
- * trigger accelerator-bound commands such as Ctrl+K.
- * | `stop`              | Post a window-close event to quit the application |
- * | `quit`              | Close the connection only |
+ * `mods` bitmask: 1=Shift, 2=Ctrl, 4=Alt, 8=Cmd.
+ *
+ * ### Read queries (answered on the main thread via #axRCProcessQuery)
+ * | Command | Reply |
+ * |---------|-------|
+ * | `list_windows`                    | One `window <x> <y> <w> <h> <title>` line per root window, then `ok` |
+ * | `get_focus`                       | `focused <title>` then `ok` (empty title when nothing focused) |
+ * | `get_rect <title>`                | `rect <x> <y> <w> <h>` (screen coords) then `ok` |
+ * | `get_ctrl_rect <ctrl_id> <title>` | `rect <x> <y> <w> <h>` (screen coords) then `ok` |
+ * | `get_text <ctrl_id> <title>`      | `text <string>` then `ok` |
+ * | `get_value <ctrl_id> <title>`     | `value <uint>` then `ok` |
+ * | `click_ctrl <ctrl_id> <title>`    | Click centre of named control, reply `ok` |
+ *
+ * `<title>` is the rest of the line and may contain spaces.
+ * Read queries block the RC thread until the main thread calls #axRCProcessQuery.
  *
  * Responses are `ok\n` or `err <reason>\n`.
  * @{
  */
+
+/**
+ * @brief Callback type for processing read queries on the main thread.
+ *
+ * The implementation fills @p response (NUL-terminated, at most @p response_len
+ * bytes) and returns.  The response must end with either `ok\n` or
+ * `err <reason>\n`.
+ *
+ * Register with #axRCSetQueryHandler; the UI layer (gem.h) provides a
+ * default implementation that reads from the live window tree.
+ */
+typedef void (*rc_query_fn_t)(const char *request, char *response, int response_len);
 
 /**
  * @brief Start the remote-control TCP server on @p port.
@@ -1247,6 +1274,30 @@ axRCStop(void);
  */
 AX_API bool_t
 axRCPopScreenshot(char *path, int pathlen);
+
+/**
+ * @brief Register the query handler called by #axRCProcessQuery.
+ *
+ * Must be called before the first `list_windows` / `get_*` / `click_ctrl`
+ * command arrives.  Typically called once after #axRCStart.
+ *
+ * @param handler  Callback that fills a response buffer from the live UI
+ *                 state.  Pass NULL to unregister.
+ */
+AX_API void
+axRCSetQueryHandler(rc_query_fn_t handler);
+
+/**
+ * @brief Process one pending read query on the main thread.
+ *
+ * Must be called from the main event loop each iteration (alongside
+ * #axRCPopScreenshot).  When a query is pending it invokes the registered
+ * handler, fills the response, and unblocks the waiting RC thread.
+ *
+ * @return `TRUE` if a query was processed, `FALSE` if none was pending.
+ */
+AX_API bool_t
+axRCProcessQuery(void);
 
 /** @} */
 
