@@ -5,7 +5,10 @@ HASH := \#
 ARCH ?= $(shell uname -m)
 
 # Platform detection
-ifdef EMSCRIPTEN
+ifneq (,$(filter iphoneos iphonesimulator,$(SDK)))
+PLATFORM_OS := ios
+PLATFORM_UNAME_S := iOS
+else ifdef EMSCRIPTEN
 PLATFORM_OS := emscripten
 PLATFORM_UNAME_S := Emscripten
 else ifeq ($(OS),Windows_NT)
@@ -40,6 +43,16 @@ ifdef EMSCRIPTEN
 	LIB_EXT = wasm
 	FIND_SOURCES = find webgl -name "*.c"
 	LANG = c
+else ifeq ($(PLATFORM_OS),ios)
+	IOS_MIN ?= 16.0
+	CC = xcrun --sdk $(SDK) clang
+	SDK_PATH := $(shell xcrun --sdk $(SDK) --show-sdk-path)
+	MIN_FLAG = $(if $(filter iphoneos,$(SDK)),-miphoneos-version-min,-mios-simulator-version-min)=$(IOS_MIN)
+	CFLAGS = -Wall -Wextra -I. -arch $(ARCH) -isysroot "$(SDK_PATH)" $(MIN_FLAG) -fobjc-arc -Wno-deprecated-declarations
+	LIB_EXT = a
+	FIND_SOURCES = ( find ios -name '*.m'; find unix -name '*.c'; )
+	LANG = objective-c
+	HAS_WINDOWING := 1
 else ifeq ($(PLATFORM_OS),darwin)
 	CC = clang
 	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION -Wno-deprecated-declarations
@@ -117,8 +130,22 @@ CFLAGS += -arch $(ARCH)
 LDFLAGS += -arch $(ARCH)
 endif
 
+ifeq ($(PLATFORM_OS),ios)
+IOS_SOURCES := $(wildcard ios/*.m unix/*.c ios/*.h) platform.h events.h rc_server_impl.c
+.PHONY: ios-settings
+ios-settings:
+	@mkdir -p "$(OUTDIR)"
+	@printf '%s\n' '$(CC) $(CFLAGS)' > "$(OUTDIR)/ios-settings.tmp"
+	@cmp -s "$(OUTDIR)/ios-settings.tmp" "$(OUTDIR)/ios-settings" || cp "$(OUTDIR)/ios-settings.tmp" "$(OUTDIR)/ios-settings"
+$(OUTDIR)/ios-settings: ios-settings
+$(TARGET): $(IOS_SOURCES) $(OUTDIR)/ios-settings
+	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -DHAVE_WINDOWING -x $(LANG) -c - -o "$(OUTDIR)/platform.o"
+	xcrun --sdk $(SDK) ar rcs "$@" "$(OUTDIR)/platform.o"
+else
 $(TARGET):
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
+
+endif
 
 # Parse platform.h to find all AX_API functions, generate a C test that asserts
 # each function pointer is non-NULL (i.e. the symbol is defined), then compile,

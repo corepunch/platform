@@ -23,6 +23,13 @@
 
 #include "events.h"
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#if TARGET_OS_IOS
+#define AX_PLATFORM_IOS 1
+#endif
+#endif
+
 #ifndef LOWORD
 /** @brief Extract the low 16 bits of a 32-bit value. */
 #define LOWORD(l) ((uint16_t)(l & 0xFFFF))
@@ -495,6 +502,15 @@ axGetFolderName(AXopenfilename const *ofn);
  */
 AX_API void
 axInit(void);
+
+#ifdef AX_PLATFORM_IOS
+/** UIKit owns the main loop. start/frame/stop run on the main thread.
+ * Declare AXSceneDelegate in the app scene manifest, or use the supplied
+ * AXApplicationDelegate configuration through this entry point. */
+AX_API void axSetTextInput(bool_t enabled);
+AX_API int axRunApplication(int argc, char **argv, bool_t (*start)(int, char **),
+                            void (*frame)(void), void (*stop)(void));
+#endif
 
 /**
  * @brief Shut down the platform subsystem and release all resources.
