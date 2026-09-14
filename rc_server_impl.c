@@ -274,7 +274,7 @@ rc_thread(void *arg)
  * Public API
  * ---------------------------------------------------------------------- */
 
-bool_t
+AX_API bool_t
 axRCStart(uint16_t port)
 {
   if (s_active)
@@ -308,7 +308,7 @@ axRCStart(uint16_t port)
   return TRUE;
 }
 
-void
+AX_API void
 axRCStop(void)
 {
   if (!s_active)
@@ -322,7 +322,7 @@ axRCStop(void)
   s_mutex = NULL;
 }
 
-bool_t
+AX_API bool_t
 axRCPopScreenshot(char *path, int pathlen)
 {
   if (!path || pathlen <= 0 || !s_mutex)
@@ -338,13 +338,13 @@ axRCPopScreenshot(char *path, int pathlen)
   return found;
 }
 
-void
+AX_API void
 axRCSetQueryHandler(rc_query_fn_t handler)
 {
   s_query_handler = handler;
 }
 
-bool_t
+AX_API bool_t
 axRCProcessQuery(void)
 {
   if (!s_query_pending || !s_mutex)
