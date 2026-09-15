@@ -12,7 +12,10 @@ static pthread_mutex_t ios_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 static NSMutableDictionary<NSNumber *, NSTimer *> *ios_timers;
 static uint32_t ios_next_timer = 1;
 
-void axPostMessageW(void *target, uint32_t event, uint32_t wparam, void *lparam) {
+static void ios_enqueue(struct AXmessage value) {
+  void *target = value.target;
+  uint32_t event = value.message, wparam = value.wParam;
+  void *lparam = value.lParam;
   pthread_mutex_lock(&ios_queue_mutex);
   if (event == kEventWindowPaint || event == kEventWindowResized) {
     for (ios_message_t *p = ios_head; p; p = p->next) {
@@ -30,11 +33,19 @@ void axPostMessageW(void *target, uint32_t event, uint32_t wparam, void *lparam)
     IOS_TRACE("queue allocation failed target=%p event=%u", target, event);
     return;
   }
-  p->value = (struct AXmessage){ .target = target, .message = event, .wParam = wparam, .lParam = lparam };
+  p->value = value;
   if (ios_tail) ios_tail->next = p; else ios_head = p;
   ios_tail = p;
   pthread_mutex_unlock(&ios_queue_mutex);
   CFRunLoopWakeUp(CFRunLoopGetMain());
+}
+
+void axPostMessageW(void *target, uint32_t event, uint32_t wparam, void *lparam) {
+  ios_enqueue((struct AXmessage){ .target = target, .message = event, .wParam = wparam, .lParam = lparam });
+}
+
+void ios_post_gesture(ax_gesture_t gesture) {
+  ios_enqueue((struct AXmessage){ .message = kEventGesture, .gesture = gesture });
 }
 
 int axPeekMessage(struct AXmessage *msg) {

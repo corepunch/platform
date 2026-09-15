@@ -1,5 +1,6 @@
 #ifndef __PLATFORM_EVENTS_H__
 #define __PLATFORM_EVENTS_H__
+#include <stdint.h>
 
 #define kEventLeftButtonDown 0xfac0b5e7
 #define kEventRightButtonDown 0x1057ac50
@@ -31,5 +32,14 @@
 #define kEventJoyButtonDown 0x6d4f8e2a
 #define kEventJoyButtonUp 0x8b1c5f3d
 #define kEventTimer 0xa8f3b521
+#define kEventGesture 0xa8f3b522
+#define kEventPointerCancel 0xa8f3b523
+
+enum { AX_GESTURE_BEGIN, AX_GESTURE_UPDATE, AX_GESTURE_END, AX_GESTURE_CANCEL };
+typedef struct {
+  uint32_t phase;
+  float x, y, previous_x, previous_y;
+  float scale, rotation; // Incremental scale factor and clockwise radians.
+} ax_gesture_t;
 
 #endif

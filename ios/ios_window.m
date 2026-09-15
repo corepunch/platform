@@ -1,5 +1,6 @@
 #include "ios_local.h"
 #include <unistd.h>
+#include <math.h>
 
 UIWindow *ios_window;
 AXView *ios_view;
@@ -83,6 +84,24 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   axPostMessageW(NULL, kEventKeyUp, AX_KEY_BACKSPACE, NULL);
 }
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+  if (self.gesture_first) return;
+  if (self.active_touch.type != UITouchTypePencil) {
+    NSMutableArray<UITouch *> *fingers = [NSMutableArray new];
+    for (UITouch *t in event.allTouches)
+      if (t.type == UITouchTypeDirect && t.phase != UITouchPhaseEnded && t.phase != UITouchPhaseCancelled)
+        [fingers addObject:t];
+    if (fingers.count >= 2) {
+      [self cancel_touch];
+      self.gesture_first = fingers[0]; self.gesture_second = fingers[1];
+      CGPoint a = [self.gesture_first locationInView:self], b = [self.gesture_second locationInView:self];
+      self.gesture_center = CGPointMake((a.x + b.x) / 2, (a.y + b.y) / 2);
+      self.gesture_vector = CGPointMake(b.x - a.x, b.y - a.y);
+      IOS_TRACE("gesture begin x=%.1f y=%.1f", self.gesture_center.x, self.gesture_center.y);
+      ios_post_gesture((ax_gesture_t){AX_GESTURE_BEGIN, self.gesture_center.x, self.gesture_center.y,
+                                    self.gesture_center.x, self.gesture_center.y, 1, 0});
+      return;
+    }
+  }
   UITouch *touch = touches.anyObject;
   for (UITouch *candidate in touches) if (candidate.type == UITouchTypePencil) touch = candidate;
   if (self.active_touch) {
@@ -94,19 +113,44 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   if (touch.tapCount == 2) ios_touch(touch, kEventLeftDoubleClick);
 }
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+  if (self.gesture_first) {
+    CGPoint a = [self.gesture_first locationInView:self], b = [self.gesture_second locationInView:self];
+    CGPoint center = CGPointMake((a.x + b.x) / 2, (a.y + b.y) / 2);
+    CGPoint vector = CGPointMake(b.x - a.x, b.y - a.y), old = self.gesture_vector;
+    float length = hypotf(vector.x, vector.y), previous = hypotf(old.x, old.y);
+    float scale = previous > 1 && length > 1 ? length / previous : 1;
+    float angle = previous > 1 && length > 1 ? atan2f(old.x * vector.y - old.y * vector.x,
+                                                                  old.x * vector.x + old.y * vector.y) : 0;
+    ios_post_gesture((ax_gesture_t){AX_GESTURE_UPDATE, center.x, center.y,
+                                  self.gesture_center.x, self.gesture_center.y, scale, angle});
+    self.gesture_center = center; self.gesture_vector = vector;
+    return;
+  }
   if (![touches containsObject:self.active_touch]) return;
   for (UITouch *touch in [event coalescedTouchesForTouch:self.active_touch] ?: @[self.active_touch])
     ios_touch(touch, kEventLeftButtonDragged);
 }
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-  if ([touches containsObject:self.active_touch]) [self cancel_touch];
+  if ([touches containsObject:self.gesture_first] || [touches containsObject:self.gesture_second]) [self end_gesture:NO];
+  if ([touches containsObject:self.active_touch]) {
+    ios_touch(self.active_touch, kEventLeftButtonUp);
+    self.active_touch = nil;
+  }
 }
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+  if ([touches containsObject:self.gesture_first] || [touches containsObject:self.gesture_second]) [self end_gesture:YES];
   if ([touches containsObject:self.active_touch]) [self cancel_touch];
 }
 - (void)cancel_touch {
-  if (self.active_touch) ios_touch(self.active_touch, kEventLeftButtonUp);
+  if (self.active_touch) ios_touch(self.active_touch, kEventPointerCancel);
   self.active_touch = nil;
+}
+- (void)end_gesture:(BOOL)cancelled {
+  if (!self.gesture_first) return;
+  IOS_TRACE("gesture end cancelled=%d", cancelled);
+  ios_post_gesture((ax_gesture_t){cancelled ? AX_GESTURE_CANCEL : AX_GESTURE_END,
+    self.gesture_center.x, self.gesture_center.y, self.gesture_center.x, self.gesture_center.y, 1, 0});
+  self.gesture_first = nil; self.gesture_second = nil;
 }
 - (void)layoutSubviews { [super layoutSubviews]; if (ios_context) ios_resize_surface(); }
 - (void)hover:(UIHoverGestureRecognizer *)gesture {
@@ -150,7 +194,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   [ios_view addGestureRecognizer:[[UIHoverGestureRecognizer alloc] initWithTarget:ios_view action:@selector(hover:)]];
   UIPanGestureRecognizer *scroll = [[UIPanGestureRecognizer alloc] initWithTarget:ios_view action:@selector(scroll:)];
   scroll.minimumNumberOfTouches = 2;
-  scroll.allowedTouchTypes = @[@(UITouchTypeDirect), @(UITouchTypeIndirectPointer)];
+  scroll.allowedTouchTypes = @[@(UITouchTypeIndirectPointer)];
   scroll.allowedScrollTypesMask = UIScrollTypeMaskAll;
   [ios_view addGestureRecognizer:scroll];
 }
@@ -185,6 +229,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 - (void)sceneWillResignActive:(UIScene *)scene {
   IOS_TRACE("scene inactive");
   [ios_view cancel_touch];
+  [ios_view end_gesture:YES];
   axPostMessageW(NULL, kEventKillFocus, 0, NULL);
   ios_display_link.paused = YES;
   if (ios_context) { [EAGLContext setCurrentContext:ios_context]; glFinish(); }

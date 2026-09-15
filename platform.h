@@ -333,6 +333,7 @@ struct AXmessage
     struct { int16_t dx, dy; };   /**< Relative delta (drag / scroll events). */
   };
   uint32_t id; /**< Sequence number assigned at post time. */
+  ax_gesture_t gesture; /**< Inline payload for kEventGesture; no borrowed storage. */
 };
 
 /**
