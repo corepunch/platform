@@ -177,7 +177,8 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 - (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event {
   for (UIPress *press in presses) ios_key(press, kEventKeyUp, FALSE);
 }
-- (BOOL)prefersStatusBarHidden { return NO; }
+- (BOOL)prefersStatusBarHidden { return YES; }
+- (BOOL)prefersHomeIndicatorAutoHidden { return YES; }
 - (void)viewDidLoad {
   [super viewDidLoad];
   self.view.backgroundColor = UIColor.blackColor;
@@ -185,12 +186,11 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   ios_view.multipleTouchEnabled = YES;
   ios_view.translatesAutoresizingMaskIntoConstraints = NO;
   [self.view addSubview:ios_view];
-  UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
   [NSLayoutConstraint activateConstraints:@[
-    [ios_view.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor],
-    [ios_view.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor],
-    [ios_view.topAnchor constraintEqualToAnchor:safe.topAnchor],
-    [ios_view.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor]]];
+    [ios_view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+    [ios_view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+    [ios_view.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+    [ios_view.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]]];
   [ios_view addGestureRecognizer:[[UIHoverGestureRecognizer alloc] initWithTarget:ios_view action:@selector(hover:)]];
   UIPanGestureRecognizer *scroll = [[UIPanGestureRecognizer alloc] initWithTarget:ios_view action:@selector(scroll:)];
   scroll.minimumNumberOfTouches = 2;
