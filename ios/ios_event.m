@@ -48,6 +48,12 @@ void ios_post_gesture(ax_gesture_t gesture) {
   ios_enqueue((struct AXmessage){ .message = kEventGesture, .gesture = gesture });
 }
 
+void ios_post_touch(uint32_t event, uint32_t wparam, void *lparam, ax_pointer_t pointer) {
+  ios_enqueue((struct AXmessage){
+    .message = event, .wParam = wparam, .lParam = lparam, .pointer = pointer
+  });
+}
+
 int axPeekMessage(struct AXmessage *msg) {
   if (!msg) { IOS_TRACE("peek rejected: null message"); return 0; }
   pthread_mutex_lock(&ios_queue_mutex);
@@ -102,6 +108,7 @@ uint32_t axSetTimer(void *target, uint32_t interval, void *userdata, bool_t repe
   if (!ios_timers) ios_timers = [NSMutableDictionary new];
   uint32_t tid = ios_next_timer++;
   NSTimer *timer = [NSTimer timerWithTimeInterval:interval / 1000.0 repeats:repeat block:^(NSTimer *t) {
+    (void)t;
     axPostMessageW(target, kEventTimer, tid, userdata);
     if (!repeat) [ios_timers removeObjectForKey:@(tid)];
   }];

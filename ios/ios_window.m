@@ -15,13 +15,25 @@ static int ios_argc;
 static char **ios_argv;
 static bool_t ios_started, ios_in_frame;
 
+static ax_pointer_t ios_pointer(UITouch *touch) {
+  ax_pointer_t p = {0};
+  if (touch.type == UITouchTypePencil) {
+    p.flags = AX_POINTER_STYLUS;
+    p.altitude = (float)touch.altitudeAngle;
+  }
+  return p;
+}
+
 static void ios_touch(UITouch *touch, uint32_t event) {
   CGPoint p = [touch locationInView:ios_view];
   CGPoint old = [touch previousLocationInView:ios_view];
   if (event != kEventLeftButtonDragged)
-    IOS_TRACE("touch view=%p event=%u x=%.1f y=%.1f pencil=%d", (__bridge void *)ios_view, event, p.x, p.y, touch.type == UITouchTypePencil);
-  axPostMessageW(NULL, event, MAKEDWORD((int)p.x, (int)p.y),
-    event == kEventLeftButtonDragged ? (void *)(intptr_t)MAKEDWORD((int)(p.x - old.x), (int)(p.y - old.y)) : NULL);
+    IOS_TRACE("touch view=%p event=%u x=%.1f y=%.1f pencil=%d altitude=%.2f",
+              (__bridge void *)ios_view, event, p.x, p.y,
+              touch.type == UITouchTypePencil, (double)touch.altitudeAngle);
+  ios_post_touch(event, MAKEDWORD((int)p.x, (int)p.y),
+    event == kEventLeftButtonDragged ? (void *)(intptr_t)MAKEDWORD((int)(p.x - old.x), (int)(p.y - old.y)) : NULL,
+    ios_pointer(touch));
 }
 
 static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
@@ -297,7 +309,7 @@ bool_t axCreateWindow(const char *title, uint32_t w, uint32_t h, uint32_t flags)
   glGenRenderbuffers(1, &ios_color);
   glGenRenderbuffers(1, &ios_depth);
   ios_resize_surface();
-  IOS_TRACE("create window title=%s", title);
+  IOS_TRACE("create window title=%s requested=%ux%u", title, w, h);
   return ios_width > 0 && glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
 }
 void axInit(void) {
@@ -325,7 +337,7 @@ void axEndPaint(void) {
   glBindRenderbuffer(GL_RENDERBUFFER, ios_color);
   if (![ios_context presentRenderbuffer:GL_RENDERBUFFER]) IOS_TRACE("present failed");
 }
-bool_t axSetSize(uint32_t w, uint32_t h, bool_t centered) { IOS_TRACE("resize request rejected: iOS owns window size requested=%ux%u", w, h); return FALSE; }
+bool_t axSetSize(uint32_t w, uint32_t h, bool_t centered) { IOS_TRACE("resize request rejected: iOS owns window size requested=%ux%u centered=%d", w, h, centered); return FALSE; }
 bool_t axCreateSurface(uint32_t w, uint32_t h) { IOS_TRACE("offscreen window unsupported size=%ux%u", w, h); return FALSE; }
 bool_t axSetSwapInterval(int interval) {
   if (interval < 0 || interval > 1) { IOS_TRACE("swap interval rejected=%d", interval); return FALSE; }

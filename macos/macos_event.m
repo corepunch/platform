@@ -221,7 +221,8 @@ start_over:
   
   int x = event.locationInWindow.x;
   int y = event.window.contentView.frame.size.height - event.locationInWindow.y;
-  
+
+  memset(e, 0, sizeof(*e));
   e->target = (void *)event.window;
   e->message = GetEventType(event);
   e->wParam = MAKEDWORD(x, y);

@@ -17,7 +17,7 @@ char const *axSettingsDirectory(void) {
   return path;
 }
 bool_t axIsDarkTheme(void) { return ios_view.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark; }
-void axSetCursor(int cursor) { /* UIKit owns pointer appearance. */ }
+void axSetCursor(int cursor) { (void)cursor; /* UIKit owns pointer appearance. */ }
 bool_t axJoystickInit(void) { return FALSE; }
 void axJoystickShutdown(void) {}
 bool_t axJoystickAvailable(void) { return FALSE; }
@@ -56,6 +56,7 @@ static bool_t ios_pick_file(AXopenfilename const *ofn, bool_t folder) {
 }
 bool_t axGetOpenFileName(AXopenfilename const *ofn) { return ios_pick_file(ofn, FALSE); }
 bool_t axGetFolderName(AXopenfilename const *ofn) {
+  (void)ofn;
   IOS_TRACE("external folder access unsupported; use app Documents"); return FALSE;
 }
 bool_t axGetSaveFileName(AXopenfilename const *ofn) {
@@ -68,8 +69,9 @@ bool_t axGetSaveFileName(AXopenfilename const *ofn) {
   [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
     field.text = ofn->lpstrFile[0] ? [NSString stringWithUTF8String:ofn->lpstrFile].lastPathComponent : @"Untitled.png";
   }];
-  [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) { done = YES; }]];
+  [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) { (void)action; done = YES; }]];
   [alert addAction:[UIAlertAction actionWithTitle:@"Save" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    (void)action;
     NSString *name = alert.textFields.firstObject.text.lastPathComponent;
     if (name.length && ![name isEqualToString:@"."] && ![name isEqualToString:@".."]) {
       NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;

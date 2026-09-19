@@ -315,7 +315,8 @@ struct AXbuffer
  * type (one of the `kEvent*` constants from events.h) and determines how the
  * parameter unions should be interpreted.
  *
- * Mouse events:   @p wParam = MAKEDWORD(x, y), @p lParam = scroll/drag delta.
+ * Mouse events:   @p wParam = MAKEDWORD(x, y), @p lParam = scroll/drag delta,
+ *                 @p pointer = stylus sample (zeroed when the device is not a stylus).
  * Keyboard events: @p wParam = key-code | modifier flags, @p lParam = UTF-8 char.
  * Window events:  @p target = window handle, @p wParam = new width/height.
  */
@@ -334,6 +335,7 @@ struct AXmessage
   };
   uint32_t id; /**< Sequence number assigned at post time. */
   ax_gesture_t gesture; /**< Inline payload for kEventGesture; no borrowed storage. */
+  ax_pointer_t pointer; /**< Stylus sample for pointer events; zeroed otherwise. */
 };
 
 /**

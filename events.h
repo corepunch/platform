@@ -42,4 +42,10 @@ typedef struct {
   float scale, rotation; // Incremental scale factor and clockwise radians.
 } ax_gesture_t;
 
+enum { AX_POINTER_STYLUS = 1u << 0 };
+typedef struct {
+  uint32_t flags;   /**< AX_POINTER_STYLUS when the sample is a stylus / Apple Pencil. */
+  float altitude;   /**< Radians: 0 = parallel to the surface, π/2 = perpendicular. */
+} ax_pointer_t;
+
 #endif

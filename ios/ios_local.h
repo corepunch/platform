@@ -21,4 +21,5 @@ extern CADisplayLink *ios_display_link;
 void ios_resize_surface(void);
 void ios_cancel_timers(void);
 void ios_post_gesture(ax_gesture_t gesture);
+void ios_post_touch(uint32_t event, uint32_t wparam, void *lparam, ax_pointer_t pointer);
 #endif
