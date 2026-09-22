@@ -40,10 +40,12 @@ input. Hardware keys retain modifier flags for framework accelerators.
 The event queue accepts worker-thread posts and coalesces paint/resize events
 by target. Timers run on the main run loop and are cancelled when their owner
 is removed. Settings live in Application Support; the working directory is
-Documents. Open imports a copy through the system document picker; native
-save chooses a file in Documents. External directory picking, offscreen native
+Documents. Open starts the native document picker in Documents. Local documents
+open directly; external selections are read with security-scoped access and file
+coordination, then copied into Documents under a unique name. Native Save asks
+for a filename, applies the filter extension and confirms replacement. External directory picking, offscreen native
 windows and joystick discovery are not implemented; rejected requests log to
-stderr. The app may provide its own framework file picker for Documents.
+stderr. Orion routes both Open and Save to these native dialogs.
 
 Apple references: [OpenGL ES context and drawable](https://developer.apple.com/documentation/opengles)
 and [coalesced touch input](https://developer.apple.com/documentation/uikit/getting-high-fidelity-input-with-coalesced-touches).
