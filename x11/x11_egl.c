@@ -1,5 +1,6 @@
 #include "x11_local.h"
 #include "../platform.h"
+#include <EGL/eglext.h>
 
 #define WIDTH 640
 #define HEIGHT 480
@@ -87,8 +88,29 @@ create_window(struct _WND* win, int32_t width, int32_t height)
   XFlush(x_display);
 
   win->egl_context = eglCreateContext(egl_display, egl_config, EGL_NO_CONTEXT, NULL);
+  EGLint surface_attributes[] = {
+    EGL_GL_COLORSPACE, EGL_GL_COLORSPACE_SRGB,
+    EGL_NONE
+  };
+  int surface_srgb = 1;
   win->egl_surface = eglCreateWindowSurface(egl_display, egl_config,
-                                             (EGLNativeWindowType)x_window, NULL);
+                                             (EGLNativeWindowType)x_window,
+                                             surface_attributes);
+  if (win->egl_surface == EGL_NO_SURFACE) {
+    surface_srgb = 0;
+    fprintf(stderr, "[x11] sRGB EGL surface failed error=0x%x; trying default RGB surface\n",
+            eglGetError());
+    win->egl_surface = eglCreateWindowSurface(egl_display, egl_config,
+                                               (EGLNativeWindowType)x_window, NULL);
+  }
+  if (win->egl_surface == EGL_NO_SURFACE) {
+    fprintf(stderr, "[x11] EGL surface creation failed error=0x%x\n", eglGetError());
+    fflush(stderr);
+    return;
+  }
+  fprintf(stderr, "[x11] EGL output surface color space=%s\n",
+          surface_srgb ? "sRGB" : "platform default fallback");
+  fflush(stderr);
   eglMakeCurrent(egl_display, win->egl_surface, win->egl_surface, win->egl_context);
 
   win->width  = width;
