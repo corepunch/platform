@@ -304,6 +304,13 @@ bool_t axCreateWindow(const char *title, uint32_t w, uint32_t h, uint32_t flags)
   ios_view.contentScaleFactor = ios_scale;
   CAEAGLLayer *layer = (CAEAGLLayer *)ios_view.layer;
   layer.opaque = YES;
+  CGColorSpaceRef color_space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+  if (color_space) {
+    layer.colorspace = color_space;
+    CGColorSpaceRelease(color_space);
+  } else {
+    IOS_TRACE("sRGB drawable color space unavailable; using platform default");
+  }
   layer.drawableProperties = @{kEAGLDrawablePropertyRetainedBacking: @YES, kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8};
   glGenFramebuffers(1, &ios_framebuffer);
   glGenRenderbuffers(1, &ios_color);

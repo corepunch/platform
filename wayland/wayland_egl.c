@@ -1,4 +1,5 @@
 #include "wayland_local.h"
+#include <EGL/eglext.h>
 
 #define WIDTH 640
 #define HEIGHT 480
@@ -131,14 +132,18 @@ create_window(struct _WND* window, int32_t width, int32_t height)
     EGL_NONE
   };
   window->egl_surface = eglCreateWindowSurface(egl_display, config, window->egl_window, surface_attributes);
-  if (!window->egl_window) {
-    printf("Failed to create sRGB EGL surface, trying regular RGB!\n");
+  if (window->egl_surface == EGL_NO_SURFACE) {
+    fprintf(stderr, "[wayland] sRGB EGL surface failed error=0x%x; trying default RGB surface\n",
+            eglGetError());
+    fflush(stderr);
     window->egl_surface = eglCreateWindowSurface(egl_display, config, window->egl_window, NULL);
   } else {
-    printf("Created sRGB EGL surface\n");
+    fprintf(stderr, "[wayland] created sRGB EGL surface\n");
+    fflush(stderr);
   }
-  if (!window->egl_window) {
-    printf("Failed to create EGL surface!\n");
+  if (window->egl_surface == EGL_NO_SURFACE) {
+    fprintf(stderr, "[wayland] EGL surface creation failed error=0x%x\n", eglGetError());
+    fflush(stderr);
     return;
   }
   eglMakeCurrent(egl_display, window->egl_surface, window->egl_surface, window->egl_context);
