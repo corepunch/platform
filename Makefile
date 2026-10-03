@@ -147,6 +147,12 @@ $(TARGET):
 
 endif
 
+ifeq ($(PLATFORM_OS),ios)
+INCLUDE_IOS_API := 1
+else
+INCLUDE_IOS_API := 0
+endif
+
 # Parse platform.h to find all AX_API functions, generate a C test that asserts
 # each function pointer is non-NULL (i.e. the symbol is defined), then compile,
 # link and run that test against the built library.
@@ -156,7 +162,7 @@ test:
 else
 test: $(TARGET)
 	@printf '#include "platform.h"\n#include <assert.h>\nint main(void) {\n' > $(TEST_SRC)
-	@awk '/^AX_API[[:space:]]/{getline; sub(/[(].*/,""); printf "    assert(%s != NULL);\n", $$1}' platform.h >> $(TEST_SRC)
+	@awk -v include_ios=$(INCLUDE_IOS_API) '/^#ifdef AX_PLATFORM_IOS/ { ios=1; next } /^#endif/ && ios { ios=0; next } ios && include_ios != 1 { next } /^AX_API[[:space:]]/ { line=$$0; while (line !~ /;/ && (getline nl) > 0) line=line " " nl; sub(/^AX_API[[:space:]]+/, "", line); n=split(line, parts, "("); if (n < 2) next; m=split(parts[1], toks, /[^A-Za-z0-9_]+/); name=toks[m]; if (name != "") printf "    assert(%s != NULL);\n", name }' platform.h >> $(TEST_SRC)
 	@printf '    return 0;\n}\n' >> $(TEST_SRC)
 	@$(CC) -I. $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
 	@$(TEST_BIN)

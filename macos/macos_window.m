@@ -284,7 +284,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   [delegate setWindow:window];
   
   [window setFrameOrigin:windowRect.origin];
-	[window setColorSpace:[NSColorSpace sRGBColorSpace]];
+  [window setColorSpace:[NSColorSpace sRGBColorSpace]];
 	[window setTitle:windowTitle];
   [window setReleasedWhenClosed:NO];
 	[window setAcceptsMouseMovedEvents:YES];

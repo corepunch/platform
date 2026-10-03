@@ -100,6 +100,7 @@ create_window(struct _WND* win, int32_t width, int32_t height)
     surface_srgb = 0;
     fprintf(stderr, "[x11] sRGB EGL surface failed error=0x%x; trying default RGB surface\n",
             eglGetError());
+    fflush(stderr);
     win->egl_surface = eglCreateWindowSurface(egl_display, egl_config,
                                                (EGLNativeWindowType)x_window, NULL);
   }
