@@ -13,6 +13,23 @@ A lightweight, cross-platform C library providing a unified API for window manag
 - **Event System**: Unified event handling for mouse, keyboard, and window events
 - **Input Processing**: Comprehensive keyboard and mouse input with modifier support
 - **Networking**: Portable TCP/UDP sockets, DNS resolution, TLS (Schannel/Secure Transport/OpenSSL), and non-blocking I/O
+- **Audio**: SDL-style WAV playback (PCM, float, A-law, mu-law) with a queued or callback device and a software mixer
+
+Load a WAV and queue it to the default device. Devices start paused, as in SDL. ADPCM is not supported.
+
+```c
+AXaudiospec spec;
+uint8_t *samples = NULL;
+uint32_t nbytes = 0;
+if (axLoadWAV("jump.wav", &spec, &samples, &nbytes)) {
+    int dev = axAudioOpen(&spec, NULL);
+    if (dev) {
+        axAudioQueue(dev, samples, nbytes);
+        axAudioPause(dev, FALSE);
+    }
+    axFreeWAV(samples);
+}
+```
 - **File Dialogs**: Native file open/save dialogs
 - **System Integration**: Theme detection, directory paths, timing utilities
 - **Minimal Dependencies**: Simple C API with no bloat

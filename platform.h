@@ -4,7 +4,7 @@
  *
  * This header defines the public API for the platform library, providing
  * a unified interface for window management, event handling, OpenGL/EGL
- * rendering context management, file dialogs, and system utilities across
+ * rendering context management, WAV playback, file dialogs, and system utilities across
  * macOS, Linux (Wayland or X11), QNX, and WebGL (Emscripten) targets.
  *
  * All public symbols are exported via the #AX_API visibility macro.
@@ -1632,5 +1632,144 @@ AX_API int
 axTlsRecv(AXtlsctx *ctx, void *buf, int len);
 
 /** @} */
+
+
+/**
+ * @defgroup audio Audio
+ * @brief SDL-style WAV loading and playback.
+ *
+ * WAV support covers RIFF PCM (8, 16, 24, and 32-bit), IEEE float 32, A-law,
+ * and mu-law. Compressed ADPCM is not supported. Samples are returned in
+ * host endianness. Playback devices start paused, matching SDL: queue or
+ * install a callback, then call #axAudioPause with `FALSE`.
+ *
+ * The hardware backend consumes signed 16-bit frames. #axAudioQueue and the
+ * device callback use the format requested at #axAudioOpen; conversion happens
+ * inside the device. Volume for #axAudioMix is SDL's 0–128 scale, where 128
+ * is unity.
+ * @{
+ */
+
+/** @brief Unsigned 8-bit sample, biased at 128. */
+#define AX_AUDIO_U8  0x0008
+/** @brief Signed 16-bit host-endian sample. */
+#define AX_AUDIO_S16 0x8010
+/** @brief Signed 32-bit host-endian sample. */
+#define AX_AUDIO_S32 0x8020
+/** @brief 32-bit IEEE float sample in the range [-1, 1]. */
+#define AX_AUDIO_F32 0x8120
+
+/** @brief Sample format passed to the device and mixer. */
+typedef int AXaudioformat;
+
+/**
+ * @brief Desired or obtained playback format.
+ *
+ * @p samples is the hardware period in frames. @p callback may be NULL, in
+ * which case the device pulls bytes queued with #axAudioQueue. A callback
+ * must fill @p stream completely and must not call #axAudioLock,
+ * #axAudioQueue, or #axAudioClose.
+ */
+typedef struct AXaudiospec {
+  int freq;            /**< Sample frames per second. */
+  AXaudioformat format;/**< One of AX_AUDIO_U8, S16, S32, or F32. */
+  uint8_t channels;    /**< 1 or 2. */
+  uint16_t samples;    /**< Period size in sample frames. */
+  void (*callback)(void *userdata, uint8_t *stream, int len);
+  void *userdata;      /**< Passed through to @p callback. */
+} AXaudiospec;
+
+/** @brief Prepare the audio subsystem. Safe to call more than once. */
+AX_API bool_t
+axAudioInit(void);
+
+/** @brief Close the device and release audio subsystem resources. */
+AX_API void
+axAudioShutdown(void);
+
+/**
+ * @brief Last audio error, or NULL if the last call succeeded.
+ * The pointer is invalidated by the next audio call.
+ */
+AX_API char const *
+axAudioGetError(void);
+
+/**
+ * @brief Open the default playback device.
+ *
+ * Starts paused. Pass NULL @p desired for 44100 Hz stereo S16. On success
+ * returns a device id (currently always 1). Only one device may be open.
+ *
+ * @param[in]  desired   Requested format, or NULL for defaults.
+ * @param[out] obtained  Filled with the accepted format; may be NULL.
+ * @return Device id, or 0 on failure.
+ */
+AX_API int
+axAudioOpen(AXaudiospec const *desired, AXaudiospec *obtained);
+
+/** @brief Close a device opened by #axAudioOpen. Passing an unknown id is safe. */
+AX_API void
+axAudioClose(int dev);
+
+/**
+ * @brief Pause or resume playback.
+ * @param pause  `TRUE` to pause, `FALSE` to start the callback or queued audio.
+ */
+AX_API void
+axAudioPause(int dev, bool_t pause);
+
+/** @brief Lock the device. Do not call from the audio callback. */
+AX_API void
+axAudioLock(int dev);
+
+/** @brief Unlock a device locked with #axAudioLock. */
+AX_API void
+axAudioUnlock(int dev);
+
+/**
+ * @brief Queue interleaved samples in the device format.
+ * Fails if the device was opened with a callback, or if the queue would
+ * exceed 4 MiB.
+ * @return `TRUE` if the bytes were copied into the queue.
+ */
+AX_API bool_t
+axAudioQueue(int dev, void const *data, uint32_t len);
+
+/** @brief Bytes still waiting in the playback queue. */
+AX_API uint32_t
+axAudioQueued(int dev);
+
+/** @brief Discard queued samples. Does not affect a callback device. */
+AX_API void
+axAudioClearQueue(int dev);
+
+/**
+ * @brief Load a RIFF WAVE file from disk.
+ * @param[out] spec       Format of the decoded buffer.
+ * @param[out] audio_buf  Allocated sample bytes. Free with #axFreeWAV.
+ * @param[out] audio_len  Length of @p audio_buf in bytes.
+ * @return `TRUE` on success.
+ */
+AX_API bool_t
+axLoadWAV(char const *path, AXaudiospec *spec, uint8_t **audio_buf, uint32_t *audio_len);
+
+/** @brief Load a RIFF WAVE image already in memory. Same contract as #axLoadWAV. */
+AX_API bool_t
+axLoadWAVMem(void const *data, uint32_t size, AXaudiospec *spec,
+             uint8_t **audio_buf, uint32_t *audio_len);
+
+/** @brief Free a buffer returned by #axLoadWAV or #axLoadWAVMem. NULL is safe. */
+AX_API void
+axFreeWAV(uint8_t *audio_buf);
+
+/**
+ * @brief Mix @p src onto @p dst with clipping.
+ * @param volume  0 is silence, 128 is unity, matching SDL_MixAudioFormat.
+ */
+AX_API void
+axAudioMix(uint8_t *dst, uint8_t const *src, AXaudioformat format, uint32_t len, int volume);
+
+/** @} */
+
 
 #endif

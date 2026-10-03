@@ -50,7 +50,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libwayland-dev libwayland-egl1-mesa libxkbcommon-dev libegl-dev libgl-dev
+        sudo apt-get install -y libwayland-dev libwayland-egl1-mesa libxkbcommon-dev libegl-dev libgl-dev libasound2-dev
     
     - name: Build
       run: make
@@ -78,7 +78,7 @@ jobs:
     - name: Install X11 dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libx11-dev libegl-dev libgl-dev
+        sudo apt-get install -y libx11-dev libegl-dev libgl-dev libasound2-dev
 
     - name: Build
       run: make
