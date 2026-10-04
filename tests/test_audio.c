@@ -60,7 +60,7 @@ static void test_pcm_and_mix(void)
   int16_t sample;
   int16_t dst[2];
   int16_t src[2];
-  char path[] = "/tmp/ax_test_tone.wav";
+  char path[] = "ax_test_tone.wav";
   FILE *f;
 
   assert(axLoadWAVMem(file, size, &spec, &buf, &len) == TRUE);
