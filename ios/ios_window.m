@@ -209,6 +209,26 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   scroll.allowedTouchTypes = @[@(UITouchTypeIndirectPointer)];
   scroll.allowedScrollTypesMask = UIScrollTypeMaskAll;
   [ios_view addGestureRecognizer:scroll];
+  for (NSNotificationName name in @[UIKeyboardWillChangeFrameNotification, UIKeyboardWillHideNotification])
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(keyboard:) name:name object:nil];
+}
+// The app slides up by the part of the window the on-screen keyboard covers.
+// A view transform keeps the drawable size, and locationInView: still reports
+// touches in the view's own coordinates.
+- (void)keyboard:(NSNotification *)note {
+  CGFloat cover = 0;
+  if (note.name != UIKeyboardWillHideNotification) {
+    CGRect end = [note.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    id<UICoordinateSpace> screen = self.view.window.screen.coordinateSpace;
+    CGRect kb = screen ? [self.view convertRect:end fromCoordinateSpace:screen] : CGRectZero;
+    CGRect hidden = CGRectIntersection(kb, self.view.bounds);
+    if (!CGRectIsNull(hidden) && CGRectGetMaxY(kb) >= CGRectGetMaxY(self.view.bounds)) cover = hidden.size.height;
+  }
+  IOS_TRACE("keyboard cover=%.1f", cover);
+  double duration = [note.userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+  UIViewAnimationOptions curve = (UIViewAnimationOptions)[note.userInfo[UIKeyboardAnimationCurveUserInfoKey] integerValue] << 16;
+  [UIView animateWithDuration:duration delay:0 options:curve | UIViewAnimationOptionBeginFromCurrentState
+                   animations:^{ ios_view.transform = CGAffineTransformMakeTranslation(0, -cover); } completion:nil];
 }
 - (void)viewDidAppear:(BOOL)animated {
   [super viewDidAppear:animated];
