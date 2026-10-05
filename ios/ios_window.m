@@ -20,7 +20,10 @@ static ax_pointer_t ios_pointer(UITouch *touch) {
   if (touch.type == UITouchTypePencil) {
     p.flags = AX_POINTER_STYLUS;
     p.altitude = (float)touch.altitudeAngle;
+  } else if (touch.type == UITouchTypeDirect) {
+    p.flags = AX_POINTER_TOUCH;
   }
+  p.time = (uint32_t)(uint64_t)(touch.timestamp * 1000);
   return p;
 }
 
