@@ -42,10 +42,11 @@ typedef struct {
   float scale, rotation; // Incremental scale factor and clockwise radians.
 } ax_gesture_t;
 
-enum { AX_POINTER_STYLUS = 1u << 0 };
+enum { AX_POINTER_STYLUS = 1u << 0, AX_POINTER_TOUCH = 1u << 1 };
 typedef struct {
-  uint32_t flags;   /**< AX_POINTER_STYLUS when the sample is a stylus / Apple Pencil. */
+  uint32_t flags;   /**< AX_POINTER_STYLUS for a stylus / Apple Pencil, AX_POINTER_TOUCH for a finger. */
   float altitude;   /**< Radians: 0 = parallel to the surface, π/2 = perpendicular. */
+  uint32_t time;    /**< Sample time in milliseconds for touch samples; 0 when unknown. */
 } ax_pointer_t;
 
 #endif
