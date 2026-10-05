@@ -35,7 +35,10 @@ finish GL work before suspension.
 Touch and coalesced Pencil samples become the standard AX pointer events;
 additional fingers are ignored during a stroke. Two-finger pan becomes scroll
 input. Hardware keys retain modifier flags for framework accelerators.
-`axSetTextInput` shows or hides the keyboard for an active text control.
+`axSetTextInput` shows or hides the keyboard for an active text control. While the
+on-screen keyboard covers the bottom of the window, the backend slides the
+whole app view up by the covered height, with the keyboard's own animation,
+and back down when it hides. Pointer coordinates are unaffected.
 
 The event queue accepts worker-thread posts and coalesces paint/resize events
 by target. Timers run on the main run loop and are cancelled when their owner
