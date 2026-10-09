@@ -19,7 +19,7 @@ Use a scene manifest with `AXSceneDelegate`, one scene, an iPad device family,
 a launch screen, and the orientations the app can lay out. Do not wrap the
 frame callback in a desktop-style infinite event loop.
 
-`axCreateWindow` uses the scene's safe-area bounds. The backend owns its ES 3
+`axCreateWindow` covers the whole screen, under the notch and home indicator. The backend owns its ES 3
 context, Retina renderbuffer and depth/stencil framebuffer. Resizing reallocates
 the drawable and posts `kEventWindowResized`; presentation retains the color
 buffer for Orion's incremental repainting. `axGetSize` and pointer events are

@@ -201,13 +201,12 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   ios_view.multipleTouchEnabled = YES;
   ios_view.translatesAutoresizingMaskIntoConstraints = NO;
   [self.view addSubview:ios_view];
-  // The drawable covers the safe area: clear of the notch, Dynamic Island and home indicator.
-  UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
+  // The drawable covers the whole screen, under the notch, Dynamic Island and home indicator.
   [NSLayoutConstraint activateConstraints:@[
-    [ios_view.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor],
-    [ios_view.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor],
-    [ios_view.topAnchor constraintEqualToAnchor:safe.topAnchor],
-    [ios_view.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor]]];
+    [ios_view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+    [ios_view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+    [ios_view.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+    [ios_view.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]]];
   [ios_view addGestureRecognizer:[[UIHoverGestureRecognizer alloc] initWithTarget:ios_view action:@selector(hover:)]];
   UIPanGestureRecognizer *scroll = [[UIPanGestureRecognizer alloc] initWithTarget:ios_view action:@selector(scroll:)];
   scroll.minimumNumberOfTouches = 2;
