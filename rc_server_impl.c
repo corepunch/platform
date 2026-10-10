@@ -121,6 +121,15 @@ rc_dispatch(int conn, const char *line)
                    (void *)(intptr_t)MAKEDWORD(dx, dy));
     rc_reply(conn, "ok\n");
 
+  } else if (strncmp(line, "drop ", 5) == 0) {
+    int consumed = 0;
+    if (sscanf(line + 5, "%d %d %n", &x, &y, &consumed) == 2 && line[5 + consumed]) {
+      axNotifyFileDropEvent(line + 5 + consumed, (float)x, (float)y);
+      rc_reply(conn, "ok\n");
+    } else {
+      rc_reply(conn, "err usage: drop <x> <y> <path>\n");
+    }
+
   /* --- Keyboard input --- */
 
   } else if (sscanf(line, "keydown %d %d", &code, &mods) == 2) {

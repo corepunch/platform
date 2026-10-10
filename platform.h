@@ -1219,6 +1219,7 @@ axMutexDestroy(axmutex_t mutex);
  * | `drag <x1> <y1> <x2> <y2>`   | Press at (x1,y1), drag to (x2,y2), release |
  * | `move <x> <y>`               | Mouse moved to (x, y) |
  * | `scroll <x> <y> <dx> <dy>`   | Scroll at (x, y) by the given wheel delta |
+ * | `drop <x> <y> <path>`        | Drop the file at path on (x, y), as a file dragged in |
  * | `key <code> [mods]`          | Key down + key up (virtual key code integer) |
  * | `keydown <code> [mods]`      | Key down only |
  * | `keyup <code> [mods]`        | Key up only |
