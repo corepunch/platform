@@ -46,7 +46,9 @@ is removed. Settings live in Application Support; the working directory is
 Documents. Open starts the native document picker in Documents. Local documents
 open directly; external selections are read with security-scoped access and file
 coordination, then copied into Documents under a unique name. Native Save asks
-for a filename, applies the filter extension and confirms replacement. External directory picking, offscreen native
+for a filename, applies the filter extension and confirms replacement. Files dragged in
+from other apps are copied into Documents under a unique name and posted as
+`kEventDragDrop` at the drop point, one event per file. External directory picking, offscreen native
 windows and joystick discovery are not implemented; rejected requests log to
 stderr. Orion routes both Open and Save to these native dialogs.
 

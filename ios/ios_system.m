@@ -32,6 +32,65 @@ static NSURL *ios_documents_url(void) {
   return url;
 }
 
+// "name", then "name 2", "name 3", ... starting at the given attempt.
+static NSURL *ios_unique_document(NSURL *documents, NSString *name, int attempt) {
+  NSURL *destination = nil;
+  for (int suffix = attempt; !destination || [NSFileManager.defaultManager fileExistsAtPath:destination.path]; suffix++) {
+    NSString *stem = name;
+    if (suffix > 1) {
+      stem = [NSString stringWithFormat:@"%@ %d", name.stringByDeletingPathExtension, suffix];
+      if (name.pathExtension.length) stem = [stem stringByAppendingPathExtension:name.pathExtension];
+    }
+    destination = [documents URLByAppendingPathComponent:stem];
+  }
+  return destination;
+}
+
+// Files dragged in from other apps are copied into Documents, then posted as
+// kEventDragDrop at the drop point, one event per file.
+@interface AXDropDelegate : NSObject <UIDropInteractionDelegate>
+@end
+@implementation AXDropDelegate
+- (BOOL)dropInteraction:(UIDropInteraction *)interaction canHandleSession:(id<UIDropSession>)session {
+  return [session hasItemsConformingToTypeIdentifiers:@[UTTypeData.identifier]];
+}
+- (UIDropProposal *)dropInteraction:(UIDropInteraction *)interaction sessionDidUpdate:(id<UIDropSession>)session {
+  return [[UIDropProposal alloc] initWithDropOperation:UIDropOperationCopy];
+}
+- (void)dropInteraction:(UIDropInteraction *)interaction performDrop:(id<UIDropSession>)session {
+  CGPoint at = [session locationInView:interaction.view];
+  NSURL *documents = ios_documents_url();
+  if (!documents) return;
+  for (UIDragItem *item in session.items) {
+    NSItemProvider *provider = item.itemProvider;
+    NSString *type = nil;
+    for (NSString *candidate in provider.registeredTypeIdentifiers)
+      if ([[UTType typeWithIdentifier:candidate] conformsToType:UTTypeData]) { type = candidate; break; }
+    if (!type) { IOS_TRACE("drop item has no file representation types=%s", provider.registeredTypeIdentifiers.description.UTF8String); continue; }
+    [provider loadFileRepresentationForTypeIdentifier:type completionHandler:^(NSURL *url, NSError *error) {
+      if (!url) { IOS_TRACE("drop load failed type=%s: %s", type.UTF8String, error.localizedDescription.UTF8String); return; }
+      // The provider's file is deleted when this handler returns; concurrent drops may race for a name.
+      NSError *copy_error = nil;
+      NSURL *destination = nil;
+      for (int attempt = 1; attempt < 100; attempt++) {
+        destination = ios_unique_document(documents, url.lastPathComponent, attempt);
+        copy_error = nil;
+        if ([NSFileManager.defaultManager copyItemAtURL:url toURL:destination error:&copy_error]) break;
+        if (copy_error.code != NSFileWriteFileExistsError) break;
+      }
+      if (copy_error) { IOS_TRACE("drop import failed name=%s: %s", url.lastPathComponent.UTF8String, copy_error.localizedDescription.UTF8String); return; }
+      axNotifyFileDropEvent(destination.fileSystemRepresentation, (float)at.x, (float)at.y);
+    }];
+  }
+}
+@end
+
+void ios_install_drop(UIView *view) {
+  static AXDropDelegate *delegate;   // UIDropInteraction holds its delegate weakly
+  if (!delegate) delegate = [AXDropDelegate new];
+  [view addInteraction:[[UIDropInteraction alloc] initWithDelegate:delegate]];
+}
+
 static void ios_wait_for_dismissal(void) {
   while (ios_window.rootViewController.presentedViewController) axWaitMessage(10);
 }
@@ -80,16 +139,8 @@ bool_t axGetOpenFileName(AXopenfilename const *ofn) {
   NSString *root = [documents.URLByResolvingSymlinksInPath.path stringByAppendingString:@"/"];
   BOOL local = [source.URLByResolvingSymlinksInPath.path hasPrefix:root];
   BOOL ok = YES;
-  if (!local) {
-    // Import external providers into permanent, app-owned storage without replacing another drawing.
-    NSString *name = source.lastPathComponent;
-    destination = [documents URLByAppendingPathComponent:name];
-    for (int suffix = 2; [NSFileManager.defaultManager fileExistsAtPath:destination.path]; suffix++) {
-      NSString *stem = [NSString stringWithFormat:@"%@ %d", name.stringByDeletingPathExtension, suffix];
-      if (name.pathExtension.length) stem = [stem stringByAppendingPathExtension:name.pathExtension];
-      destination = [documents URLByAppendingPathComponent:stem];
-    }
-  }
+  // Import external providers into permanent, app-owned storage without replacing another drawing.
+  if (!local) destination = ios_unique_document(documents, source.lastPathComponent, 1);
   if (strlen(destination.fileSystemRepresentation) >= ofn->nMaxFile) {
     ios_file_error(@"The selected filename is too long."); ok = NO;
   } else if (!local) {

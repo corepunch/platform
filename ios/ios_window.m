@@ -207,6 +207,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
     [ios_view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
     [ios_view.topAnchor constraintEqualToAnchor:self.view.topAnchor],
     [ios_view.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]]];
+  ios_install_drop(ios_view);
   [ios_view addGestureRecognizer:[[UIHoverGestureRecognizer alloc] initWithTarget:ios_view action:@selector(hover:)]];
   UIPanGestureRecognizer *scroll = [[UIPanGestureRecognizer alloc] initWithTarget:ios_view action:@selector(scroll:)];
   scroll.minimumNumberOfTouches = 2;
