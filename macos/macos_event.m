@@ -49,16 +49,6 @@ axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
     .wParam = wParam,
     .lParam = lParam
   };
-  NSEvent *customEvent =
-  [NSEvent otherEventWithType:NSEventTypeApplicationDefined
-                     location:NSZeroPoint
-                modifierFlags:0
-                    timestamp:[NSDate timeIntervalSinceReferenceDate]
-                 windowNumber:0
-                      context:nil
-                      subtype:queue.write
-                        data1:wParam
-                        data2:0];
   for (uint16_t r = queue.read; r != queue.write; r++) {
     if (!queue.data[r].message)
       continue;
@@ -71,9 +61,20 @@ axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
         return;
     }
   }
-  queue.data[queue.write++] = msg;
-  // Post the event to the application's event queue
-  [NSApp postEvent:customEvent atStart:NO];
+  @autoreleasepool {
+    NSEvent *customEvent =
+    [NSEvent otherEventWithType:NSEventTypeApplicationDefined
+                       location:NSZeroPoint
+                  modifierFlags:0
+                      timestamp:[NSDate timeIntervalSinceReferenceDate]
+                   windowNumber:0
+                        context:nil
+                        subtype:queue.write
+                          data1:wParam
+                          data2:0];
+    queue.data[queue.write++] = msg;
+    [NSApp postEvent:customEvent atStart:NO];
+  }
 }
 
 void
@@ -172,8 +173,8 @@ GetKeyCode(NSEvent *event)
   }
 }
 
-int
-axPeekMessage(struct AXmessage * e)
+static int
+peek_message(struct AXmessage *e)
 {
   NSEvent *event;
   
@@ -204,7 +205,6 @@ start_over:
     memcpy(e, &queue.data[queue.read], sizeof(struct AXmessage));
     memset(&queue.data[queue.read], 0, sizeof(struct AXmessage));
     queue.read++;
-    [event release];
     if (!e->message) {
       goto start_over;
     }
@@ -215,7 +215,6 @@ start_over:
   }
   
   if (!GetEventType(event)) {
-    [event release];
     goto start_over;
   }
   
@@ -259,9 +258,17 @@ start_over:
       break;
   }
   
-  [event release];
-  
   return 1;
+}
+
+int
+axPeekMessage(struct AXmessage *e)
+{
+  /* nextEventMatchingMask returns a borrowed event, including during native
+   * fullscreen transitions. Let the pool release it after decoding. */
+  @autoreleasepool {
+    return peek_message(e);
+  }
 }
 
 int

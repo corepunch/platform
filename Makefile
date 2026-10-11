@@ -36,6 +36,7 @@ TEST_TIMER_BIN = /tmp/test_timer
 TEST_NET_BIN   = /tmp/test_net
 TEST_FS_BIN    = /tmp/test_filesystem
 TEST_AUDIO_BIN = /tmp/test_audio
+TEST_MACOS_EVENTS_BIN = /tmp/test_macos_events
 
 ifdef EMSCRIPTEN
 	CC = emcc
@@ -205,9 +206,16 @@ endif
 clean:
 	rm -f $(TARGET)
 
+ifeq ($(PLATFORM_OS),darwin)
+test: test-macos-events
+test-macos-events: $(TARGET)
+	@$(CC) -I. tests/test_macos_events.m $(TEST_LDFLAGS) -framework AppKit -o $(TEST_MACOS_EVENTS_BIN)
+	@NSZombieEnabled=YES $(TEST_MACOS_EVENTS_BIN)
+endif
+
 install: $(TARGET)
 	install -d /usr/local/lib /usr/local/include
 	install -m 755 $(TARGET) /usr/local/lib/
 	install -m 644 platform.h /usr/local/include/
 
-.PHONY: all clean install test
+.PHONY: all clean install test test-macos-events
