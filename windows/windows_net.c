@@ -134,17 +134,23 @@ axNetSetReuseAddr(int sock, bool_t reuse)
 }
 
 bool_t
-axNetBind(int sock, uint16_t port)
+axNetBind(int sock, char const *host, uint16_t port)
 {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family      = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (!host) {
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  } else if (InetPtonA(AF_INET, host, &addr.sin_addr) != 1) {
+    fprintf(stderr, "axNetBind: invalid IPv4 address: %s\n", host);
+    return FALSE;
+  }
   addr.sin_port        = htons(port);
   if (bind((SOCKET)sock, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) {
     fprintf(stderr, "axNetBind: %d\n", WSAGetLastError());
     return FALSE;
   }
+  return TRUE;
   return TRUE;
 }
 

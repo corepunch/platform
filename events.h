@@ -1,5 +1,6 @@
 #ifndef __PLATFORM_EVENTS_H__
 #define __PLATFORM_EVENTS_H__
+#include <stdint.h>
 
 #define kEventLeftButtonDown 0xfac0b5e7
 #define kEventRightButtonDown 0x1057ac50
@@ -31,5 +32,21 @@
 #define kEventJoyButtonDown 0x6d4f8e2a
 #define kEventJoyButtonUp 0x8b1c5f3d
 #define kEventTimer 0xa8f3b521
+#define kEventGesture 0xa8f3b522
+#define kEventPointerCancel 0xa8f3b523
+
+enum { AX_GESTURE_BEGIN, AX_GESTURE_UPDATE, AX_GESTURE_END, AX_GESTURE_CANCEL };
+typedef struct {
+  uint32_t phase;
+  float x, y, previous_x, previous_y;
+  float scale, rotation; // Incremental scale factor and clockwise radians.
+} ax_gesture_t;
+
+enum { AX_POINTER_STYLUS = 1u << 0, AX_POINTER_TOUCH = 1u << 1 };
+typedef struct {
+  uint32_t flags;   /**< AX_POINTER_STYLUS for a stylus / Apple Pencil, AX_POINTER_TOUCH for a finger. */
+  float altitude;   /**< Radians: 0 = parallel to the surface, π/2 = perpendicular. */
+  uint32_t time;    /**< Sample time in milliseconds for touch samples; 0 when unknown. */
+} ax_pointer_t;
 
 #endif

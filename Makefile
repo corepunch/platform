@@ -5,7 +5,10 @@ HASH := \#
 ARCH ?= $(shell uname -m)
 
 # Platform detection
-ifdef EMSCRIPTEN
+ifneq (,$(filter iphoneos iphonesimulator,$(SDK)))
+PLATFORM_OS := ios
+PLATFORM_UNAME_S := iOS
+else ifdef EMSCRIPTEN
 PLATFORM_OS := emscripten
 PLATFORM_UNAME_S := Emscripten
 else ifeq ($(OS),Windows_NT)
@@ -32,20 +35,32 @@ TEST_MSG_BIN  = /tmp/test_messages
 TEST_TIMER_BIN = /tmp/test_timer
 TEST_NET_BIN   = /tmp/test_net
 TEST_FS_BIN    = /tmp/test_filesystem
+TEST_AUDIO_BIN = /tmp/test_audio
+TEST_MACOS_EVENTS_BIN = /tmp/test_macos_events
 
 ifdef EMSCRIPTEN
 	CC = emcc
 	CFLAGS = -Wall -Wextra -fPIC -I.
 	LDFLAGS = -sSIDE_MODULE=1 -sUSE_WEBGL2=1 -sMIN_WEBGL_VERSION=1 -sMAX_WEBGL_VERSION=2
 	LIB_EXT = wasm
-	FIND_SOURCES = find webgl -name "*.c"
+	FIND_SOURCES = ( find webgl -name "*.c"; find audio -name "*.c"; )
 	LANG = c
+else ifeq ($(PLATFORM_OS),ios)
+	IOS_MIN ?= 16.0
+	CC = xcrun --sdk $(SDK) clang
+	SDK_PATH := $(shell xcrun --sdk $(SDK) --show-sdk-path)
+	MIN_FLAG = $(if $(filter iphoneos,$(SDK)),-miphoneos-version-min,-mios-simulator-version-min)=$(IOS_MIN)
+	CFLAGS = -Wall -Wextra -I. -arch $(ARCH) -isysroot "$(SDK_PATH)" $(MIN_FLAG) -fobjc-arc -Wno-deprecated-declarations
+	LIB_EXT = a
+	FIND_SOURCES = ( find ios -name '*.m'; find unix -name '*.c'; find audio -name '*.c'; )
+	LANG = objective-c
+	HAS_WINDOWING := 1
 else ifeq ($(PLATFORM_OS),darwin)
 	CC = clang
 	CFLAGS = -Wall -Wextra -fPIC -I. -DGL_SILENCE_DEPRECATION -Wno-deprecated-declarations
-	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -framework Security -framework CoreFoundation -install_name @rpath/$(LIBNAME)
+	LDFLAGS = -dynamiclib -framework AppKit -framework Cocoa -framework OpenGL -framework IOSurface -framework Security -framework CoreFoundation -framework AudioToolbox -install_name @rpath/$(LIBNAME)
 	LIB_EXT = dylib
-	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; )
+	FIND_SOURCES = ( find macos -name "*.m"; find unix -name "*.c"; find audio -name "*.c"; )
 	LANG = objective-c
 	TEST_LDFLAGS = -L$(abspath $(OUTDIR)) -lplatform -rpath $(abspath $(OUTDIR))
 	HAS_WINDOWING := 1
@@ -59,7 +74,7 @@ else ifeq ($(PLATFORM_OS),linux)
 	ifneq ($(WAYLAND_LIBS),)
 		CFLAGS += $(shell pkg-config --cflags wayland-client wayland-egl xkbcommon egl gl 2>/dev/null)
 		LDFLAGS += $(WAYLAND_LIBS)
-		FIND_SOURCES = ( find wayland -name "*.c"; find unix -name "*.c"; )
+		FIND_SOURCES = ( find wayland -name "*.c"; find unix -name "*.c"; find audio -name "*.c"; )
 		HAS_WINDOWING := 1
 	else
 		# Try to detect X11 libraries as fallback
@@ -67,13 +82,19 @@ else ifeq ($(PLATFORM_OS),linux)
 		ifneq ($(X11_LIBS),)
 			CFLAGS += $(shell pkg-config --cflags x11 egl gl 2>/dev/null)
 			LDFLAGS += $(X11_LIBS)
-			FIND_SOURCES = ( find x11 -name "*.c"; find unix -name "*.c"; )
+			FIND_SOURCES = ( find x11 -name "*.c"; find unix -name "*.c"; find audio -name "*.c"; )
 			HAS_WINDOWING := 1
 		else
 			# Fallback to unix-only (no windowing support)
-			FIND_SOURCES = find unix -name "*.c"
+			FIND_SOURCES = ( find unix -name "*.c"; find audio -name "*.c"; )
 			HAS_WINDOWING := 0
 		endif
+	endif
+	# Optional ALSA playback. Without it, WAV load/mix still build and the device open fails.
+	ALSA_LIBS := $(shell pkg-config --libs alsa 2>/dev/null)
+	ifneq ($(ALSA_LIBS),)
+		CFLAGS += $(shell pkg-config --cflags alsa 2>/dev/null) -DHAVE_ALSA
+		LDFLAGS += $(ALSA_LIBS)
 	endif
 	# Optional OpenSSL support for TLS on Linux
 	OPENSSL_LIBS := $(shell pkg-config --libs openssl 2>/dev/null)
@@ -89,9 +110,9 @@ else ifeq ($(PLATFORM_OS),windows)
 	LDFLAGS = -shared \
 	          -Wl,--out-implib,$(OUTDIR)/libplatform.dll.a \
 	          -lopengl32 -lgdi32 -luser32 -lcomdlg32 \
-	          -lole32 -lshell32 -ladvapi32 -lws2_32 -lxinput1_4 -lsecur32
+	          -lole32 -lshell32 -ladvapi32 -lws2_32 -lxinput1_4 -lsecur32 -lwinmm
 	LIB_EXT = dll
-	FIND_SOURCES = find windows -name "*.c"
+	FIND_SOURCES = ( find windows -name "*.c"; find audio -name "*.c"; )
 	LANG = c
 	# Put the test binary next to the DLL so Windows finds it at runtime
 	TEST_SRC = $(OUTDIR)/test_platform_api_tmp.c
@@ -101,6 +122,7 @@ else ifeq ($(PLATFORM_OS),windows)
 	TEST_TIMER_BIN = $(OUTDIR)/test_timer.exe
 	TEST_NET_BIN   = $(OUTDIR)/test_net.exe
 	TEST_FS_BIN    = $(OUTDIR)/test_filesystem.exe
+	TEST_AUDIO_BIN = $(OUTDIR)/test_audio.exe
 	HAS_WINDOWING := 1
 else
 	$(error Unsupported OS: $(PLATFORM_UNAME_S))
@@ -117,8 +139,28 @@ CFLAGS += -arch $(ARCH)
 LDFLAGS += -arch $(ARCH)
 endif
 
+ifeq ($(PLATFORM_OS),ios)
+IOS_SOURCES := $(wildcard ios/*.m unix/*.c ios/*.h) platform.h events.h rc_server_impl.c
+.PHONY: ios-settings
+ios-settings:
+	@mkdir -p "$(OUTDIR)"
+	@printf '%s\n' '$(CC) $(CFLAGS)' > "$(OUTDIR)/ios-settings.tmp"
+	@cmp -s "$(OUTDIR)/ios-settings.tmp" "$(OUTDIR)/ios-settings" || cp "$(OUTDIR)/ios-settings.tmp" "$(OUTDIR)/ios-settings"
+$(OUTDIR)/ios-settings: ios-settings
+$(TARGET): $(IOS_SOURCES) $(OUTDIR)/ios-settings
+	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -DHAVE_WINDOWING -x $(LANG) -c - -o "$(OUTDIR)/platform.o"
+	xcrun --sdk $(SDK) ar rcs "$@" "$(OUTDIR)/platform.o"
+else
 $(TARGET):
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
+
+endif
+
+ifeq ($(PLATFORM_OS),ios)
+INCLUDE_IOS_API := 1
+else
+INCLUDE_IOS_API := 0
+endif
 
 # Parse platform.h to find all AX_API functions, generate a C test that asserts
 # each function pointer is non-NULL (i.e. the symbol is defined), then compile,
@@ -129,7 +171,7 @@ test:
 else
 test: $(TARGET)
 	@printf '#include "platform.h"\n#include <assert.h>\nint main(void) {\n' > $(TEST_SRC)
-	@awk '/^AX_API[[:space:]]/{getline; sub(/[(].*/,""); printf "    assert(%s != NULL);\n", $$1}' platform.h >> $(TEST_SRC)
+	@awk -v include_ios=$(INCLUDE_IOS_API) '/^#ifdef AX_PLATFORM_IOS/ { ios=1; next } /^#endif/ && ios { ios=0; next } ios && include_ios != 1 { next } /^AX_API[[:space:]]/ { line=$$0; while (line !~ /;/ && (getline nl) > 0) line=line " " nl; sub(/^AX_API[[:space:]]+/, "", line); n=split(line, parts, "("); if (n < 2) next; m=split(parts[1], toks, /[^A-Za-z0-9_]+/); name=toks[m]; if (name != "") printf "    assert(%s != NULL);\n", name }' platform.h >> $(TEST_SRC)
 	@printf '    return 0;\n}\n' >> $(TEST_SRC)
 	@$(CC) -I. $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
 	@$(TEST_BIN)
@@ -155,14 +197,25 @@ endif
 	@$(TEST_FS_BIN)
 	@rm -f $(TEST_FS_BIN)
 	@echo "Filesystem tests passed."
+	@$(CC) -I. tests/test_audio.c $(TEST_LDFLAGS) -o $(TEST_AUDIO_BIN)
+	@$(TEST_AUDIO_BIN)
+	@rm -f $(TEST_AUDIO_BIN)
+	@echo "Audio tests passed."
 endif
 
 clean:
 	rm -f $(TARGET)
+
+ifeq ($(PLATFORM_OS),darwin)
+test: test-macos-events
+test-macos-events: $(TARGET)
+	@$(CC) -I. tests/test_macos_events.m $(TEST_LDFLAGS) -framework AppKit -o $(TEST_MACOS_EVENTS_BIN)
+	@NSZombieEnabled=YES $(TEST_MACOS_EVENTS_BIN)
+endif
 
 install: $(TARGET)
 	install -d /usr/local/lib /usr/local/include
 	install -m 755 $(TARGET) /usr/local/lib/
 	install -m 644 platform.h /usr/local/include/
 
-.PHONY: all clean install test
+.PHONY: all clean install test test-macos-events

@@ -130,7 +130,7 @@ int main(void) {
     int server = axNetSocket(AX_NET_AF_IPV4, AX_NET_SOCK_TCP);
     if (server < 0) { fputs("socket failed\n", stderr); return 1; }
     axNetSetReuseAddr(server, TRUE);   /* allow immediate rebind after restart */
-    if (!axNetBind(server, 8080)) { fputs("bind failed\n", stderr); return 1; }
+    if (!axNetBind(server, NULL, 8080)) { fputs("bind failed\n", stderr); return 1; }
     axNetListen(server, 8);
 
     printf("listening on :8080\n");
@@ -261,7 +261,7 @@ if (axNetResolve("example.com", ip, (int)sizeof(ip))) {
 
 | Function | Description |
 |----------|-------------|
-| `axNetBind(sock, port)` | Bind to a local port on all interfaces. |
+| `axNetBind(sock, host, port)` | Bind to a numeric local address, or all interfaces when `host` is `NULL`. |
 | `axNetListen(sock, backlog)` | Mark socket as passive. |
 | `axNetAccept(sock)` | Accept an incoming connection; returns new socket or -1. |
 

@@ -4,7 +4,7 @@
  *
  * This header defines the public API for the platform library, providing
  * a unified interface for window management, event handling, OpenGL/EGL
- * rendering context management, file dialogs, and system utilities across
+ * rendering context management, WAV playback, file dialogs, and system utilities across
  * macOS, Linux (Wayland or X11), QNX, and WebGL (Emscripten) targets.
  *
  * All public symbols are exported via the #AX_API visibility macro.
@@ -22,6 +22,13 @@
 #include <time.h>
 
 #include "events.h"
+
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#if TARGET_OS_IOS
+#define AX_PLATFORM_IOS 1
+#endif
+#endif
 
 #ifndef LOWORD
 /** @brief Extract the low 16 bits of a 32-bit value. */
@@ -308,7 +315,8 @@ struct AXbuffer
  * type (one of the `kEvent*` constants from events.h) and determines how the
  * parameter unions should be interpreted.
  *
- * Mouse events:   @p wParam = MAKEDWORD(x, y), @p lParam = scroll/drag delta.
+ * Mouse events:   @p wParam = MAKEDWORD(x, y), @p lParam = scroll/drag delta,
+ *                 @p pointer = stylus sample (zeroed when the device is not a stylus).
  * Keyboard events: @p wParam = key-code | modifier flags, @p lParam = UTF-8 char.
  * Window events:  @p target = window handle, @p wParam = new width/height.
  */
@@ -326,6 +334,8 @@ struct AXmessage
     struct { int16_t dx, dy; };   /**< Relative delta (drag / scroll events). */
   };
   uint32_t id; /**< Sequence number assigned at post time. */
+  ax_gesture_t gesture; /**< Inline payload for kEventGesture; no borrowed storage. */
+  ax_pointer_t pointer; /**< Stylus sample for pointer events; zeroed otherwise. */
 };
 
 /**
@@ -495,6 +505,15 @@ axGetFolderName(AXopenfilename const *ofn);
  */
 AX_API void
 axInit(void);
+
+#ifdef AX_PLATFORM_IOS
+/** UIKit owns the main loop. start/frame/stop run on the main thread.
+ * Declare AXSceneDelegate in the app scene manifest, or use the supplied
+ * AXApplicationDelegate configuration through this entry point. */
+AX_API void axSetTextInput(bool_t enabled);
+AX_API int axRunApplication(int argc, char **argv, bool_t (*start)(int, char **),
+                            void (*frame)(void), void (*stop)(void));
+#endif
 
 /**
  * @brief Shut down the platform subsystem and release all resources.
@@ -1114,6 +1133,195 @@ axCancelTimer(uint32_t timer_id);
 /** @} */
 
 /**
+ * @defgroup threads Threads and mutexes
+ * @brief Minimal cross-platform threading primitives.
+ *
+ * Opaque handles keep platform types out of public headers.  The thread
+ * function receives the @p arg pointer and may call any platform API;
+ * the handle must be passed to #axThreadJoin before the process exits.
+ * @{
+ */
+
+/** @brief Opaque thread handle returned by #axThreadCreate. */
+typedef void *axthread_t;
+
+/** @brief Opaque mutex handle returned by #axMutexCreate. */
+typedef void *axmutex_t;
+
+/**
+ * @brief Spawn a new thread that calls @p fn(arg).
+ *
+ * @param fn   Function the thread executes.
+ * @param arg  Passed unchanged to @p fn.
+ * @return Thread handle on success, `NULL` on failure.
+ */
+AX_API axthread_t
+axThreadCreate(void (*fn)(void *), void *arg);
+
+/**
+ * @brief Wait for @p thread to finish and release its resources.
+ *
+ * @param thread  Handle returned by #axThreadCreate.  Passing `NULL` is safe.
+ */
+AX_API void
+axThreadJoin(axthread_t thread);
+
+/**
+ * @brief Create a non-recursive mutex.
+ *
+ * @return Mutex handle on success, `NULL` on failure.
+ */
+AX_API axmutex_t
+axMutexCreate(void);
+
+/**
+ * @brief Acquire @p mutex, blocking until it is available.
+ *
+ * @param mutex  Handle returned by #axMutexCreate.
+ */
+AX_API void
+axMutexLock(axmutex_t mutex);
+
+/**
+ * @brief Release @p mutex.
+ *
+ * @param mutex  Handle returned by #axMutexCreate.
+ */
+AX_API void
+axMutexUnlock(axmutex_t mutex);
+
+/**
+ * @brief Destroy @p mutex and free its resources.
+ *
+ * The mutex must not be held when this is called.
+ *
+ * @param mutex  Handle returned by #axMutexCreate.  Passing `NULL` is safe.
+ */
+AX_API void
+axMutexDestroy(axmutex_t mutex);
+
+/** @} */
+
+/**
+ * @defgroup rc Remote Control
+ * @brief TCP-based remote-control server for test automation.
+ *
+ * Start the server with #axRCStart (typically triggered by a `-rc` flag).
+ * An external test harness connects on the given port and sends newline-
+ * terminated text commands; each command receives an `ok` or `err` reply.
+ *
+ * ### Input commands
+ * | Command | Effect |
+ * |---------|--------|
+ * | `click <x> <y>`              | Left button down + up at (x, y) |
+ * | `rclick <x> <y>`             | Right button down + up at (x, y) |
+ * | `dblclick <x> <y>`           | Left down + up + double-click at (x, y) |
+ * | `drag <x1> <y1> <x2> <y2>`   | Press at (x1,y1), drag to (x2,y2), release |
+ * | `move <x> <y>`               | Mouse moved to (x, y) |
+ * | `scroll <x> <y> <dx> <dy>`   | Scroll at (x, y) by the given wheel delta |
+ * | `drop <x> <y> <path>`        | Drop the file at path on (x, y), as a file dragged in |
+ * | `key <code> [mods]`          | Key down + key up (virtual key code integer) |
+ * | `keydown <code> [mods]`      | Key down only |
+ * | `keyup <code> [mods]`        | Key up only |
+ * | `type <text>`                | Send each character as a key down/up pair |
+ * | `screenshot <path>`          | Schedule screenshot on the next painted frame |
+ * | `stop`                       | Post a window-close event to quit the app |
+ * | `quit`                       | Close the TCP connection only |
+ *
+ * `mods` bitmask: 1=Shift, 2=Ctrl, 4=Alt, 8=Cmd.
+ *
+ * ### Read queries (answered on the main thread via #axRCProcessQuery)
+ * | Command | Reply |
+ * |---------|-------|
+ * | `list_windows`                    | One `window <x> <y> <w> <h> <title>` line per root window, then `ok` |
+ * | `get_focus`                       | `focused <title>` then `ok` (empty title when nothing focused) |
+ * | `get_rect <title>`                | `rect <x> <y> <w> <h>` (screen coords) then `ok` |
+ * | `get_ctrl_rect <ctrl_id> <title>` | `rect <x> <y> <w> <h>` (screen coords) then `ok` |
+ * | `get_text <ctrl_id> <title>`      | `text <string>` then `ok` |
+ * | `get_value <ctrl_id> <title>`     | `value <uint>` then `ok` |
+ * | `click_ctrl <ctrl_id> <title>`    | Click centre of named control, reply `ok` |
+ *
+ * `<title>` is the rest of the line and may contain spaces.
+ * Read queries block the RC thread until the main thread calls #axRCProcessQuery.
+ *
+ * Responses are `ok\n` or `err <reason>\n`.
+ * @{
+ */
+
+/**
+ * @brief Callback type for processing read queries on the main thread.
+ *
+ * The implementation fills @p response (NUL-terminated, at most @p response_len
+ * bytes) and returns.  The response must end with either `ok\n` or
+ * `err <reason>\n`.
+ *
+ * Register with #axRCSetQueryHandler; the UI layer (gem.h) provides a
+ * default implementation that reads from the live window tree.
+ */
+typedef void (*rc_query_fn_t)(const char *request, char *response, int response_len);
+
+/**
+ * @brief Start the remote-control TCP server on @p port.
+ *
+ * Spawns a background thread that accepts one client at a time and
+ * processes commands via #axPostMessageW.  Call once after #axInit.
+ *
+ * @param port  TCP port to listen on (1024–65535).
+ * @return `TRUE` on success, `FALSE` if the socket could not be bound.
+ */
+AX_API bool_t
+axRCStart(uint16_t port);
+
+/**
+ * @brief Stop the remote-control server and join its thread.
+ *
+ * Safe to call even if #axRCStart was never called.
+ */
+AX_API void
+axRCStop(void);
+
+/**
+ * @brief Remove a pending screenshot request, if one exists.
+ *
+ * When a `screenshot <path>` command is received the path is stored here.
+ * The main event loop should call this each iteration, take the screenshot
+ * via the UI layer, then call #axRCClearPendingScreenshot.
+ *
+ * @param path    Buffer receiving the null-terminated path.
+ * @param pathlen Size of @p path in bytes.
+ * @return `TRUE` when a path was copied, `FALSE` when no request is pending
+ *         or the buffer is too small.
+ */
+AX_API bool_t
+axRCPopScreenshot(char *path, int pathlen);
+
+/**
+ * @brief Register the query handler called by #axRCProcessQuery.
+ *
+ * Must be called before the first `list_windows` / `get_*` / `click_ctrl`
+ * command arrives.  Typically called once after #axRCStart.
+ *
+ * @param handler  Callback that fills a response buffer from the live UI
+ *                 state.  Pass NULL to unregister.
+ */
+AX_API void
+axRCSetQueryHandler(rc_query_fn_t handler);
+
+/**
+ * @brief Process one pending read query on the main thread.
+ *
+ * Must be called from the main event loop each iteration (alongside
+ * #axRCPopScreenshot).  When a query is pending it invokes the registered
+ * handler, fills the response, and unblocks the waiting RC thread.
+ *
+ * @return `TRUE` if a query was processed, `FALSE` if none was pending.
+ */
+AX_API bool_t
+axRCProcessQuery(void);
+
+/** @} */
+
+/**
  * @defgroup net Networking
  * @brief Portable socket, DNS, TLS, and async I/O primitives for HTTP/HTTPS
  *        and general TCP/UDP networking.
@@ -1249,14 +1457,16 @@ AX_API bool_t
 axNetSetReuseAddr(int sock, bool_t reuse);
 
 /**
- * @brief Bind a socket to a local port on all interfaces.
+ * @brief Bind a socket to a local host and port.
  *
  * @param sock  Socket descriptor.
- * @param port  Local port number in host byte order.
+ * @param host  Numeric local address, or `NULL` for all local interfaces.
+ *              The address family must match the socket.
+ * @param port  Local port number in host byte order.  Pass 0 to select one.
  * @return `TRUE` on success, `FALSE` on failure.
  */
 AX_API bool_t
-axNetBind(int sock, uint16_t port);
+axNetBind(int sock, char const *host, uint16_t port);
 
 /**
  * @brief Mark a bound socket as passive and set the connection backlog.
@@ -1423,5 +1633,144 @@ AX_API int
 axTlsRecv(AXtlsctx *ctx, void *buf, int len);
 
 /** @} */
+
+
+/**
+ * @defgroup audio Audio
+ * @brief SDL-style WAV loading and playback.
+ *
+ * WAV support covers RIFF PCM (8, 16, 24, and 32-bit), IEEE float 32, A-law,
+ * and mu-law. Compressed ADPCM is not supported. Samples are returned in
+ * host endianness. Playback devices start paused, matching SDL: queue or
+ * install a callback, then call #axAudioPause with `FALSE`.
+ *
+ * The hardware backend consumes signed 16-bit frames. #axAudioQueue and the
+ * device callback use the format requested at #axAudioOpen; conversion happens
+ * inside the device. Volume for #axAudioMix is SDL's 0–128 scale, where 128
+ * is unity.
+ * @{
+ */
+
+/** @brief Unsigned 8-bit sample, biased at 128. */
+#define AX_AUDIO_U8  0x0008
+/** @brief Signed 16-bit host-endian sample. */
+#define AX_AUDIO_S16 0x8010
+/** @brief Signed 32-bit host-endian sample. */
+#define AX_AUDIO_S32 0x8020
+/** @brief 32-bit IEEE float sample in the range [-1, 1]. */
+#define AX_AUDIO_F32 0x8120
+
+/** @brief Sample format passed to the device and mixer. */
+typedef int AXaudioformat;
+
+/**
+ * @brief Desired or obtained playback format.
+ *
+ * @p samples is the hardware period in frames. @p callback may be NULL, in
+ * which case the device pulls bytes queued with #axAudioQueue. A callback
+ * must fill @p stream completely and must not call #axAudioLock,
+ * #axAudioQueue, or #axAudioClose.
+ */
+typedef struct AXaudiospec {
+  int freq;            /**< Sample frames per second. */
+  AXaudioformat format;/**< One of AX_AUDIO_U8, S16, S32, or F32. */
+  uint8_t channels;    /**< 1 or 2. */
+  uint16_t samples;    /**< Period size in sample frames. */
+  void (*callback)(void *userdata, uint8_t *stream, int len);
+  void *userdata;      /**< Passed through to @p callback. */
+} AXaudiospec;
+
+/** @brief Prepare the audio subsystem. Safe to call more than once. */
+AX_API bool_t
+axAudioInit(void);
+
+/** @brief Close the device and release audio subsystem resources. */
+AX_API void
+axAudioShutdown(void);
+
+/**
+ * @brief Last audio error, or NULL if the last call succeeded.
+ * The pointer is invalidated by the next audio call.
+ */
+AX_API char const *
+axAudioGetError(void);
+
+/**
+ * @brief Open the default playback device.
+ *
+ * Starts paused. Pass NULL @p desired for 44100 Hz stereo S16. On success
+ * returns a device id (currently always 1). Only one device may be open.
+ *
+ * @param[in]  desired   Requested format, or NULL for defaults.
+ * @param[out] obtained  Filled with the accepted format; may be NULL.
+ * @return Device id, or 0 on failure.
+ */
+AX_API int
+axAudioOpen(AXaudiospec const *desired, AXaudiospec *obtained);
+
+/** @brief Close a device opened by #axAudioOpen. Passing an unknown id is safe. */
+AX_API void
+axAudioClose(int dev);
+
+/**
+ * @brief Pause or resume playback.
+ * @param pause  `TRUE` to pause, `FALSE` to start the callback or queued audio.
+ */
+AX_API void
+axAudioPause(int dev, bool_t pause);
+
+/** @brief Lock the device. Do not call from the audio callback. */
+AX_API void
+axAudioLock(int dev);
+
+/** @brief Unlock a device locked with #axAudioLock. */
+AX_API void
+axAudioUnlock(int dev);
+
+/**
+ * @brief Queue interleaved samples in the device format.
+ * Fails if the device was opened with a callback, or if the queue would
+ * exceed 4 MiB.
+ * @return `TRUE` if the bytes were copied into the queue.
+ */
+AX_API bool_t
+axAudioQueue(int dev, void const *data, uint32_t len);
+
+/** @brief Bytes still waiting in the playback queue. */
+AX_API uint32_t
+axAudioQueued(int dev);
+
+/** @brief Discard queued samples. Does not affect a callback device. */
+AX_API void
+axAudioClearQueue(int dev);
+
+/**
+ * @brief Load a RIFF WAVE file from disk.
+ * @param[out] spec       Format of the decoded buffer.
+ * @param[out] audio_buf  Allocated sample bytes. Free with #axFreeWAV.
+ * @param[out] audio_len  Length of @p audio_buf in bytes.
+ * @return `TRUE` on success.
+ */
+AX_API bool_t
+axLoadWAV(char const *path, AXaudiospec *spec, uint8_t **audio_buf, uint32_t *audio_len);
+
+/** @brief Load a RIFF WAVE image already in memory. Same contract as #axLoadWAV. */
+AX_API bool_t
+axLoadWAVMem(void const *data, uint32_t size, AXaudiospec *spec,
+             uint8_t **audio_buf, uint32_t *audio_len);
+
+/** @brief Free a buffer returned by #axLoadWAV or #axLoadWAVMem. NULL is safe. */
+AX_API void
+axFreeWAV(uint8_t *audio_buf);
+
+/**
+ * @brief Mix @p src onto @p dst with clipping.
+ * @param volume  0 is silence, 128 is unity, matching SDL_MixAudioFormat.
+ */
+AX_API void
+axAudioMix(uint8_t *dst, uint8_t const *src, AXaudioformat format, uint32_t len, int volume);
+
+/** @} */
+
 
 #endif

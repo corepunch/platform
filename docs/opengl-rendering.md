@@ -89,10 +89,13 @@ case kEventWindowResized: {
 
 ---
 
-## Off-screen surfaces (macOS only)
+## Hidden and off-screen rendering
 
-`axCreateSurface` allocates an IOSurface-backed off-screen framebuffer.  Bind
-it with `axBindFramebuffer` before rendering:
+`axCreateSurface` allocates an IOSurface-backed off-screen framebuffer on
+macOS. Orion's `UI_INIT_HIDDEN` uses it when available and otherwise creates an
+`AX_WINDOW_HIDDEN` platform window, providing a portable OpenGL context without
+showing application UI. Applications should render to their own framebuffer
+object when they need a specific output size or pixel format.
 
 ```c
 axCreateSurface(1920, 1080);
@@ -108,7 +111,8 @@ draw_scene();
 axEndPaint();
 ```
 
-`axCreateSurface` returns `FALSE` on all platforms except macOS.
+`axCreateSurface` may return `FALSE` on platforms without a native off-screen
+surface; this indicates that the caller should use a hidden window context.
 
 ---
 
