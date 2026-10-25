@@ -10,11 +10,12 @@ confirms or cancels.
 
 ```c
 typedef struct {
-    char       *lpstrFile;   /* output buffer (UTF-8, null-terminated) */
+    char       *lpstrFile;   /* in/out: default path and selected UTF-8 path */
     uint32_t    nMaxFile;    /* size of lpstrFile in bytes              */
     char const *lpstrFilter; /* optional file-type filter               */
     char const *lpstrTitle;  /* optional dialog title (NULL = default)  */
     uint32_t    Flags;       /* OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST   */
+    uint32_t    nFilterIndex; /* initial filter, 1-based; 0 means first */
 } AXopenfilename;
 ```
 
@@ -38,9 +39,30 @@ if (axGetOpenFileName(&ofn)) {
 }
 ```
 
-`lpstrFilter` uses Windows-style double-null-terminated filter pairs.  On
-non-Windows platforms the filter is currently ignored, but the dialog still
-works.
+`lpstrFilter` uses Windows-style double-null-terminated filter pairs. macOS
+supports semicolon-separated extensions, an All Files (`*.*` or `*`) choice,
+and a filter popup when multiple pairs are supplied. Other non-Windows backends
+currently ignore the filter. `lpstrFile` must initially be null-terminated.
+
+On macOS, all panels honor `lpstrTitle` and the default path in `lpstrFile`.
+Cancel leaves the buffer unchanged. An invalid buffer or a selected path that
+does not fit is rejected with a diagnostic instead of returning a truncated path.
+
+`axFileDialogsRequireNative()` returns true for a macOS process signed with
+`com.apple.security.app-sandbox = true`, and for iOS. It returns false on other
+platforms. Orion uses this capability to route sandboxed macOS Open, Save, and
+folder dialogs through native panels; ordinary desktop builds retain Orion's
+custom dialogs. The macOS query uses the process's signed entitlement rather
+than an environment variable or a build flag.
+
+Native macOS panels grant access through Powerbox before returning. The
+path-based API keeps that implicit access available for subsequent reads and
+saves during the process lifetime; it does not create persistent bookmarks.
+Reopening a stored path after relaunch requires selecting it again or a
+document layer that manages security-scoped bookmarks. Apps need the
+`com.apple.security.files.user-selected.read-write` sandbox entitlement to save
+outside their container. See Apple's
+[sandbox file access guide](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox).
 
 ---
 

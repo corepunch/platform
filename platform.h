@@ -434,8 +434,10 @@ axNotifyFileDropEvent(char const *filename, float x, float y);
 
 /** @brief Flag: the chosen file must already exist. */
 enum {
-  OFN_FILEMUSTEXIST = 1 << 0,
-  OFN_PATHMUSTEXIST = 1 << 1, /**< The directory portion of the path must exist. */
+  AX_OFN_FILEMUSTEXIST = 1 << 0,
+  AX_OFN_PATHMUSTEXIST = 1 << 1, /**< The directory portion of the path must exist. */
+  OFN_FILEMUSTEXIST = AX_OFN_FILEMUSTEXIST,
+  OFN_PATHMUSTEXIST = AX_OFN_PATHMUSTEXIST,
 };
 
 /**
@@ -447,14 +449,28 @@ typedef struct _AXopenfilename {
   char const *lpstrFilter; /**< Optional file-type filter string (platform-specific format). */
   char const *lpstrTitle;  /**< Optional dialog title; NULL uses the platform default. */
   uint32_t    Flags;       /**< Combination of OFN_* flags. */
+  uint32_t    nFilterIndex; /**< Initially selected filter (1-based; 0 uses the first). */
 } AXopenfilename;
+
+/** @brief Whether the OS requires native panels to grant file access. */
+#if defined(__APPLE__) && TARGET_OS_OSX
+AX_API bool_t axFileDialogsRequireNative(void);
+#else
+static inline bool_t axFileDialogsRequireNative(void) {
+#ifdef AX_PLATFORM_IOS
+  return TRUE;
+#else
+  return FALSE;
+#endif
+}
+#endif
 
 /**
  * @brief Show a native open-file dialog.
  *
  * Blocks until the user confirms or cancels.  On success the chosen path is
- * written to @p ofn->lpstrFile (null-terminated, truncated to @p ofn->nMaxFile
- * bytes).
+ * written to @p ofn->lpstrFile (null-terminated). macOS rejects a path that
+ * does not fit; some other backends truncate it to @p ofn->nMaxFile bytes.
  *
  * @param ofn  Dialog parameters.
  * @return `TRUE` if the user selected a file, `FALSE` if cancelled or unsupported.
@@ -466,8 +482,8 @@ axGetOpenFileName(AXopenfilename const *ofn);
  * @brief Show a native save-file dialog.
  *
  * Blocks until the user confirms or cancels.  On success the chosen path is
- * written to @p ofn->lpstrFile (null-terminated, truncated to @p ofn->nMaxFile
- * bytes).
+ * written to @p ofn->lpstrFile (null-terminated). macOS rejects a path that
+ * does not fit; some other backends truncate it to @p ofn->nMaxFile bytes.
  *
  * @param ofn  Dialog parameters.
  * @return `TRUE` if the user entered a path, `FALSE` if cancelled or unsupported.
@@ -479,8 +495,8 @@ axGetSaveFileName(AXopenfilename const *ofn);
  * @brief Show a native folder-picker dialog.
  *
  * Blocks until the user confirms or cancels.  On success the chosen directory
- * path is written to @p ofn->lpstrFile (null-terminated, truncated to
- * @p ofn->nMaxFile bytes).
+ * path is written to @p ofn->lpstrFile (null-terminated). macOS rejects a path
+ * that does not fit; some other backends truncate it to @p ofn->nMaxFile bytes.
  *
  * @param ofn  Dialog parameters.
  * @return `TRUE` if the user selected a folder, `FALSE` if cancelled or unsupported.

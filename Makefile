@@ -211,6 +211,12 @@ test: test-macos-events
 test-macos-events: $(TARGET)
 	@$(CC) -I. tests/test_macos_events.m $(TEST_LDFLAGS) -framework AppKit -o $(TEST_MACOS_EVENTS_BIN)
 	@NSZombieEnabled=YES $(TEST_MACOS_EVENTS_BIN)
+
+test: test-macos-file-dialog
+test-macos-file-dialog:
+	@$(CC) -I. -Wno-deprecated-declarations tests/test_macos_file_dialog.m -framework AppKit -framework Security -o /tmp/test_macos_file_dialog
+	@/tmp/test_macos_file_dialog 0
+	@NSZombieEnabled=YES /tmp/test_macos_file_dialog
 endif
 
 install: $(TARGET)
@@ -218,4 +224,4 @@ install: $(TARGET)
 	install -m 755 $(TARGET) /usr/local/lib/
 	install -m 644 platform.h /usr/local/include/
 
-.PHONY: all clean install test test-macos-events
+.PHONY: all clean install test test-macos-events test-macos-file-dialog
