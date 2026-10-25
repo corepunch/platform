@@ -156,25 +156,24 @@ CenterOnScreen(uint32_t width, uint32_t height)
 	return CGRectMake(x, y, width, height);
 }
 
-static bool IsDarkMode(NSWindow *window) {
-  NSAppearance *appearance = [window effectiveAppearance];
-  NSAppearanceName match = [appearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameDarkAqua, NSAppearanceNameAqua]];
-  return [match isEqualToString:NSAppearanceNameDarkAqua];
-}
+// Posts kEventAppearanceChanged when the application's effective appearance changes.
+// Observing NSApp (not the AppleInterfaceThemeChangedNotification broadcast) reports the
+// appearance after AppKit has applied it, including Auto switching at sunset.
+@interface AppearanceObserver : NSObject
+@end
 
-static id ListenForDarkModeChanges(NSWindow *window) {
-  return [[NSDistributedNotificationCenter defaultCenter]
-          addObserverForName:@"AppleInterfaceThemeChangedNotification"
-          object:nil
-          queue:[NSOperationQueue mainQueue]
-          usingBlock:^(NSNotification * _Nonnull note) {
-    (void)note;
-    if (IsDarkMode(window)) {
-      NSLog(@"Switched to Dark Mode");
-    } else {
-      NSLog(@"Switched to Light Mode");
-    }
-  }];
+@implementation AppearanceObserver
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object
+                        change:(NSDictionary *)change context:(void *)context {
+  (void)keyPath; (void)object; (void)change; (void)context;
+  axPostMessageW(NULL, kEventAppearanceChanged, axIsDarkTheme() ? 1 : 0, NULL);
+}
+@end
+
+static id ListenForDarkModeChanges(void) {
+  AppearanceObserver *observer = [[AppearanceObserver alloc] init];
+  [NSApp addObserver:observer forKeyPath:@"effectiveAppearance" options:0 context:NULL];
+  return observer;
 }
 
 static NSWindow *MakeWindow(NSRect windowRect, uint32_t flags) {
@@ -309,7 +308,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
     [window toggleFullScreen:nil];
   }
 
-  wstate.DarkModeObserver = ListenForDarkModeChanges(window);
+  wstate.DarkModeObserver = ListenForDarkModeChanges();
   
   if (wstate.width != width || wstate.height != height) {
     axNotifySizeChanged(width, height);
@@ -354,7 +353,7 @@ void axShutdown(void) {
     }
 
     if (wstate.DarkModeObserver) {
-      [[NSDistributedNotificationCenter defaultCenter] removeObserver:wstate.DarkModeObserver];
+      [NSApp removeObserver:wstate.DarkModeObserver forKeyPath:@"effectiveAppearance"];
       wstate.DarkModeObserver = nil;
     }
 

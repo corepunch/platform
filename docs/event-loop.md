@@ -89,6 +89,7 @@ axShutdown();
 | `kEventWindowChangedScreen` | Moved to another monitor | — |
 | `kEventSetFocus`      | Window gained focus     | — |
 | `kEventKillFocus`     | Window lost focus       | — |
+| `kEventAppearanceChanged` | OS switched light/dark appearance (macOS, Windows) | `1` when dark |
 
 ```c
 case kEventWindowResized: {
