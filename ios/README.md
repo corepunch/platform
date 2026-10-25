@@ -40,6 +40,14 @@ on-screen keyboard covers the bottom of the window, the backend slides the
 whole app view up by the covered height, with the keyboard's own animation,
 and back down when it hides. Pointer coordinates are unaffected.
 
+When embedded by ORCA's scene delegate, the drawable fills the window and
+shrinks above a docked keyboard instead of sliding. `axIOSGetSafeArea` reports
+the drawable's current safe insets in points; the framework applies these to
+controls rather than cropping the rendered background. `axIOSSetBackgroundColor`
+matches the native backdrop and status-bar contrast to the rendered canvas.
+`axIOSShowKeyboard` also accepts the keyboard layout and secure-entry trait;
+changing traits while focused reloads the native input view.
+
 The event queue accepts worker-thread posts and coalesces paint/resize events
 by target. Timers run on the main run loop and are cancelled when their owner
 is removed. Settings live in Application Support; the working directory is

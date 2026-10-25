@@ -968,6 +968,13 @@ axSetSize(uint32_t width, uint32_t height, bool_t centered);
 AX_API uint32_t
 axGetSize(struct AXsize* size);
 
+#ifdef AX_PLATFORM_IOS
+/** Native safe-area insets in view points; the drawable itself fills the window. */
+AX_API void axIOSGetSafeArea(float *left, float *top, float *right, float *bottom);
+/** Match system chrome contrast and the window backdrop to the screen canvas. */
+AX_API void axIOSSetBackgroundColor(float red, float green, float blue);
+#endif
+
 /**
  * @brief Wait for the next event or until @p msec milliseconds have elapsed.
  *

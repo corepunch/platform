@@ -87,6 +87,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 - (BOOL)canBecomeFirstResponder { return YES; }
 - (BOOL)hasText { return YES; }
 - (UITextAutocorrectionType)autocorrectionType { return UITextAutocorrectionTypeNo; }
+- (UITextSpellCheckingType)spellCheckingType { return UITextSpellCheckingTypeNo; }
 - (UITextAutocapitalizationType)autocapitalizationType { return UITextAutocapitalizationTypeNone; }
 - (UITextSmartQuotesType)smartQuotesType { return UITextSmartQuotesTypeNo; }
 - (UITextSmartDashesType)smartDashesType { return UITextSmartDashesTypeNo; }
@@ -233,6 +234,11 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   self.gesture_first = nil; self.gesture_second = nil;
 }
 - (void)layoutSubviews { [super layoutSubviews]; if (ios_context) ios_resize_surface(); }
+- (void)safeAreaInsetsDidChange {
+  [super safeAreaInsetsDidChange];
+  if (ios_external_host)
+    axPostMessageW(NULL, kEventWindowResized, axGetSize(NULL), NULL);
+}
 - (void)hover:(UIHoverGestureRecognizer *)gesture {
   CGPoint p = [gesture locationInView:self];
   axPostMessageW(NULL, kEventMouseMoved, MAKEDWORD((int)p.x, (int)p.y), NULL);
@@ -257,6 +263,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 
 @interface AXController : UIViewController
 @property(nonatomic) CGRect keyboard_frame;
+@property(nonatomic) UIStatusBarStyle status_bar_style;
 @end
 @implementation AXController
 - (BOOL)canBecomeFirstResponder { return YES; }
@@ -267,10 +274,11 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   for (UIPress *press in presses) ios_key(press, kEventKeyUp, FALSE);
 }
 - (BOOL)prefersStatusBarHidden { return !ios_external_host; }
+- (UIStatusBarStyle)preferredStatusBarStyle { return self.status_bar_style; }
 - (BOOL)prefersHomeIndicatorAutoHidden { return !ios_external_host; }
 - (void)viewDidLoad {
   [super viewDidLoad];
-  self.view.backgroundColor = UIColor.blackColor;
+  self.view.backgroundColor = UIColor.systemBackgroundColor;
   ios_view = [[AXView alloc] initWithFrame:self.view.bounds];
   ios_view.multipleTouchEnabled = YES;
   [self.view addSubview:ios_view];
@@ -303,7 +311,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 - (void)viewDidLayoutSubviews {
   [super viewDidLayoutSubviews];
   if (!ios_external_host) return;
-  CGRect frame = UIEdgeInsetsInsetRect(self.view.bounds, self.view.safeAreaInsets);
+  CGRect frame = self.view.bounds;
   if (!CGRectIsEmpty(self.keyboard_frame)) {
     id<UICoordinateSpace> screen = self.view.window.screen.coordinateSpace;
     CGRect keyboard = screen ? [self.view convertRect:self.keyboard_frame fromCoordinateSpace:screen] : CGRectZero;
@@ -527,15 +535,38 @@ void axShutdown(void) {
 
 UIWindow *axIOSGetWindow(void) { return ios_window; }
 bool_t ios_external_lifecycle(void) { return ios_start == NULL; }
-void axIOSShowKeyboard(bool_t visible) {
+void axIOSShowKeyboard(bool_t visible, UIKeyboardType keyboard, bool_t secure) {
   if (!ios_view) return;
   if (visible) {
+    BOOL changed = ios_view.keyboardType != keyboard || ios_view.secureTextEntry != !!secure;
+    ios_view.keyboardType = keyboard;
+    ios_view.secureTextEntry = !!secure;
+    if (changed && ios_view.isFirstResponder) [ios_view reloadInputViews];
     if (!ios_view.isFirstResponder && !ios_window.rootViewController.presentedViewController &&
         UIApplication.sharedApplication.applicationState == UIApplicationStateActive)
       axSetTextInput(TRUE);
   } else if (ios_view.isFirstResponder) axSetTextInput(FALSE);
 }
 float axGetScaling(void) { return ios_scale; }
+void axIOSGetSafeArea(float *left, float *top, float *right, float *bottom) {
+  UIEdgeInsets insets = ios_view.safeAreaInsets;
+  if (left) *left = insets.left;
+  if (top) *top = insets.top;
+  if (right) *right = insets.right;
+  if (bottom) *bottom = insets.bottom;
+}
+void axIOSSetBackgroundColor(float red, float green, float blue) {
+  if (!ios_external_host || !ios_window) return;
+  AXController *host = (AXController *)ios_window.rootViewController;
+  UIColor *color = [UIColor colorWithRed:red green:green blue:blue alpha:1];
+  if (![host.view.backgroundColor isEqual:color]) host.view.backgroundColor = color;
+  UIStatusBarStyle style = .2126 * red + .7152 * green + .0722 * blue > .5
+                        ? UIStatusBarStyleDarkContent : UIStatusBarStyleLightContent;
+  if (host.status_bar_style != style) {
+    host.status_bar_style = style;
+    [host setNeedsStatusBarAppearanceUpdate];
+  }
+}
 uint32_t axGetSize(struct AXsize *size) {
   if (size) { size->width = ios_width; size->height = ios_height; }
   return MAKEDWORD(ios_width, ios_height);
