@@ -13,6 +13,8 @@
 #endif
 #define IOS_TRACE(...) do { fprintf(stderr, "[ios] " __VA_ARGS__); fputc('\n', stderr); fflush(stderr); } while (0)
 @interface AXView : UIView <UIKeyInput>
+@property(nonatomic) UIKeyboardType keyboardType;
+@property(nonatomic, getter=isSecureTextEntry) BOOL secureTextEntry;
 @property(nonatomic, strong) UITouch *active_touch;
 @property(nonatomic, strong) UITouch *gesture_first;
 @property(nonatomic, strong) UITouch *gesture_second;
@@ -31,7 +33,7 @@ void ios_install_drop(UIView *view);
 void ios_post_gesture(ax_gesture_t gesture);
 void ios_post_touch(uint32_t event, uint32_t wparam, void *lparam, ax_pointer_t pointer);
 UIWindow *axIOSGetWindow(void);
-void axIOSShowKeyboard(bool_t visible);
+void axIOSShowKeyboard(bool_t visible, UIKeyboardType keyboard, bool_t secure);
 void axIOSShutdownEvents(void);
 bool_t ios_external_lifecycle(void);
 #endif
