@@ -336,6 +336,16 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     };
     break;
 
+  case WM_SETTINGCHANGE:
+    /* "ImmersiveColorSet" announces a light/dark app-mode change. */
+    if (lparam && lstrcmpiA((LPCSTR)lparam, "ImmersiveColorSet") == 0) {
+      events.queue[events.write++] = (EVENT){
+        .message = kEventAppearanceChanged,
+        .wParam  = axIsDarkTheme() ? 1 : 0,
+      };
+    }
+    break;
+
   case WM_KILLFOCUS:
     events.queue[events.write++] = (EVENT){
       .message = kEventKillFocus,

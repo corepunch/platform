@@ -34,6 +34,7 @@
 #define kEventTimer 0xa8f3b521
 #define kEventGesture 0xa8f3b522
 #define kEventPointerCancel 0xa8f3b523
+#define kEventAppearanceChanged 0xa8f3b524 // wParam: 1 when the OS now uses a dark appearance
 
 enum { AX_GESTURE_BEGIN, AX_GESTURE_UPDATE, AX_GESTURE_END, AX_GESTURE_CANCEL };
 typedef struct {
