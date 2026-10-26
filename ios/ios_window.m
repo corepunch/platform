@@ -38,6 +38,13 @@ static uint32_t ios_point(CGPoint p) {
   return MAKEDWORD((int)CLAMP(p.x, 0, UINT16_MAX), (int)CLAMP(p.y, 0, UINT16_MAX));
 }
 
+static void ios_scroll(UITouch *touch, CGPoint origin, uint32_t phase, int dx, int dy) {
+  ax_pointer_t pointer = ios_pointer(touch);
+  pointer.flags |= phase;
+  ios_post_touch(kEventScrollWheel, ios_point(origin),
+                 (void *)(uintptr_t)MAKEDWORD(dx, dy), pointer);
+}
+
 static void ios_touch(UITouch *touch, uint32_t event) {
   CGPoint p = [touch locationInView:ios_view];
   CGPoint old = [touch previousLocationInView:ios_view];
@@ -156,6 +163,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   self.scroll_remainder = CGPointZero;
   self.touch_mode = ios_external_host && touch.type == UITouchTypeDirect ? 0 : 1;
   if (!self.touch_mode) {
+    ios_scroll(touch, self.touch_origin, AX_POINTER_SCROLL_BEGIN, 0, 0);
     ios_touch(touch, kEventMouseMoved);
     return;
   }
@@ -184,8 +192,10 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
       if (hypot(dx, dy) < 8) return;
       // Determine direction before a press so scrolling cannot activate a button.
       self.touch_mode = fabs(dy) >= fabs(dx) ? 2 : 1;
-      if (self.touch_mode == 1)
+      if (self.touch_mode == 1) {
+        ios_scroll(self.active_touch, self.touch_origin, AX_POINTER_SCROLL_CANCEL, 0, 0);
         ios_post_touch(kEventLeftButtonDown, ios_point(self.touch_origin), NULL, ios_pointer(self.active_touch));
+      }
     }
     if (self.touch_mode == 2) {
       CGPoint remainder = self.scroll_remainder;
@@ -195,8 +205,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
       self.scroll_remainder = CGPointMake(remainder.x - dx, remainder.y - dy);
       self.touch_previous = p;
       if (dx || dy)
-        axPostMessageW(NULL, kEventScrollWheel, ios_point(self.touch_origin),
-                       (void *)(uintptr_t)MAKEDWORD(dx, dy));
+        ios_scroll(self.active_touch, self.touch_origin, AX_POINTER_SCROLL_UPDATE, dx, dy);
       return;
     }
   }
@@ -206,6 +215,8 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
   if ([touches containsObject:self.gesture_first] || [touches containsObject:self.gesture_second]) [self end_gesture:NO];
   if ([touches containsObject:self.active_touch]) {
+    if (ios_external_host && self.active_touch.type == UITouchTypeDirect)
+      ios_scroll(self.active_touch, self.touch_origin, AX_POINTER_SCROLL_END, 0, 0);
     if (!self.touch_mode) {
       ios_touch(self.active_touch, kEventLeftButtonDown);
       if (self.active_touch.tapCount == 2) ios_touch(self.active_touch, kEventLeftDoubleClick);
@@ -220,6 +231,8 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 }
 - (void)cancel_touch {
   if (self.active_touch) {
+    if (ios_external_host && self.active_touch.type == UITouchTypeDirect)
+      ios_scroll(self.active_touch, self.touch_origin, AX_POINTER_SCROLL_CANCEL, 0, 0);
     if (!ios_external_host) ios_touch(self.active_touch, kEventPointerCancel);
     else if (self.touch_mode == 1)
       ios_post_touch(kEventLeftButtonUp, MAKEDWORD(UINT16_MAX, UINT16_MAX), NULL, ios_pointer(self.active_touch));
