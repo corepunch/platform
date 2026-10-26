@@ -1,49 +1,8 @@
 #include "ios_local.h"
-#include <pthread.h>
 #import <objc/runtime.h>
 static char ios_timer_owner;
-
-typedef struct ios_message {
-  struct AXmessage value;
-  struct ios_message *next;
-} ios_message_t;
-static ios_message_t *ios_head, *ios_tail;
-static pthread_mutex_t ios_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 static NSMutableDictionary<NSNumber *, NSTimer *> *ios_timers;
-static uint32_t ios_next_timer = 1, ios_next_message = 1;
-
-static void ios_enqueue(struct AXmessage value) {
-  void *target = value.target;
-  uint32_t event = value.message, wparam = value.wParam;
-  void *lparam = value.lParam;
-  pthread_mutex_lock(&ios_queue_mutex);
-  if (event == kEventWindowPaint || event == kEventWindowResized) {
-    for (ios_message_t *p = ios_head; p; p = p->next) {
-      if (p->value.target == target && p->value.message == event) {
-        p->value.wParam = wparam;
-        p->value.lParam = lparam;
-        pthread_mutex_unlock(&ios_queue_mutex);
-        return;
-      }
-    }
-  }
-  ios_message_t *p = calloc(1, sizeof(*p));
-  if (!p) {
-    pthread_mutex_unlock(&ios_queue_mutex);
-    IOS_TRACE("queue allocation failed target=%p event=%u", target, event);
-    return;
-  }
-  value.id = ios_next_message++;
-  p->value = value;
-  if (ios_tail) ios_tail->next = p; else ios_head = p;
-  ios_tail = p;
-  pthread_mutex_unlock(&ios_queue_mutex);
-  CFRunLoopWakeUp(CFRunLoopGetMain());
-}
-
-void axPostMessageW(void *target, uint32_t event, uint32_t wparam, void *lparam) {
-  ios_enqueue((struct AXmessage){ .target = target, .message = event, .wParam = wparam, .lParam = lparam });
-}
+static uint32_t ios_next_timer = 1;
 
 void ios_post_gesture(ax_gesture_t gesture) {
   ios_enqueue((struct AXmessage){ .message = kEventGesture, .gesture = gesture });
@@ -55,47 +14,17 @@ void ios_post_touch(uint32_t event, uint32_t wparam, void *lparam, ax_pointer_t 
   });
 }
 
-int axPeekMessage(struct AXmessage *msg) {
-  if (!msg) { IOS_TRACE("peek rejected: null message"); return 0; }
-  pthread_mutex_lock(&ios_queue_mutex);
-  ios_message_t *p = ios_head;
-  int ready = p != NULL;
-  if (p) {
-    *msg = p->value;
-    ios_head = p->next;
-    if (!ios_head) ios_tail = NULL;
-    free(p);
-  }
-  pthread_mutex_unlock(&ios_queue_mutex);
-  return ready;
-}
-
 // UIKit owns the main loop; frame callbacks must never block waiting for input.
 int axGetMessage(struct AXmessage *msg) { return axPeekMessage(msg); }
 int axWaitMessage(longTime_t msec) {
   // ORCA frame polling cannot reenter UIKit; standalone modal loops still pump it.
   if (msec || !ios_external_lifecycle())
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, msec ? msec / 1000.0 : 0.01, true);
-  pthread_mutex_lock(&ios_queue_mutex);
-  int ready = ios_head != NULL;
-  pthread_mutex_unlock(&ios_queue_mutex);
-  return ready;
+  return ios_messages_ready();
 }
 
 void axRemoveFromQueue(void *target) {
-  pthread_mutex_lock(&ios_queue_mutex);
-  ios_message_t **link = &ios_head;
-  ios_tail = NULL;
-  while (*link) {
-    ios_message_t *p = *link;
-    if (p->value.target == target) {
-      *link = p->next;
-      if (p->value.message == kEventDragDrop) free(p->value.lParam);
-      free(p);
-    }
-    else { ios_tail = p; link = &p->next; }
-  }
-  pthread_mutex_unlock(&ios_queue_mutex);
+  ios_remove_messages(target);
   for (NSNumber *key in ios_timers.allKeys) {
     if ([objc_getAssociatedObject(ios_timers[key], &ios_timer_owner) pointerValue] == target) axCancelTimer(key.unsignedIntValue);
   }
@@ -133,13 +62,5 @@ void axIOSShutdownEvents(void) {
   [ios_timers release];
 #endif
   ios_timers = nil;
-  pthread_mutex_lock(&ios_queue_mutex);
-  while (ios_head) {
-    ios_message_t *p = ios_head;
-    ios_head = p->next;
-    if (p->value.message == kEventDragDrop) free(p->value.lParam);
-    free(p);
-  }
-  ios_tail = NULL;
-  pthread_mutex_unlock(&ios_queue_mutex);
+  ios_shutdown_messages();
 }

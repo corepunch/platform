@@ -4,6 +4,7 @@
 #import <QuartzCore/CAEAGLLayer.h>
 #import <OpenGLES/ES3/gl.h>
 #include "../platform.h"
+#include "ios_message_queue.h"
 #if __has_feature(objc_arc)
 #define AXIOS_RELEASE(object) ((void)0)
 #define AXIOS_AUTORELEASE(object) (object)
