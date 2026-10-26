@@ -15,7 +15,7 @@ EAGLContext *ios_context;
 CADisplayLink *ios_display_link;
 static GLuint ios_framebuffer, ios_color, ios_depth;
 static int ios_width, ios_height, ios_pixel_w, ios_pixel_h;
-static float ios_scale = 1;
+static float ios_scale = 1, ios_keyboard_inset;
 static bool_t (*ios_start)(int, char **);
 static void (*ios_frame)(void), (*ios_stop)(void);
 static int ios_argc;
@@ -325,16 +325,24 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   [super viewDidLayoutSubviews];
   if (!ios_external_host) return;
   CGRect frame = self.view.bounds;
+  float inset = 0;
   if (!CGRectIsEmpty(self.keyboard_frame)) {
     id<UICoordinateSpace> screen = self.view.window.screen.coordinateSpace;
     CGRect keyboard = screen ? [self.view convertRect:self.keyboard_frame fromCoordinateSpace:screen] : CGRectZero;
     CGRect hidden = CGRectIntersection(frame, keyboard);
-    if (!CGRectIsNull(hidden) && CGRectGetMaxY(keyboard) >= CGRectGetMaxY(frame))
-      frame.size.height = MAX(0, CGRectGetMinY(hidden) - CGRectGetMinY(frame));
+    if (!CGRectIsEmpty(hidden) && CGRectGetMaxY(keyboard) >= CGRectGetMaxY(frame) &&
+        CGRectGetMinX(keyboard) <= CGRectGetMinX(frame) &&
+        CGRectGetMaxX(keyboard) >= CGRectGetMaxX(frame))
+      inset = hidden.size.height;
   }
   ios_view.frame = frame;
   [ios_view setNeedsLayout];
   [ios_view layoutIfNeeded];
+  if (ios_keyboard_inset != inset) {
+    ios_keyboard_inset = inset;
+    axPostMessageW(NULL, kEventWindowResized, axGetSize(NULL), NULL);
+    axPostMessageW(NULL, kEventWindowPaint, axGetSize(NULL), NULL);
+  }
 }
 // The app slides up by the part of the window the on-screen keyboard covers.
 // A view transform keeps the drawable size, and locationInView: still reports
@@ -544,6 +552,7 @@ void axShutdown(void) {
     ios_window = nil;
     ios_external_host = FALSE;
   }
+  ios_keyboard_inset = 0;
 }
 
 UIWindow *axIOSGetWindow(void) { return ios_window; }
@@ -561,6 +570,7 @@ void axIOSShowKeyboard(bool_t visible, UIKeyboardType keyboard, bool_t secure) {
   } else if (ios_view.isFirstResponder) axSetTextInput(FALSE);
 }
 float axGetScaling(void) { return ios_scale; }
+float axIOSGetKeyboardInset(void) { return ios_keyboard_inset; }
 void axIOSGetSafeArea(float *left, float *top, float *right, float *bottom) {
   UIEdgeInsets insets = ios_view.safeAreaInsets;
   if (left) *left = insets.left;
