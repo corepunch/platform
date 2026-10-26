@@ -971,6 +971,9 @@ axGetSize(struct AXsize* size);
 #ifdef AX_PLATFORM_IOS
 /** Native safe-area insets in view points; the drawable itself fills the window. */
 AX_API void axIOSGetSafeArea(float *left, float *top, float *right, float *bottom);
+/** Docked keyboard bottom occlusion in view points for an embedded host; zero otherwise.
+ * Changes post kEventWindowResized and kEventWindowPaint without resizing the drawable. */
+AX_API float axIOSGetKeyboardInset(void);
 /** Match system chrome contrast and the window backdrop to the screen canvas. */
 AX_API void axIOSSetBackgroundColor(float red, float green, float blue);
 #endif
