@@ -37,6 +37,7 @@ TEST_NET_BIN   = /tmp/test_net
 TEST_FS_BIN    = /tmp/test_filesystem
 TEST_AUDIO_BIN = /tmp/test_audio
 TEST_MACOS_EVENTS_BIN = /tmp/test_macos_events
+TEST_IOS_MESSAGE_QUEUE_BIN = /tmp/test_ios_message_queue
 
 ifdef EMSCRIPTEN
 	CC = emcc
@@ -207,6 +208,12 @@ clean:
 	rm -f $(TARGET)
 
 ifeq ($(PLATFORM_OS),darwin)
+test: test-ios-message-queue
+test-ios-message-queue:
+	@$(CC) -Wall -Wextra -Werror -I. -DIOS_MESSAGE_QUEUE_TESTING tests/test_ios_message_queue.c ios/ios_message_queue.m -framework CoreFoundation -o $(TEST_IOS_MESSAGE_QUEUE_BIN)
+	@$(TEST_IOS_MESSAGE_QUEUE_BIN)
+	@rm -f $(TEST_IOS_MESSAGE_QUEUE_BIN)
+
 test: test-macos-events
 test-macos-events: $(TARGET)
 	@$(CC) -I. tests/test_macos_events.m $(TEST_LDFLAGS) -framework AppKit -o $(TEST_MACOS_EVENTS_BIN)
@@ -224,4 +231,4 @@ install: $(TARGET)
 	install -m 755 $(TARGET) /usr/local/lib/
 	install -m 644 platform.h /usr/local/include/
 
-.PHONY: all clean install test test-macos-events test-macos-file-dialog
+.PHONY: all clean install test test-macos-events test-macos-file-dialog test-ios-message-queue
