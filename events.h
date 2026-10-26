@@ -43,9 +43,14 @@ typedef struct {
   float scale, rotation; // Incremental scale factor and clockwise radians.
 } ax_gesture_t;
 
-enum { AX_POINTER_STYLUS = 1u << 0, AX_POINTER_TOUCH = 1u << 1 };
+enum {
+  AX_POINTER_STYLUS = 1u << 0, AX_POINTER_TOUCH = 1u << 1,
+  /* Direct-touch scroll lifecycle carried by kEventScrollWheel. */
+  AX_POINTER_SCROLL_BEGIN = 1u << 2, AX_POINTER_SCROLL_UPDATE = 1u << 3,
+  AX_POINTER_SCROLL_END = 1u << 4, AX_POINTER_SCROLL_CANCEL = 1u << 5
+};
 typedef struct {
-  uint32_t flags;   /**< AX_POINTER_STYLUS for a stylus / Apple Pencil, AX_POINTER_TOUCH for a finger. */
+  uint32_t flags;   /**< Device flags plus optional AX_POINTER_SCROLL_* lifecycle for direct-touch scrolling. */
   float altitude;   /**< Radians: 0 = parallel to the surface, π/2 = perpendicular. */
   uint32_t time;    /**< Sample time in milliseconds for touch samples; 0 when unknown. */
 } ax_pointer_t;
