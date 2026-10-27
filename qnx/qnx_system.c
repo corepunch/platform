@@ -369,6 +369,18 @@ axRemoveFromQueue(void *target)
       memset(&queue.data[r], 0, sizeof(queue.data[r]));
 }
 
+void
+axRemoveMessages(void *target, uint32_t message, uint32_t wparam)
+{
+  uint16_t r = queue.read, w = queue.write, nw = queue.read;
+  while (r != w) {
+    struct AXmessage const *e = &queue.data[r++];
+    if (e->target != target || e->message != message || (wparam != AX_ANY_WPARAM && e->wParam != wparam))
+      queue.data[nw++] = *e;
+  }
+  queue.write = nw;
+}
+
 int
 axWaitMessage(longTime_t msec)
 {

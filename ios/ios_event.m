@@ -24,7 +24,7 @@ int axWaitMessage(longTime_t msec) {
 }
 
 void axRemoveFromQueue(void *target) {
-  ios_remove_messages(target);
+  ios_remove_messages(target, 0, AX_ANY_WPARAM);
   for (NSNumber *key in ios_timers.allKeys) {
     if ([objc_getAssociatedObject(ios_timers[key], &ios_timer_owner) pointerValue] == target) axCancelTimer(key.unsignedIntValue);
   }

@@ -99,13 +99,14 @@ int axPeekMessage(struct AXmessage *msg) {
   return ready;
 }
 
-void ios_remove_messages(void *target) {
+void ios_remove_messages(void *target, uint32_t message, uint32_t wparam) {
   pthread_mutex_lock(&ios_queue_mutex);
   ios_message_t **link = &ios_head;
   ios_tail = NULL;
   while (*link) {
     ios_message_t *p = *link;
-    if (p->value.target == target) {
+    if (p->value.target == target && (!message || p->value.message == message) &&
+        (wparam == AX_ANY_WPARAM || p->value.wParam == wparam)) {
       *link = p->next;
       if (p->value.message == kEventDragDrop) free(p->value.lParam);
       free(p);
@@ -113,6 +114,10 @@ void ios_remove_messages(void *target) {
     else { ios_tail = p; link = &p->next; }
   }
   pthread_mutex_unlock(&ios_queue_mutex);
+}
+
+void axRemoveMessages(void *target, uint32_t message, uint32_t wparam) {
+  if (message) ios_remove_messages(target, message, wparam);
 }
 
 void ios_shutdown_messages(void) {

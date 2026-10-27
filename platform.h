@@ -406,6 +406,25 @@ axGetMessage(struct AXmessage* msg);
 AX_API void
 axRemoveFromQueue(void* target);
 
+/** @brief Wildcard for #axRemoveMessages: match an event whatever its wParam. */
+#define AX_ANY_WPARAM ((uint32_t)-1)
+
+/**
+ * @brief Remove queued events of one type for one target.
+ *
+ * Removes every queued event whose target is @p target and whose type is
+ * @p message, keeping the order of the others. Pass #AX_ANY_WPARAM as
+ * @p wparam to match any wParam, or a value to remove only the events that
+ * carry it, such as the ticks of one cancelled timer. Unlike
+ * #axRemoveFromQueue, this leaves the target's timers running.
+ *
+ * @param target   Window or object handle to match against.
+ * @param message  Event type to remove (e.g. #kEventTimer).
+ * @param wparam   wParam to match, or #AX_ANY_WPARAM for any.
+ */
+AX_API void
+axRemoveMessages(void* target, uint32_t message, uint32_t wparam);
+
 /**
  * @brief Notify the event system that a file was dropped onto the window.
  *
