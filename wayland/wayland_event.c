@@ -798,6 +798,21 @@ axRemoveFromQueue(void* hobj)
 }
 
 void
+axRemoveMessages(void* hobj, uint32_t event, uint32_t wparam)
+{
+  WORD read_idx  = events.read;
+  WORD write_idx = events.write;
+  WORD new_write = events.read;
+
+  while (read_idx != write_idx) {
+    EVENT const *e = &events.queue[read_idx++];
+    if (e->target != hobj || e->message != event || (wparam != AX_ANY_WPARAM && e->wParam != wparam))
+      events.queue[new_write++] = *e;
+  }
+  events.write = new_write;
+}
+
+void
 axNotifyFileDropEvent(char const* filename, float x, float y)
 {
   if (!filename || !filename[0]) return;

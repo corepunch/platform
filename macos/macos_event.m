@@ -41,6 +41,17 @@ axRemoveFromQueue(void* target)
 }
 
 void
+axRemoveMessages(void* target, uint32_t message, uint32_t wparam)
+{
+  // Cocoa events refer to queue slots by index, so clear matches in place.
+  for (uint16_t r = queue.read; r != queue.write; r++) {
+    struct AXmessage const *e = &queue.data[r];
+    if (e->target == target && e->message == message && (wparam == AX_ANY_WPARAM || e->wParam == wparam))
+      memset(&queue.data[r], 0, sizeof(queue.data[r]));
+  }
+}
+
+void
 axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
 {
   struct AXmessage const msg = {

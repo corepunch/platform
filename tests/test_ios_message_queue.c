@@ -73,10 +73,10 @@ static void test_removal_and_reset(void) {
   axPostMessageW(&first, kEventDragDrop, 0, strdup("removed file"));
   ios_begin_message_frame();
   axPostMessageW(&second, kEventKeyUp, 3, NULL);
-  ios_remove_messages(&first);
+  ios_remove_messages(&first, 0, AX_ANY_WPARAM);
   assert(axPeekMessage(&msg) && msg.target == &second && msg.wParam == 2);
   assert(!axPeekMessage(&msg));
-  ios_remove_messages(&second);
+  ios_remove_messages(&second, 0, AX_ANY_WPARAM);
   axPostMessageW(&first, kEventKeyDown, 4, NULL);
   assert(!axPeekMessage(&msg));
   ios_begin_message_frame();
@@ -86,6 +86,23 @@ static void test_removal_and_reset(void) {
   assert(!axPeekMessage(&msg));
   axPostMessageW(&second, kEventKeyDown, 5, NULL);
   assert(axPeekMessage(&msg) && msg.id == 1 && msg.wParam == 5);
+  assert(!axPeekMessage(&msg));
+}
+
+static void test_remove_by_type(void) {
+  ios_shutdown_messages();
+  int first, second;
+  struct AXmessage msg;
+  axPostMessageW(&first, kEventTimer, 1, NULL);
+  axPostMessageW(&first, kEventTimer, 2, NULL);
+  axPostMessageW(&second, kEventTimer, 1, NULL);
+  axPostMessageW(&first, kEventKeyDown, 3, NULL);
+  axRemoveMessages(&first, kEventTimer, 1);
+  assert(axPeekMessage(&msg) && msg.target == &first && msg.message == kEventTimer && msg.wParam == 2);
+  assert(axPeekMessage(&msg) && msg.target == &second && msg.wParam == 1);
+  axPostMessageW(&first, kEventTimer, 4, NULL);
+  axRemoveMessages(&first, kEventTimer, AX_ANY_WPARAM);
+  assert(axPeekMessage(&msg) && msg.message == kEventKeyDown && msg.wParam == 3);
   assert(!axPeekMessage(&msg));
 }
 
@@ -116,8 +133,9 @@ int main(void) {
   test_inertia_interrupt();
   test_complete_snapshot();
   test_removal_and_reset();
+  test_remove_by_type();
   test_sequence_wrap();
   ios_shutdown_messages();
-  puts("PASS: iOS queue frame boundaries, touch interruption, FIFO, removal, reset and sequence wrap");
+  puts("PASS: iOS queue frame boundaries, touch interruption, FIFO, removal by target and type, reset and sequence wrap");
   return 0;
 }

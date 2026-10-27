@@ -1,7 +1,8 @@
 /*
  * test_messages.c – behavioral tests for the platform event-queue API.
  *
- * Tests axPostMessageW, axPeekMessage, and axRemoveFromQueue without
+ * Tests axPostMessageW, axPeekMessage, axRemoveFromQueue and
+ * axRemoveMessages without
  * requiring a live display server or windowing context.
  *
  * On macOS the internal queue is coupled to NSApp, so message-delivery tests
@@ -137,6 +138,45 @@ static void test_remove_nonexistent_target(void)
 }
 
 /* -------------------------------------------------------------------
+ * test_remove_messages
+ *   axRemoveMessages must remove only one type for one target, matching
+ *   wParam exactly unless AX_ANY_WPARAM is given.
+ * ------------------------------------------------------------------- */
+static void test_remove_messages(void)
+{
+  struct AXmessage msg;
+  void *handle_a = (void *)0xA0A0;
+  void *handle_b = (void *)0xB0B0;
+
+  drain_queue();
+
+  axPostMessageW(handle_a, kEventTimer,   1, NULL);
+  axPostMessageW(handle_a, kEventTimer,   2, NULL);
+  axPostMessageW(handle_b, kEventTimer,   1, NULL);
+  axPostMessageW(handle_a, kEventKeyDown, 1, NULL);
+  axPostMessageW(handle_a, kEventTimer,   1, NULL);
+
+  /* One timer of handle_a: other timers, targets and types stay queued */
+  axRemoveMessages(handle_a, kEventTimer, 1);
+  assert(axPeekMessage(&msg) == 1);
+  assert(msg.target == handle_a && msg.message == kEventTimer && msg.wParam == 2);
+  assert(axPeekMessage(&msg) == 1);
+  assert(msg.target == handle_b && msg.message == kEventTimer && msg.wParam == 1);
+  assert(axPeekMessage(&msg) == 1);
+  assert(msg.target == handle_a && msg.message == kEventKeyDown);
+  assert(axPeekMessage(&msg) == 0);
+
+  /* AX_ANY_WPARAM removes the type whatever its wParam */
+  axPostMessageW(handle_a, kEventTimer,   3, NULL);
+  axPostMessageW(handle_a, kEventKeyDown, 4, NULL);
+  axPostMessageW(handle_a, kEventTimer,   5, NULL);
+  axRemoveMessages(handle_a, kEventTimer, AX_ANY_WPARAM);
+  assert(axPeekMessage(&msg) == 1);
+  assert(msg.message == kEventKeyDown && msg.wParam == 4);
+  assert(axPeekMessage(&msg) == 0);
+}
+
+/* -------------------------------------------------------------------
  * test_lparam_roundtrip
  *   The lParam pointer must survive the queue round-trip unchanged.
  * ------------------------------------------------------------------- */
@@ -230,6 +270,7 @@ int main(void)
   test_fifo_ordering();
   test_remove_from_queue();
   test_remove_nonexistent_target();
+  test_remove_messages();
   test_lparam_roundtrip();
   test_double_click_sequence();
   test_get_message();
