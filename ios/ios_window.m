@@ -515,7 +515,8 @@ bool_t axCreateWindow(const char *title, uint32_t w, uint32_t h, uint32_t flags)
   ios_view.contentScaleFactor = ios_scale;
   CAEAGLLayer *layer = (CAEAGLLayer *)ios_view.layer;
   layer.opaque = YES;
-  layer.drawableProperties = @{kEAGLDrawablePropertyRetainedBacking: @YES, kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8};
+  // ORCA clears the whole frame; only standalone clients need incremental repainting.
+  layer.drawableProperties = @{kEAGLDrawablePropertyRetainedBacking: @(!ios_external_host), kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8};
   glGenFramebuffers(1, &ios_framebuffer);
   glGenRenderbuffers(1, &ios_color);
   glGenRenderbuffers(1, &ios_depth);

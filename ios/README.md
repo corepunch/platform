@@ -22,7 +22,8 @@ frame callback in a desktop-style infinite event loop.
 `axCreateWindow` covers the whole screen, under the notch and home indicator. The backend owns its ES 3
 context, Retina renderbuffer and depth/stencil framebuffer. Resizing reallocates
 the drawable and posts `kEventWindowResized`; presentation retains the color
-buffer for Orion's incremental repainting. `axGetSize` and pointer events are
+buffer for standalone clients' incremental repainting. Embedded ORCA clears
+each full frame and disables retained backing. `axGetSize` and pointer events are
 in UIKit points; `axGetScaling` supplies the backing-pixel scale. Child-window
 coordinate conversion remains the framework's responsibility.
 
