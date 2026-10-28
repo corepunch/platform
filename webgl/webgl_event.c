@@ -7,6 +7,9 @@ static struct
   WORD write, read;
   float pointer_x, pointer_y;
   uint32_t buttons; /* bitmask of currently pressed mouse buttons */
+  uint32_t last_down;
+  longTime_t last_down_time;
+  int last_down_x, last_down_y;
 } events = { 0 };
 
 #define MAX_TIMERS 64
@@ -91,23 +94,35 @@ on_mousemove(int eventType, const EmscriptenMouseEvent *e, void *userData)
   return EM_TRUE;
 }
 
+static void queue_button_down(uint32_t down, uint32_t double_click, int x, int y) {
+  longTime_t now = axGetMilliseconds();
+  int dx = x - events.last_down_x, dy = y - events.last_down_y;
+  bool_t doubled = events.last_down == down && now - events.last_down_time <= 300 && dx * dx + dy * dy <= 25;
+  axPostMessageOwnedW((EVENT){.x = (uint16_t)x, .y = (uint16_t)y, .message = down});
+  if (doubled) {
+    events.last_down = 0;
+    axPostMessageOwnedW((EVENT){.x = (uint16_t)x, .y = (uint16_t)y, .message = double_click});
+  } else {
+    events.last_down = down;
+    events.last_down_time = now;
+    events.last_down_x = x;
+    events.last_down_y = y;
+  }
+}
+
 static EM_BOOL
 on_mousedown(int eventType, const EmscriptenMouseEvent *e, void *userData)
 {
   (void)eventType;
   (void)userData;
   events.buttons |= (1u << e->button);
-  uint32_t msg;
+  uint32_t msg, double_click;
   switch (e->button) {
-  case 0:  msg = kEventLeftButtonDown;  break;
-  case 2:  msg = kEventRightButtonDown; break;
-  default: msg = kEventOtherButtonDown; break;
+  case 0:  msg = kEventLeftButtonDown;  double_click = kEventLeftDoubleClick;  break;
+  case 2:  msg = kEventRightButtonDown; double_click = kEventRightDoubleClick; break;
+  default: msg = kEventOtherButtonDown; double_click = kEventOtherDoubleClick; break;
   }
-  axPostMessageOwnedW((EVENT){
-    .x = (uint16_t)e->targetX,
-    .y = (uint16_t)e->targetY,
-    .message = msg,
-  });
+  queue_button_down(msg, double_click, e->targetX, e->targetY);
   return EM_TRUE;
 }
 
@@ -130,25 +145,6 @@ on_mouseup(int eventType, const EmscriptenMouseEvent *e, void *userData)
   });
   return EM_TRUE;
 }
-
-// static EM_BOOL
-// on_dblclick(int eventType, const EmscriptenMouseEvent *e, void *userData)
-// {
-//   (void)eventType;
-//   (void)userData;
-//   uint32_t msg;
-//   switch (e->button) {
-//   case 0:  msg = kEventLeftDoubleClick;  break;
-//   case 2:  msg = kEventRightDoubleClick; break;
-//   default: msg = kEventOtherDoubleClick; break;
-//   }
-//   events.queue[events.write++] = (EVENT){
-//     .x = (uint16_t)e->targetX,
-//     .y = (uint16_t)e->targetY,
-//     .message = msg,
-//   };
-//   return EM_TRUE;
-// }
 
 static EM_BOOL
 on_wheel(int eventType, const EmscriptenWheelEvent *e, void *userData)
@@ -204,11 +200,7 @@ on_touchstart(int eventType, const EmscriptenTouchEvent *e, void *userData)
   events.buttons |= (1u << 0);
   events.pointer_x = (float)tx;
   events.pointer_y = (float)ty;
-  axPostMessageOwnedW((EVENT){
-    .x = (uint16_t)tx,
-    .y = (uint16_t)ty,
-    .message = kEventLeftButtonDown,
-  });
+  queue_button_down(kEventLeftButtonDown, kEventLeftDoubleClick, tx, ty);
   return EM_TRUE;
 }
 
@@ -309,7 +301,6 @@ webgl_register_callbacks(void)
   emscripten_set_mousemove_callback("#canvas", NULL, EM_FALSE, on_mousemove);
   emscripten_set_mousedown_callback("#canvas", NULL, EM_FALSE, on_mousedown);
   emscripten_set_mouseup_callback("#canvas", NULL, EM_FALSE, on_mouseup);
-  // emscripten_set_dblclick_callback("#canvas", NULL, EM_FALSE, on_dblclick);
   emscripten_set_wheel_callback("#canvas", NULL, EM_FALSE, on_wheel);
   emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keydown);
   emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, EM_FALSE, on_keyup);
