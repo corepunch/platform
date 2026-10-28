@@ -347,6 +347,15 @@ axGetMessage(PEVENT pEvent)
 void
 axPostMessageOwnedW(struct AXmessage message)
 {
+  if (message.message == kEventWindowPaint || message.message == kEventWindowResized) {
+    for (uint16_t r = events.read; r != events.write; r++) {
+      if (events.queue[r].target != message.target || events.queue[r].message != message.message) continue;
+      struct AXmessage old = events.queue[r];
+      events.queue[r] = message;
+      axDisposeMessage(&old);
+      return;
+    }
+  }
   if ((uint16_t)(events.write + 1) == events.read) {
     axDisposeMessage(&message);
     return;
