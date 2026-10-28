@@ -24,12 +24,15 @@ static void test_inertia_interrupt(void) {
   struct AXmessage msg;
   axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
   ios_begin_message_frame();
+  // A paint requested while the batch runs draws in the same callback once
+  // the batch has drained; the paint that one requests waits for the next
+  // callback, so a repainting handler cannot starve UIKit.
   int paints = 0;
   while (axPeekMessage(&msg)) {
-    assert(msg.message == kEventWindowPaint && ++paints == 1);
+    assert(msg.message == kEventWindowPaint && ++paints <= 2);
     axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
   }
-  assert(paints == 1 && !ios_messages_ready());
+  assert(paints == 2 && !ios_messages_ready());
 
   // UIKit can now deliver a new touch while another inertia paint is pending.
   ios_enqueue((struct AXmessage){ .message = kEventScrollWheel,
@@ -40,10 +43,21 @@ static void test_inertia_interrupt(void) {
   axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
   assert(axPeekMessage(&msg) && msg.message == kEventScrollWheel);
   assert(msg.pointer.flags == (AX_POINTER_TOUCH | AX_POINTER_SCROLL_BEGIN));
+  // The touch's paint is shown in the frame that handled the touch.
+  assert(axPeekMessage(&msg) && msg.message == kEventWindowPaint);
   assert(!axPeekMessage(&msg) && !ios_messages_ready());
 
+  // Only paints skip ahead: other messages posted while draining wait, even
+  // when a later paint is delivered around them.
+  axPostMessageW(NULL, kEventTimer, 7, NULL);
   ios_begin_message_frame();
+  assert(axPeekMessage(&msg) && msg.message == kEventTimer && msg.wParam == 7);
+  axPostMessageW(NULL, kEventTimer, 8, NULL);
+  axPostMessageW(NULL, kEventWindowPaint, 0, NULL);
   assert(axPeekMessage(&msg) && msg.message == kEventWindowPaint);
+  assert(!axPeekMessage(&msg));
+  ios_begin_message_frame();
+  assert(axPeekMessage(&msg) && msg.message == kEventTimer && msg.wParam == 8);
   assert(!axPeekMessage(&msg));
 }
 
