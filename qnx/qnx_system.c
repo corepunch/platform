@@ -177,8 +177,7 @@ qnx_process_screen_events(void)
           .y = (uint16_t)pos[1],
           .dy = -1,
         };
-        queue.data[queue.write++] = msg;
-        sem_post(&event_sem);
+        axPostMessageOwnedW(msg);
         break;
       }
       if (buttons & SCREEN_MOUSE_BUTTON_SCROLL_DOWN) {
@@ -188,8 +187,7 @@ qnx_process_screen_events(void)
           .y = (uint16_t)pos[1],
           .dy = 1,
         };
-        queue.data[queue.write++] = msg;
-        sem_post(&event_sem);
+        axPostMessageOwnedW(msg);
         break;
       }
 
@@ -228,16 +226,14 @@ qnx_process_screen_events(void)
               .x = (uint16_t)pos[0],
               .y = (uint16_t)pos[1],
             };
-            queue.data[queue.write++] = down_ev;
-            sem_post(&event_sem);
+            axPostMessageOwnedW(down_ev);
           }
           struct AXmessage ev = {
             .message = msg_type,
             .x = (uint16_t)pos[0],
             .y = (uint16_t)pos[1],
           };
-          queue.data[queue.write++] = ev;
-          sem_post(&event_sem);
+          axPostMessageOwnedW(ev);
         }
         if (released & btns[i].mask) {
           struct AXmessage ev = {
@@ -245,8 +241,7 @@ qnx_process_screen_events(void)
             .x = (uint16_t)pos[0],
             .y = (uint16_t)pos[1],
           };
-          queue.data[queue.write++] = ev;
-          sem_post(&event_sem);
+          axPostMessageOwnedW(ev);
         }
       }
 
@@ -269,8 +264,7 @@ qnx_process_screen_events(void)
           .dx = dx,
           .dy = dy,
         };
-        queue.data[queue.write++] = ev;
-        sem_post(&event_sem);
+        axPostMessageOwnedW(ev);
       }
       break;
     }
@@ -294,16 +288,14 @@ qnx_process_screen_events(void)
           char ch = (char)sym;
           memcpy(&ev.lParam, &ch, 1);
         }
-        queue.data[queue.write++] = ev;
-        sem_post(&event_sem);
+        axPostMessageOwnedW(ev);
       }
       break;
     }
 
     case SCREEN_EVENT_CLOSE: {
       struct AXmessage ev = { .message = kEventWindowClosed };
-      queue.data[queue.write++] = ev;
-      sem_post(&event_sem);
+      axPostMessageOwnedW(ev);
       break;
     }
 
@@ -324,31 +316,36 @@ init_event_sem(void)
 }
 
 void
-axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+axPostMessageOwnedW(struct AXmessage message)
 {
   init_event_sem();
-
-  /* Coalesce duplicate resize/paint events */
-  for (uint16_t r = queue.read; r != queue.write; r++) {
-    if (queue.data[r].message != event)
-      continue;
-    switch (event) {
-      case kEventWindowResized:
-      case kEventWindowPaint:
-        queue.data[r].target = hobj;
-        queue.data[r].wParam = wparam;
-        queue.data[r].lParam = lparam;
-        return;
+  if (message.message == kEventWindowResized || message.message == kEventWindowPaint) {
+    for (uint16_t r = queue.read; r != queue.write; r++) {
+      if (queue.data[r].target != message.target || queue.data[r].message != message.message) continue;
+      struct AXmessage old = queue.data[r];
+      queue.data[r] = message;
+      axDisposeMessage(&old);
+      return;
     }
   }
-
-  queue.data[queue.write].target  = hobj;
-  queue.data[queue.write].message = event;
-  queue.data[queue.write].wParam  = wparam;
-  queue.data[queue.write].lParam  = lparam;
-  queue.write++;
-
+  if ((uint16_t)(queue.write + 1) == queue.read) { axDisposeMessage(&message); return; }
+  queue.data[queue.write++] = message;
   sem_post(&event_sem);
+}
+
+void
+axPostMessageW(void *target, uint32_t event, uint32_t wparam, void *lparam)
+{
+  axPostMessageOwnedW((struct AXmessage){ .target = target, .message = event,
+    .wParam = wparam, .lParam = lparam });
+}
+
+void
+axClearMessageQueue(void)
+{
+  struct AXmessagePayload *dispose = NULL;
+  while (queue.read != queue.write) axTakeMessagePayload(&queue.data[queue.read++], &dispose);
+  axDisposePayloads(dispose);
 }
 
 int
@@ -364,21 +361,28 @@ axPeekMessage(struct AXmessage *e)
 void
 axRemoveFromQueue(void *target)
 {
-  for (uint16_t r = queue.read; r != queue.write; r++)
-    if (queue.data[r].target == target)
-      memset(&queue.data[r], 0, sizeof(queue.data[r]));
+  struct AXmessagePayload *dispose = NULL;
+  for (uint16_t r = queue.read; r != queue.write; r++) {
+    if (queue.data[r].target != target) continue;
+    axTakeMessagePayload(&queue.data[r], &dispose);
+    memset(&queue.data[r], 0, sizeof(queue.data[r]));
+  }
+  axDisposePayloads(dispose);
 }
 
 void
 axRemoveMessages(void *target, uint32_t message, uint32_t wparam)
 {
+  struct AXmessagePayload *dispose = NULL;
   uint16_t r = queue.read, w = queue.write, nw = queue.read;
   while (r != w) {
-    struct AXmessage const *e = &queue.data[r++];
-    if (e->target != target || e->message != message || (wparam != AX_ANY_WPARAM && e->wParam != wparam))
-      queue.data[nw++] = *e;
+    struct AXmessage *e = &queue.data[r++];
+    if (e->target == target && e->message == message && (wparam == AX_ANY_WPARAM || e->wParam == wparam))
+      axTakeMessagePayload(e, &dispose);
+    else queue.data[nw++] = *e;
   }
   queue.write = nw;
+  axDisposePayloads(dispose);
 }
 
 int

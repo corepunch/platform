@@ -320,9 +320,15 @@ struct AXbuffer
  * Keyboard events: @p wParam = key-code | modifier flags, @p lParam = UTF-8 char.
  * Window events:  @p target = window handle, @p wParam = new width/height.
  */
+struct AXmessagePayload {
+  struct AXmessagePayload *next;
+  void *data;
+  void (*dispose)(void *);
+};
+
 struct AXmessage
 {
-  void*    target;   /**< Window or object that should receive the event. */
+  void*    target;   /**< Borrowed window/object handle; payload ownership does not retain it. */
   uint32_t message;  /**< Event type identifier (e.g. #kEventKeyDown). */
   union {
     wParam_t wParam;                         /**< Generic word parameter. */
@@ -336,7 +342,53 @@ struct AXmessage
   uint32_t id; /**< Sequence number assigned at post time. */
   ax_gesture_t gesture; /**< Inline payload for kEventGesture; no borrowed storage. */
   ax_pointer_t pointer; /**< Stylus sample for pointer events; zeroed otherwise. */
+  struct AXmessagePayload *ownedPayload; /**< Ownership transfers with the message. */
 };
+
+/** Attach owned storage. On allocation failure, storage is released immediately. */
+static inline int axOwnMessageData(struct AXmessage *message, void *data, void (*dispose)(void *))
+{
+  struct AXmessagePayload *owner = malloc(sizeof(*owner));
+  if (!owner) { dispose(data); return 0; }
+  *owner = (struct AXmessagePayload){ .data = data, .dispose = dispose };
+  message->ownedPayload = owner;
+  return 1;
+}
+
+/** Detach before invoking destructors, which may themselves mutate the queue. */
+static inline void axTakeMessagePayload(struct AXmessage *message, struct AXmessagePayload **list)
+{
+  struct AXmessagePayload *owner = message->ownedPayload;
+  if (!owner) return;
+  message->ownedPayload = NULL;
+  if (message->lParam == owner->data) message->lParam = NULL;
+  owner->next = *list;
+  *list = owner;
+}
+
+static inline void axDisposePayloads(struct AXmessagePayload *list)
+{
+  while (list) {
+    struct AXmessagePayload *next = list->next;
+    list->dispose(list->data);
+    free(list);
+    list = next;
+  }
+}
+
+/** Release a dequeued message's payload. Borrowed lParam values are untouched. */
+static inline void axDisposeMessage(struct AXmessage *message)
+{
+  struct AXmessagePayload *list = NULL;
+  axTakeMessagePayload(message, &list);
+  axDisposePayloads(list);
+}
+
+/** Takes ownership, including when an event is rejected, coalesced or canceled. */
+AX_API void axPostMessageOwnedW(struct AXmessage message);
+
+/** Releases all queued owned payloads; used before platform shutdown. */
+AX_API void axClearMessageQueue(void);
 
 /**
  * @brief 2-D size in pixels.
@@ -363,7 +415,7 @@ struct AXsize
  * @param hobj   Target window or object handle (stored in #AX_Message::target).
  * @param event  Event type identifier (e.g. #kEventWindowPaint).
  * @param wparam Word-sized parameter; semantics depend on @p event.
- * @param lparam Pointer-sized parameter; semantics depend on @p event.
+ * @param lparam Borrowed pointer-sized parameter; caller retains its lifetime.
  */
 AX_API void
 axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
@@ -373,6 +425,9 @@ axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam);
  *
  * On macOS this also pumps the native Cocoa run loop to collect pending
  * system events before returning.
+ *
+ * Ownership transfers to the caller, which must call #axDisposeMessage after
+ * processing the event (or transfer it to another owner).
  *
  * @param[out] msg  Filled with event data when an event is available.
  * @return 1 if an event was written to @p msg, 0 if the queue is empty.
@@ -387,6 +442,8 @@ axPeekMessage(struct AXmessage* msg);
  * written to @p msg, except on platforms that cannot block the main thread
  * event loop (for example WebGL), where it falls back to non-blocking queue
  * polling semantics.
+ *
+ * Owned payloads follow the same disposal contract as #axPeekMessage.
  *
  * @param[out] msg  Filled with the next available event.
  * @return 1 if an event was written to @p msg, 0 if blocking is unsupported

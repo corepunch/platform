@@ -30,47 +30,61 @@ struct
 } queue = { 0 };
 
 void
-axRemoveFromQueue(void* target)
+axClearMessageQueue(void)
 {
-  for (uint16_t r = queue.read; r != queue.write; r++)
-    if (queue.data[r].target == target)
-      memset(&queue.data[r], 0, sizeof(queue.data[r]));
+  struct AXmessagePayload *dispose = NULL;
+  while (queue.read != queue.write) {
+    axTakeMessagePayload(&queue.data[queue.read], &dispose);
+    memset(&queue.data[queue.read++], 0, sizeof(struct AXmessage));
+  }
+  axDisposePayloads(dispose);
+}
+
+void
+axRemoveFromQueue(void *target)
+{
+  struct AXmessagePayload *dispose = NULL;
+  for (uint16_t r = queue.read; r != queue.write; r++) {
+    if (queue.data[r].target != target) continue;
+    axTakeMessagePayload(&queue.data[r], &dispose);
+    memset(&queue.data[r], 0, sizeof(queue.data[r]));
+  }
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == target)
       axCancelTimer(s_timers[i].id);
+  axDisposePayloads(dispose);
 }
 
 void
-axRemoveMessages(void* target, uint32_t message, uint32_t wparam)
+axRemoveMessages(void *target, uint32_t message, uint32_t wparam)
 {
+  struct AXmessagePayload *dispose = NULL;
   // Cocoa events refer to queue slots by index, so clear matches in place.
   for (uint16_t r = queue.read; r != queue.write; r++) {
-    struct AXmessage const *e = &queue.data[r];
-    if (e->target == target && e->message == message && (wparam == AX_ANY_WPARAM || e->wParam == wparam))
-      memset(&queue.data[r], 0, sizeof(queue.data[r]));
+    struct AXmessage *e = &queue.data[r];
+    if (e->target != target || e->message != message ||
+        (wparam != AX_ANY_WPARAM && e->wParam != wparam)) continue;
+    axTakeMessagePayload(e, &dispose);
+    memset(e, 0, sizeof(*e));
   }
+  axDisposePayloads(dispose);
 }
 
 void
-axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
+axPostMessageOwnedW(struct AXmessage msg)
 {
-  struct AXmessage const msg = {
-    .target = obj,
-    .message = Msg,
-    .wParam = wParam,
-    .lParam = lParam
-  };
-  for (uint16_t r = queue.read; r != queue.write; r++) {
-    if (!queue.data[r].message)
-      continue;
-    if (queue.data[r].message != Msg)
-      continue;
-    switch (Msg) {
-      case kEventWindowResized:
-      case kEventWindowPaint:
-        queue.data[r] = msg;
-        return;
+  if (msg.message == kEventWindowResized || msg.message == kEventWindowPaint) {
+    for (uint16_t r = queue.read; r != queue.write; r++) {
+      if (queue.data[r].target != msg.target || queue.data[r].message != msg.message) continue;
+      struct AXmessage old = queue.data[r];
+      queue.data[r] = msg;
+      axDisposeMessage(&old);
+      return;
     }
+  }
+  if ((uint16_t)(queue.write + 1) == queue.read) {
+    axDisposeMessage(&msg);
+    return;
   }
   @autoreleasepool {
     NSEvent *customEvent =
@@ -81,11 +95,18 @@ axPostMessageW(void* obj, uint32_t Msg, wParam_t wParam, lParam_t lParam)
                    windowNumber:0
                         context:nil
                         subtype:queue.write
-                          data1:wParam
+                          data1:msg.wParam
                           data2:0];
     queue.data[queue.write++] = msg;
     [NSApp postEvent:customEvent atStart:NO];
   }
+}
+
+void
+axPostMessageW(void *obj, uint32_t event, wParam_t wparam, lParam_t lparam)
+{
+  axPostMessageOwnedW((struct AXmessage){ .target = obj, .message = event,
+    .wParam = wparam, .lParam = lparam });
 }
 
 void

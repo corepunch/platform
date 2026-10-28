@@ -215,6 +215,7 @@ axInit(void)
 void
 axShutdown(void)
 {
+  axClearMessageQueue();
   xkb_state_unref(xkb_state);
   xkb_keymap_unref(xkb_keymap);
   xkb_context_unref(xkb_ctx);

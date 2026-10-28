@@ -163,6 +163,7 @@ axInit(void)
 void
 axShutdown(void)
 {
+  axClearMessageQueue();
   delete_window(&window);
   if (egl_display != EGL_NO_DISPLAY) {
     eglTerminate(egl_display);

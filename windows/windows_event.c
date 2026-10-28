@@ -29,12 +29,12 @@ timer_proc(HWND h, UINT m, UINT_PTR nid, DWORD t)
   (void)h; (void)m; (void)t;
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].win_id == nid) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .target  = s_timers[i].obj,
         .message = kEventTimer,
         .wParam  = s_timers[i].id,
         .lParam  = s_timers[i].userdata,
-      };
+      });
       if (!s_timers[i].repeat)
         axCancelTimer(s_timers[i].id);
       return;
@@ -140,10 +140,10 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     int ext = (lparam >> 24) & 1; /* extended-key flag */
     uint32_t key = vk_to_axkey(wparam, ext);
     if (key) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .message = kEventKeyDown,
         .wParam  = key | win32_modifiers(),
-      };
+      });
     }
     break;
   }
@@ -153,10 +153,10 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     int ext = (lparam >> 24) & 1;
     uint32_t key = vk_to_axkey(wparam, ext);
     if (key) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .message = kEventKeyUp,
         .wParam  = key | win32_modifiers(),
-      };
+      });
     }
     break;
   }
@@ -164,101 +164,101 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
   case WM_CHAR: {
     uint32_t ch = (uint32_t)wparam;
     if (ch >= 32 && ch < 127) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .message = kEventChar,
         .wParam  = ch,
-      };
+      });
     }
     break;
   }
 
   case WM_LBUTTONDOWN:
     SetCapture(hwnd);
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventLeftButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_LBUTTONUP:
     ReleaseCapture();
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventLeftButtonUp,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_LBUTTONDBLCLK:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventLeftButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
-    events.queue[events.write++] = (EVENT){
+    });
+    axPostMessageOwnedW((EVENT){
       .message = kEventLeftDoubleClick,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_RBUTTONDOWN:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventRightButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_RBUTTONUP:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventRightButtonUp,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_MBUTTONDOWN:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventOtherButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_MBUTTONUP:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventOtherButtonUp,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_RBUTTONDBLCLK:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventRightButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
-    events.queue[events.write++] = (EVENT){
+    });
+    axPostMessageOwnedW((EVENT){
       .message = kEventRightDoubleClick,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_MBUTTONDBLCLK:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventOtherButtonDown,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
-    events.queue[events.write++] = (EVENT){
+    });
+    axPostMessageOwnedW((EVENT){
       .message = kEventOtherDoubleClick,
       .x = (uint16_t)LOWORD(lparam),
       .y = (uint16_t)HIWORD(lparam),
-    };
+    });
     break;
 
   case WM_MOUSEMOVE: {
@@ -281,13 +281,13 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     else
       msg = kEventMouseMoved;
 
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = msg,
       .x = (uint16_t)cur_x,
       .y = (uint16_t)cur_y,
       .dx = dx,
       .dy = dy,
-    };
+    });
     break;
   }
 
@@ -297,12 +297,12 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     /* Convert screen coords to client coords for the position */
     POINT pt = { LOWORD(lparam), HIWORD(lparam) };
     ScreenToClient(hwnd, &pt);
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventScrollWheel,
       .x  = (uint16_t)pt.x,
       .y  = (uint16_t)pt.y,
       .dy = dy,
-    };
+    });
     break;
   }
 
@@ -312,10 +312,10 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     if (nw != g_win_width || nh != g_win_height) {
       g_win_width  = nw;
       g_win_height = nh;
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .message = kEventWindowResized,
         .wParam  = MAKEDWORD(nw, nh),
-      };
+      });
     }
     break;
   }
@@ -324,38 +324,38 @@ WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     PAINTSTRUCT ps;
     BeginPaint(hwnd, &ps);
     EndPaint(hwnd, &ps);
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventWindowPaint,
-    };
+    });
     break;
   }
 
   case WM_SETFOCUS:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventSetFocus,
-    };
+    });
     break;
 
   case WM_SETTINGCHANGE:
     /* "ImmersiveColorSet" announces a light/dark app-mode change. */
     if (lparam && lstrcmpiA((LPCSTR)lparam, "ImmersiveColorSet") == 0) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .message = kEventAppearanceChanged,
         .wParam  = axIsDarkTheme() ? 1 : 0,
-      };
+      });
     }
     break;
 
   case WM_KILLFOCUS:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventKillFocus,
-    };
+    });
     break;
 
   case WM_CLOSE:
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .message = kEventWindowClosed,
-    };
+    });
     /* Do not call DestroyWindow; let the application decide */
     return 0;
 
@@ -463,51 +463,62 @@ axGetMessage(PEVENT pEvent)
 }
 
 void
-axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+axPostMessageOwnedW(struct AXmessage message)
 {
-  if (events.write - events.read >=
-      (int)(sizeof(events.queue) / sizeof(events.queue[0]))) {
+  if ((uint16_t)(events.write + 1) == events.read) {
+    axDisposeMessage(&message);
     return;
   }
-  events.queue[events.write++] = (EVENT){
-    .target  = hobj,
-    .message = event,
-    .wParam  = wparam,
-    .lParam  = lparam,
-  };
+  events.queue[events.write++] = message;
+}
+
+void
+axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+{
+  axPostMessageOwnedW((struct AXmessage){ .target = hobj, .message = event,
+    .wParam = wparam, .lParam = lparam });
+}
+
+void
+axClearMessageQueue(void)
+{
+  struct AXmessagePayload *dispose = NULL;
+  while (events.read != events.write)
+    axTakeMessagePayload(&events.queue[events.read++], &dispose);
+  axDisposePayloads(dispose);
 }
 
 void
 axRemoveFromQueue(void *hobj)
 {
-  uint16_t r = events.read;
-  uint16_t w = events.write;
-  uint16_t nw = events.read;
-
-  while (r != w) {
-    if (events.queue[r].target != hobj)
-      events.queue[nw++] = events.queue[r];
-    r++;
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj) axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = nw;
+  events.write = write;
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
       axCancelTimer(s_timers[i].id);
+  axDisposePayloads(dispose);
 }
 
 void
 axRemoveMessages(void *hobj, uint32_t event, uint32_t wparam)
 {
-  WORD read_idx  = events.read;
-  WORD write_idx = events.write;
-  WORD new_write = events.read;
-
-  while (read_idx != write_idx) {
-    EVENT const *e = &events.queue[read_idx++];
-    if (e->target != hobj || e->message != event || (wparam != AX_ANY_WPARAM && e->wParam != wparam))
-      events.queue[new_write++] = *e;
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj && message->message == event &&
+        (wparam == AX_ANY_WPARAM || message->wParam == wparam))
+      axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = new_write;
+  events.write = write;
+  axDisposePayloads(dispose);
 }
 
 void

@@ -81,13 +81,13 @@ on_mousemove(int eventType, const EmscriptenMouseEvent *e, void *userData)
   else
     msg = kEventMouseMoved;
 
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = (uint16_t)e->targetX,
     .y = (uint16_t)e->targetY,
     .dx = dx,
     .dy = dy,
     .message = msg,
-  };
+  });
   return EM_TRUE;
 }
 
@@ -103,11 +103,11 @@ on_mousedown(int eventType, const EmscriptenMouseEvent *e, void *userData)
   case 2:  msg = kEventRightButtonDown; break;
   default: msg = kEventOtherButtonDown; break;
   }
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = (uint16_t)e->targetX,
     .y = (uint16_t)e->targetY,
     .message = msg,
-  };
+  });
   return EM_TRUE;
 }
 
@@ -123,11 +123,11 @@ on_mouseup(int eventType, const EmscriptenMouseEvent *e, void *userData)
   case 2:  msg = kEventRightButtonUp; break;
   default: msg = kEventOtherButtonUp; break;
   }
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = (uint16_t)e->targetX,
     .y = (uint16_t)e->targetY,
     .message = msg,
-  };
+  });
   return EM_TRUE;
 }
 
@@ -157,12 +157,12 @@ on_wheel(int eventType, const EmscriptenWheelEvent *e, void *userData)
   (void)userData;
   int16_t dx = -(int16_t)e->deltaX;
   int16_t dy = -(int16_t)e->deltaY;
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = (uint16_t)events.pointer_x,
     .y = (uint16_t)events.pointer_y,
     .lParam = (void *)(intptr_t)((dy << 16) | (uint16_t)dx),
     .message = kEventScrollWheel,
-  };
+  });
   return EM_TRUE;
 }
 
@@ -172,10 +172,10 @@ on_keydown(int eventType, const EmscriptenKeyboardEvent *e, void *userData)
   (void)eventType;
   (void)userData;
   uint32_t keycode = map_keycode(e->keyCode);
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .message = kEventKeyDown,
     .wParam = keycode,
-  };
+  });
   return EM_FALSE; // allow default browser behaviour
 }
 
@@ -185,10 +185,10 @@ on_keyup(int eventType, const EmscriptenKeyboardEvent *e, void *userData)
   (void)eventType;
   (void)userData;
   uint32_t keycode = map_keycode(e->keyCode);
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .message = kEventKeyUp,
     .wParam = keycode,
-  };
+  });
   return EM_FALSE;
 }
 
@@ -204,11 +204,11 @@ on_touchstart(int eventType, const EmscriptenTouchEvent *e, void *userData)
   events.buttons |= (1u << 0);
   events.pointer_x = (float)tx;
   events.pointer_y = (float)ty;
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = (uint16_t)tx,
     .y = (uint16_t)ty,
     .message = kEventLeftButtonDown,
-  };
+  });
   return EM_TRUE;
 }
 
@@ -235,12 +235,12 @@ on_touchmove(int eventType, const EmscriptenTouchEvent *e, void *userData)
   // };
   int16_t sdx = (int16_t)(dx);
   int16_t sdy = (int16_t)(dy);
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = (uint16_t)tx,
     .y = (uint16_t)ty,
     .lParam = (void *)(intptr_t)((sdy << 16) | (uint16_t)sdx),
     .message = kEventScrollWheel,
-  };
+  });
   return EM_TRUE;
 }
 
@@ -256,11 +256,11 @@ on_touchend(int eventType, const EmscriptenTouchEvent *e, void *userData)
     x = (uint16_t)e->touches[0].targetX;
     y = (uint16_t)e->touches[0].targetY;
   }
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = x,
     .y = y,
     .message = kEventLeftButtonUp,
-  };
+  });
   return EM_TRUE;
 }
 
@@ -296,10 +296,10 @@ on_resize(int eventType, const EmscriptenUiEvent *e, void *userData)
 
   /* Notify the engine with the canvas size (not window size) */
 
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .message = kEventWindowResized,
     .wParam = MAKEDWORD(g_canvas_width, g_canvas_height),
-  };
+  });
   return EM_TRUE;
 }
 
@@ -345,50 +345,62 @@ axGetMessage(PEVENT pEvent)
 }
 
 void
-axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+axPostMessageOwnedW(struct AXmessage message)
 {
-  if ((WORD)(events.write - events.read) == (WORD)(sizeof(events.queue) / sizeof(events.queue[0]) - 1)) {
+  if ((uint16_t)(events.write + 1) == events.read) {
+    axDisposeMessage(&message);
     return;
   }
-  events.queue[events.write++] = (EVENT){
-    .target = hobj,
-    .message = event,
-    .wParam = wparam,
-    .lParam = lparam,
-  };
+  events.queue[events.write++] = message;
+}
+
+void
+axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
+{
+  axPostMessageOwnedW((struct AXmessage){ .target = hobj, .message = event,
+    .wParam = wparam, .lParam = lparam });
+}
+
+void
+axClearMessageQueue(void)
+{
+  struct AXmessagePayload *dispose = NULL;
+  while (events.read != events.write)
+    axTakeMessagePayload(&events.queue[events.read++], &dispose);
+  axDisposePayloads(dispose);
 }
 
 void
 axRemoveFromQueue(void *hobj)
 {
-  WORD read_idx = events.read;
-  WORD write_idx = events.write;
-  WORD new_write = events.read;
-
-  while (read_idx != write_idx) {
-    if (events.queue[read_idx].target != hobj)
-      events.queue[new_write++] = events.queue[read_idx];
-    read_idx++;
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj) axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = new_write;
+  events.write = write;
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
       axCancelTimer(s_timers[i].id);
+  axDisposePayloads(dispose);
 }
 
 void
 axRemoveMessages(void *hobj, uint32_t event, uint32_t wparam)
 {
-  WORD read_idx  = events.read;
-  WORD write_idx = events.write;
-  WORD new_write = events.read;
-
-  while (read_idx != write_idx) {
-    EVENT const *e = &events.queue[read_idx++];
-    if (e->target != hobj || e->message != event || (wparam != AX_ANY_WPARAM && e->wParam != wparam))
-      events.queue[new_write++] = *e;
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj && message->message == event &&
+        (wparam == AX_ANY_WPARAM || message->wParam == wparam))
+      axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = new_write;
+  events.write = write;
+  axDisposePayloads(dispose);
 }
 
 void
@@ -406,12 +418,12 @@ timer_fired(uint32_t timer_id)
 {
   for (int i = 0; i < MAX_TIMERS; i++) {
     if (s_timers[i].id == timer_id) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .target  = s_timers[i].obj,
         .message = kEventTimer,
         .wParam  = timer_id,
         .lParam  = s_timers[i].userdata,
-      };
+      });
       if (!s_timers[i].repeat)
         axCancelTimer(timer_id);
       return;

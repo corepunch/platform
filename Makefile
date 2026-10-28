@@ -152,7 +152,8 @@ $(TARGET): $(IOS_SOURCES) $(OUTDIR)/ios-settings
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -DHAVE_WINDOWING -x $(LANG) -c - -o "$(OUTDIR)/platform.o"
 	xcrun --sdk $(SDK) ar rcs "$@" "$(OUTDIR)/platform.o"
 else
-$(TARGET):
+PLATFORM_SOURCES := $(shell $(FIND_SOURCES))
+$(TARGET): $(PLATFORM_SOURCES) platform.h events.h rc_server_impl.c
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -x $(LANG) - $(LDFLAGS) -o $@
 
 endif

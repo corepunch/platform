@@ -226,12 +226,12 @@ timers_poll(void)
     uint64_t expirations = 0;
     ssize_t n = read(s_timers[i].fd, &expirations, sizeof(expirations));
     if (n == (ssize_t)sizeof(expirations) && expirations > 0) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .target  = s_timers[i].obj,
         .message = kEventTimer,
         .wParam  = s_timers[i].id,
         .lParam  = s_timers[i].userdata,
-      };
+      });
       if (!s_timers[i].repeat)
         axCancelTimer(s_timers[i].id);
     }
@@ -350,7 +350,7 @@ x11_process_events(void)
       uint32_t key = keysym_to_ax_key(sym);
       if (key) {
         uint32_t mods = x11_modifiers(xev.xkey.state);
-        EVENT *e = &events.queue[events.write++];
+        EVENT value = {0}, *e = &value;
         e->target  = NULL;
         e->message = (xev.type == KeyPress) ? kEventKeyDown : kEventKeyUp;
         e->wParam  = key | mods;
@@ -360,6 +360,7 @@ x11_process_events(void)
           XLookupString(&xev.xkey, (char*)&e->lParam,
                         (int)sizeof(e->lParam) - 1, NULL, NULL);
         }
+        axPostMessageOwnedW(value);
       }
       break;
     }
@@ -441,22 +442,22 @@ x11_process_events(void)
         break;
       case Button4:
         if (pressed) {
-          events.queue[events.write++] = (EVENT){
+          axPostMessageOwnedW((EVENT){
             .x = (uint16_t)xev.xbutton.x,
             .y = (uint16_t)xev.xbutton.y,
             .dy = 1,
             .message = kEventScrollWheel,
-          };
+          });
         }
         break;
       case Button5:
         if (pressed) {
-          events.queue[events.write++] = (EVENT){
+          axPostMessageOwnedW((EVENT){
             .x = (uint16_t)xev.xbutton.x,
             .y = (uint16_t)xev.xbutton.y,
             .dy = -1,
             .message = kEventScrollWheel,
-          };
+          });
         }
         break;
       }
@@ -469,16 +470,16 @@ x11_process_events(void)
         else if (msg == kEventRightDoubleClick) down_msg = kEventRightButtonDown;
         else if (msg == kEventOtherDoubleClick) down_msg = kEventOtherButtonDown;
         if (down_msg)
-          events.queue[events.write++] = (EVENT){
+          axPostMessageOwnedW((EVENT){
             .x = (uint16_t)xev.xbutton.x,
             .y = (uint16_t)xev.xbutton.y,
             .message = down_msg,
-          };
-        events.queue[events.write++] = (EVENT){
+          });
+        axPostMessageOwnedW((EVENT){
           .x = (uint16_t)xev.xbutton.x,
           .y = (uint16_t)xev.xbutton.y,
           .message = msg,
-        };
+        });
       }
       break;
     }
@@ -499,13 +500,13 @@ x11_process_events(void)
       else
         msg = kEventMouseMoved;
 
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .x = (uint16_t)xev.xmotion.x,
         .y = (uint16_t)xev.xmotion.y,
         .dx = dx,
         .dy = dy,
         .message = msg,
-      };
+      });
       break;
     }
 
@@ -515,39 +516,39 @@ x11_process_events(void)
           xev.xconfigure.height != window.height) {
         window.width  = xev.xconfigure.width;
         window.height = xev.xconfigure.height;
-        events.queue[events.write++] = (EVENT){
+        axPostMessageOwnedW((EVENT){
           .wParam  = MAKEDWORD(xev.xconfigure.width, xev.xconfigure.height),
           .message = kEventWindowResized,
-        };
+        });
       }
       break;
     }
 
     case Expose:
       if (xev.xexpose.count == 0) {
-        events.queue[events.write++] = (EVENT){
+        axPostMessageOwnedW((EVENT){
           .message = kEventWindowPaint,
-        };
+        });
       }
       break;
 
     case FocusIn:
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .message = kEventSetFocus,
-      };
+      });
       break;
 
     case FocusOut:
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .message = kEventKillFocus,
-      };
+      });
       break;
 
     case ClientMessage:
       if ((Atom)xev.xclient.data.l[0] == wm_delete_window) {
-        events.queue[events.write++] = (EVENT){
+        axPostMessageOwnedW((EVENT){
           .message = kEventWindowClosed,
-        };
+        });
       } else {
         xdnd_handle_client_message(&xev);
       }
@@ -723,61 +724,72 @@ axGetMessage(PEVENT pEvent)
 void
 NotifyWindowEvent(void* window, uint32_t eventType, uint32_t wparam)
 {
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .wParam   = wparam,
     .message  = eventType,
     .target   = window,
-  };
+  });
 }
 
 void
-axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
+axPostMessageOwnedW(struct AXmessage message)
 {
-  if (events.write - events.read >=
-      (int)(sizeof(events.queue) / sizeof(events.queue[0]))) {
+  if ((uint16_t)(events.write + 1) == events.read) {
+    axDisposeMessage(&message);
     return;
   }
-  events.queue[events.write++] = (EVENT){
-    .target  = hobj,
-    .message = event,
-    .wParam  = wparam,
-    .lParam  = lparam,
-  };
+  events.queue[events.write++] = message;
 }
 
 void
-axRemoveFromQueue(void* hobj)
+axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 {
-  WORD read_idx  = events.read;
-  WORD write_idx = events.write;
-  WORD new_write = events.read;
+  axPostMessageOwnedW((struct AXmessage){ .target = hobj, .message = event,
+    .wParam = wparam, .lParam = lparam });
+}
 
-  while (read_idx != write_idx) {
-    if (events.queue[read_idx].target != hobj)
-      events.queue[new_write++] = events.queue[read_idx];
-    read_idx++;
+void
+axClearMessageQueue(void)
+{
+  struct AXmessagePayload *dispose = NULL;
+  while (events.read != events.write)
+    axTakeMessagePayload(&events.queue[events.read++], &dispose);
+  axDisposePayloads(dispose);
+}
+
+void
+axRemoveFromQueue(void *hobj)
+{
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj) axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = new_write;
+  events.write = write;
 #ifdef __linux__
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
       axCancelTimer(s_timers[i].id);
 #endif
+  axDisposePayloads(dispose);
 }
 
 void
-axRemoveMessages(void* hobj, uint32_t event, uint32_t wparam)
+axRemoveMessages(void *hobj, uint32_t event, uint32_t wparam)
 {
-  WORD read_idx  = events.read;
-  WORD write_idx = events.write;
-  WORD new_write = events.read;
-
-  while (read_idx != write_idx) {
-    EVENT const *e = &events.queue[read_idx++];
-    if (e->target != hobj || e->message != event || (wparam != AX_ANY_WPARAM && e->wParam != wparam))
-      events.queue[new_write++] = *e;
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj && message->message == event &&
+        (wparam == AX_ANY_WPARAM || message->wParam == wparam))
+      axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = new_write;
+  events.write = write;
+  axDisposePayloads(dispose);
 }
 
 void

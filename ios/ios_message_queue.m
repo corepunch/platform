@@ -57,9 +57,11 @@ void ios_enqueue(struct AXmessage value) {
   if (value.message == kEventWindowResized || ios_is_paint(&value)) {
     for (ios_message_t *p = ios_head; p; p = p->next) {
       if (p->value.target == value.target && p->value.message == value.message) {
-        p->value.wParam = value.wParam;
-        p->value.lParam = value.lParam;
+        struct AXmessage old = p->value;
+        value.id = old.id;
+        p->value = value;
         pthread_mutex_unlock(&ios_queue_mutex);
+        axDisposeMessage(&old);
         return;
       }
     }
@@ -68,6 +70,7 @@ void ios_enqueue(struct AXmessage value) {
   if (!p) {
     pthread_mutex_unlock(&ios_queue_mutex);
     fprintf(stderr, "[ios] queue allocation failed target=%p event=%u\n", value.target, value.message);
+    axDisposeMessage(&value);
     return;
   }
   value.id = ios_next_message++;
@@ -77,6 +80,8 @@ void ios_enqueue(struct AXmessage value) {
   pthread_mutex_unlock(&ios_queue_mutex);
   CFRunLoopWakeUp(CFRunLoopGetMain());
 }
+
+void axPostMessageOwnedW(struct AXmessage message) { ios_enqueue(message); }
 
 void axPostMessageW(void *target, uint32_t event, uint32_t wparam, void *lparam) {
   ios_enqueue((struct AXmessage){ .target = target, .message = event, .wParam = wparam, .lParam = lparam });
@@ -128,6 +133,7 @@ int axPeekMessage(struct AXmessage *msg) {
 }
 
 void ios_remove_messages(void *target, uint32_t message, uint32_t wparam) {
+  ios_message_t *removed = NULL;
   pthread_mutex_lock(&ios_queue_mutex);
   ios_message_t **link = &ios_head;
   ios_tail = NULL;
@@ -136,12 +142,19 @@ void ios_remove_messages(void *target, uint32_t message, uint32_t wparam) {
     if (p->value.target == target && (!message || p->value.message == message) &&
         (wparam == AX_ANY_WPARAM || p->value.wParam == wparam)) {
       *link = p->next;
-      if (p->value.message == kEventDragDrop) free(p->value.lParam);
-      free(p);
+      p->next = removed;
+      removed = p;
     }
     else { ios_tail = p; link = &p->next; }
   }
   pthread_mutex_unlock(&ios_queue_mutex);
+  while (removed) {
+    ios_message_t *next = removed->next;
+    if (removed->value.message == kEventDragDrop && !removed->value.ownedPayload) free(removed->value.lParam);
+    axDisposeMessage(&removed->value);
+    free(removed);
+    removed = next;
+  }
 }
 
 void axRemoveMessages(void *target, uint32_t message, uint32_t wparam) {
@@ -152,19 +165,23 @@ unsigned ios_paint_count(void) { return ios_paints_delivered; }
 
 void ios_shutdown_messages(void) {
   pthread_mutex_lock(&ios_queue_mutex);
-  while (ios_head) {
-    ios_message_t *p = ios_head;
-    ios_head = p->next;
-    if (p->value.message == kEventDragDrop) free(p->value.lParam);
-    free(p);
-  }
-  ios_tail = NULL;
+  ios_message_t *removed = ios_head;
+  ios_head = ios_tail = NULL;
   ios_next_message = 1;
   ios_frame_last_message = ios_frame_last_paint = 0;
   ios_frame_bounded = ios_frame_drained = 0;
   ios_paint_message = 0;
   pthread_mutex_unlock(&ios_queue_mutex);
+  while (removed) {
+    ios_message_t *next = removed->next;
+    if (removed->value.message == kEventDragDrop && !removed->value.ownedPayload) free(removed->value.lParam);
+    axDisposeMessage(&removed->value);
+    free(removed);
+    removed = next;
+  }
 }
+
+void axClearMessageQueue(void) { ios_shutdown_messages(); }
 
 #ifdef IOS_MESSAGE_QUEUE_TESTING
 void ios_test_message_sequence(uint32_t next) {
