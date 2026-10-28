@@ -10,6 +10,8 @@ void ios_post_display_paint(uint32_t size);
 // Freeze the readable queue at the start of a UIKit display callback.
 void ios_begin_message_frame(void);
 int ios_messages_ready(void);
+// Paints handed to the host so far; frame profiling reports the paint rate.
+unsigned ios_paint_count(void);
 // Remove queued messages for target; message 0 matches any type.
 void ios_remove_messages(void *target, uint32_t message, uint32_t wparam);
 void ios_shutdown_messages(void);

@@ -8,20 +8,53 @@ typedef struct ios_message {
 } ios_message_t;
 static ios_message_t *ios_head, *ios_tail;
 static pthread_mutex_t ios_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
-static uint32_t ios_next_message = 1, ios_frame_last_message;
+static uint32_t ios_next_message = 1, ios_frame_last_message, ios_frame_last_paint;
 static uint32_t ios_paint_message;
-static int ios_frame_bounded;
+static int ios_frame_bounded, ios_frame_drained;
+static unsigned ios_paints_delivered;
 
-static int ios_message_ready(void) {
-  // Unsigned subtraction preserves ordering when the sequence wraps.
-  return ios_head && (!ios_frame_bounded ||
-      (uint32_t)(ios_frame_last_message - ios_head->value.id) < UINT32_C(0x80000000));
+static int ios_is_paint(struct AXmessage const *value) {
+  return value->message == kEventWindowPaint ||
+         (ios_paint_message && value->message == ios_paint_message);
+}
+
+// Unsigned subtraction preserves ordering when the sequence wraps.
+static int ios_posted_by(uint32_t id, uint32_t last) {
+  return (uint32_t)(last - id) < UINT32_C(0x80000000);
+}
+
+// Finds the next readable message. Messages posted during a display callback
+// wait for the next one, so UIKit can deliver a touch between animation
+// steps. The paints they request are the exception: once the callback's
+// batch has drained, the paints queued so far draw in the same callback, so
+// every animation step and touch is shown in the frame that handled it.
+// Paints posted by those paints wait for the next callback.
+static int ios_ready_message(ios_message_t **prev_out, ios_message_t **out) {
+  ios_message_t *prev = NULL, *p = ios_head;
+  if (!p) return 0;
+  if (ios_frame_bounded && !ios_posted_by(p->value.id, ios_frame_last_message)) {
+    if (!ios_frame_drained) {
+      ios_frame_drained = 1;
+      ios_frame_last_paint = ios_next_message - 1;
+    }
+    for (; p && !(ios_is_paint(&p->value) && ios_posted_by(p->value.id, ios_frame_last_paint)); p = p->next)
+      prev = p;
+    if (!p) return 0;
+  }
+  *prev_out = prev;
+  *out = p;
+  return 1;
+}
+
+static void ios_unlink(ios_message_t *prev, ios_message_t *p) {
+  if (prev) prev->next = p->next; else ios_head = p->next;
+  if (ios_tail == p) ios_tail = prev;
+  free(p);
 }
 
 void ios_enqueue(struct AXmessage value) {
   pthread_mutex_lock(&ios_queue_mutex);
-  if (value.message == kEventWindowPaint || value.message == kEventWindowResized ||
-      (ios_paint_message && value.message == ios_paint_message)) {
+  if (value.message == kEventWindowResized || ios_is_paint(&value)) {
     for (ios_message_t *p = ios_head; p; p = p->next) {
       if (p->value.target == value.target && p->value.message == value.message) {
         p->value.wParam = value.wParam;
@@ -58,13 +91,7 @@ void ios_set_paint_message(uint32_t message) {
 void ios_post_display_paint(uint32_t size) {
   pthread_mutex_lock(&ios_queue_mutex);
   int pending = 0;
-  for (ios_message_t *p = ios_head; p; p = p->next) {
-    if (p->value.message == kEventWindowPaint ||
-        (ios_paint_message && p->value.message == ios_paint_message)) {
-      pending = 1;
-      break;
-    }
-  }
+  for (ios_message_t *p = ios_head; p && !pending; p = p->next) pending = ios_is_paint(&p->value);
   pthread_mutex_unlock(&ios_queue_mutex);
   // This runtime has one drawable; a queued application paint already redraws it.
   if (!pending) axPostMessageW(NULL, kEventWindowPaint, size, NULL);
@@ -74,26 +101,27 @@ void ios_begin_message_frame(void) {
   pthread_mutex_lock(&ios_queue_mutex);
   ios_frame_last_message = ios_next_message - 1;
   ios_frame_bounded = 1;
+  ios_frame_drained = 0;
   pthread_mutex_unlock(&ios_queue_mutex);
 }
 
 int ios_messages_ready(void) {
+  ios_message_t *prev, *p;
   pthread_mutex_lock(&ios_queue_mutex);
-  int ready = ios_message_ready();
+  int ready = ios_ready_message(&prev, &p);
   pthread_mutex_unlock(&ios_queue_mutex);
   return ready;
 }
 
 int axPeekMessage(struct AXmessage *msg) {
   if (!msg) return 0;
+  ios_message_t *prev, *p;
   pthread_mutex_lock(&ios_queue_mutex);
-  int ready = ios_message_ready();
+  int ready = ios_ready_message(&prev, &p);
   if (ready) {
-    ios_message_t *p = ios_head;
     *msg = p->value;
-    ios_head = p->next;
-    if (!ios_head) ios_tail = NULL;
-    free(p);
+    ios_paints_delivered += ios_is_paint(&p->value);
+    ios_unlink(prev, p);
   }
   pthread_mutex_unlock(&ios_queue_mutex);
   return ready;
@@ -120,6 +148,8 @@ void axRemoveMessages(void *target, uint32_t message, uint32_t wparam) {
   if (message) ios_remove_messages(target, message, wparam);
 }
 
+unsigned ios_paint_count(void) { return ios_paints_delivered; }
+
 void ios_shutdown_messages(void) {
   pthread_mutex_lock(&ios_queue_mutex);
   while (ios_head) {
@@ -130,8 +160,8 @@ void ios_shutdown_messages(void) {
   }
   ios_tail = NULL;
   ios_next_message = 1;
-  ios_frame_last_message = 0;
-  ios_frame_bounded = 0;
+  ios_frame_last_message = ios_frame_last_paint = 0;
+  ios_frame_bounded = ios_frame_drained = 0;
   ios_paint_message = 0;
   pthread_mutex_unlock(&ios_queue_mutex);
 }
