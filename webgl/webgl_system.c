@@ -46,6 +46,7 @@ axInit(void)
 void
 axShutdown(void)
 {
+  axClearMessageQueue();
   emscripten_webgl_destroy_context(g_webgl_ctx);
   g_webgl_ctx = 0;
 }

@@ -142,6 +142,43 @@ static void test_sequence_wrap(void) {
   assert(!axPeekMessage(&msg));
 }
 
+static unsigned disposed;
+static void dispose_owned(void *value) {
+  disposed++;
+  free(value);
+  // Destructors run outside the mutex and can safely post another message.
+  axPostMessageW(NULL, kEventKeyUp, disposed, NULL);
+}
+
+static void post_owned(void *target, uint32_t event) {
+  void *value = malloc(16);
+  assert(value);
+  struct AXmessage message = { .target = target, .message = event, .lParam = value };
+  assert(axOwnMessageData(&message, value, dispose_owned));
+  axPostMessageOwnedW(message);
+}
+
+static void test_owned_payloads(void) {
+  ios_shutdown_messages();
+  int target;
+  struct AXmessage msg;
+  post_owned(&target, kEventWindowPaint);
+  post_owned(&target, kEventWindowPaint);
+  assert(disposed == 1);
+  assert(axPeekMessage(&msg) && msg.message == kEventWindowPaint);
+  axDisposeMessage(&msg);
+  axDisposeMessage(&msg);
+  assert(disposed == 2);
+  post_owned(&target, kEventKeyDown);
+  ios_remove_messages(&target, 0, AX_ANY_WPARAM);
+  assert(disposed == 3);
+  post_owned(&target, kEventKeyDown);
+  ios_shutdown_messages();
+  assert(disposed == 4);
+  assert(axPeekMessage(&msg) && msg.message == kEventKeyUp && msg.wParam == 4);
+  assert(!axPeekMessage(&msg));
+}
+
 int main(void) {
   test_unbounded_and_coalesced();
   test_inertia_interrupt();
@@ -149,6 +186,7 @@ int main(void) {
   test_removal_and_reset();
   test_remove_by_type();
   test_sequence_wrap();
+  test_owned_payloads();
   ios_shutdown_messages();
   puts("PASS: iOS queue frame boundaries, touch interruption, FIFO, removal by target and type, reset and sequence wrap");
   return 0;

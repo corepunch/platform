@@ -288,12 +288,12 @@ timers_poll(void)
     uint64_t expirations = 0;
     ssize_t n = read(s_timers[i].fd, &expirations, sizeof(expirations));
     if (n == (ssize_t)sizeof(expirations) && expirations > 0) {
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .target  = s_timers[i].obj,
         .message = kEventTimer,
         .wParam  = s_timers[i].id,
         .lParam  = s_timers[i].userdata,
-      };
+      });
       if (!s_timers[i].repeat)
         axCancelTimer(s_timers[i].id);
     }
@@ -347,13 +347,13 @@ pointer_motion(void* data,
   else
     msg = kEventMouseMoved;
 
-  events.queue[events.write++] = (EVENT){
+  axPostMessageOwnedW((EVENT){
     .x = (uint16_t)new_x,
     .y = (uint16_t)new_y,
     .dx = dx,
     .dy = dy,
     .message = msg,
-  };
+  });
 }
 
 static void
@@ -407,22 +407,22 @@ pointer_button(void* data,
     /* For double-click: also emit MouseDown first so that handlers which
      * only listen for MouseDown still process the second click. */
     if (msg == dbl_msg)
-      events.queue[events.write++] = (EVENT){
+      axPostMessageOwnedW((EVENT){
         .x = (uint16_t)events.pointer.x,
         .y = (uint16_t)events.pointer.y,
         .message = down_msg,
-      };
-    events.queue[events.write++] = (EVENT){
+      });
+    axPostMessageOwnedW((EVENT){
       .x = (uint16_t)events.pointer.x,
       .y = (uint16_t)events.pointer.y,
       .message = msg,
-    };
+    });
   } else {
-    events.queue[events.write++] = (EVENT){
+    axPostMessageOwnedW((EVENT){
       .x = (uint16_t)events.pointer.x,
       .y = (uint16_t)events.pointer.y,
       .message = up_msg,
-    };
+    });
   }
 }
 
@@ -435,12 +435,12 @@ pointer_axis(void* data,
 {
   int16_t dx = axis == WL_POINTER_AXIS_VERTICAL_SCROLL ? 0 : -wl_fixed_to_double(value);
   int16_t dy = axis == WL_POINTER_AXIS_VERTICAL_SCROLL ? -wl_fixed_to_double(value) : 0;
-  events.queue[events.write++] = (EVENT) {
+  axPostMessageOwnedW((EVENT) {
     .x = events.pointer.x,
     .y = events.pointer.y,
     .lParam = (void*)(intptr_t)((dy)<<16|dx),
     .message = kEventScrollWheel
-  };
+  });
 }
 
 // Attach pointer listener
@@ -469,7 +469,7 @@ keyboard_enter(void* data,
                struct wl_surface* surface,
                struct wl_array* keys)
 {
-  events.queue[events.write++] = (EVENT){ .message = kEventSetFocus };
+  axPostMessageOwnedW((EVENT){ .message = kEventSetFocus });
 }
 
 static void
@@ -478,7 +478,7 @@ keyboard_leave(void* data,
                uint32_t serial,
                struct wl_surface* surface)
 {
-  events.queue[events.write++] = (EVENT){ .message = kEventKillFocus };
+  axPostMessageOwnedW((EVENT){ .message = kEventKillFocus });
 }
 
 static uint32_t
@@ -588,7 +588,8 @@ keyboard_key(void* data,
   bool_t pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
   uint32_t msg = pressed ? kEventKeyDown : kEventKeyUp;
 
-  PEVENT e = &events.queue[events.write++];
+  EVENT value = {0};
+  PEVENT e = &value;
   *e = (EVENT){
     .message = msg,
     .wParam  = axkey | mods,
@@ -600,6 +601,7 @@ keyboard_key(void* data,
     xkb_state_key_get_utf8(xkb_state, keycode, (char*)&e->lParam,
                            sizeof(e->lParam));
   }
+  axPostMessageOwnedW(value);
 }
 
 static void
@@ -654,7 +656,7 @@ xdg_surface_configure(void* data,
                       uint32_t serial)
 {
   xdg_surface_ack_configure(xdg_surface, serial);
-  events.queue[events.write++] = (EVENT){ .message = kEventWindowPaint };
+  axPostMessageOwnedW((EVENT){ .message = kEventWindowPaint });
 }
 
 static struct xdg_surface_listener xdg_surface_listener = {
@@ -757,59 +759,70 @@ axGetMessage(PEVENT pEvent)
 }
 
 void NotifyWindowEvent(void *window, uint32_t eventType, uint32_t wparam) {
-  events.queue[events.write++] = (EVENT){ 
+  axPostMessageOwnedW((EVENT){
     .wParam = wparam,
     .message = kEventWindowPaint,
     .target = window,
-  };
+  });
 }
 
 void
-axPostMessageW(void* hobj, uint32_t event, uint32_t wparam, void* lparam)
+axPostMessageOwnedW(struct AXmessage message)
 {
-  if (events.write - events.read >= sizeof(events.queue) / sizeof(events.queue[0])) {
-    // Queue is full, ignore the message
+  if ((uint16_t)(events.write + 1) == events.read) {
+    axDisposeMessage(&message);
     return;
   }
-  events.queue[events.write++] = (EVENT){
-    .target = hobj,
-    .message = event,
-    .wParam = wparam,
-    .lParam = lparam,
-  };
+  events.queue[events.write++] = message;
 }
 
 void
-axRemoveFromQueue(void* hobj)
+axPostMessageW(void *hobj, uint32_t event, uint32_t wparam, void *lparam)
 {
-  WORD read_idx = events.read;
-  WORD write_idx = events.write;
-  WORD new_write = events.read;
+  axPostMessageOwnedW((struct AXmessage){ .target = hobj, .message = event,
+    .wParam = wparam, .lParam = lparam });
+}
 
-  while (read_idx != write_idx) {
-    if (events.queue[read_idx].target != hobj)
-      events.queue[new_write++] = events.queue[read_idx];
-    read_idx++;
+void
+axClearMessageQueue(void)
+{
+  struct AXmessagePayload *dispose = NULL;
+  while (events.read != events.write)
+    axTakeMessagePayload(&events.queue[events.read++], &dispose);
+  axDisposePayloads(dispose);
+}
+
+void
+axRemoveFromQueue(void *hobj)
+{
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj) axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = new_write;
+  events.write = write;
   for (int i = 0; i < MAX_TIMERS; i++)
     if (s_timers[i].id != 0 && s_timers[i].obj == hobj)
       axCancelTimer(s_timers[i].id);
+  axDisposePayloads(dispose);
 }
 
 void
-axRemoveMessages(void* hobj, uint32_t event, uint32_t wparam)
+axRemoveMessages(void *hobj, uint32_t event, uint32_t wparam)
 {
-  WORD read_idx  = events.read;
-  WORD write_idx = events.write;
-  WORD new_write = events.read;
-
-  while (read_idx != write_idx) {
-    EVENT const *e = &events.queue[read_idx++];
-    if (e->target != hobj || e->message != event || (wparam != AX_ANY_WPARAM && e->wParam != wparam))
-      events.queue[new_write++] = *e;
+  struct AXmessagePayload *dispose = NULL;
+  uint16_t read = events.read, write = events.read;
+  while (read != events.write) {
+    struct AXmessage *message = &events.queue[read++];
+    if (message->target == hobj && message->message == event &&
+        (wparam == AX_ANY_WPARAM || message->wParam == wparam))
+      axTakeMessagePayload(message, &dispose);
+    else events.queue[write++] = *message;
   }
-  events.write = new_write;
+  events.write = write;
+  axDisposePayloads(dispose);
 }
 
 void

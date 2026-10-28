@@ -35,6 +35,7 @@ axInit(void)
 void
 axShutdown(void)
 {
+  axClearMessageQueue();
   if (g_hrc) {
     wglMakeCurrent(NULL, NULL);
     wglDeleteContext(g_hrc);

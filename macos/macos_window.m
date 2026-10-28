@@ -112,6 +112,14 @@ struct wstate {
   uint32_t flags;
 } wstate = {0};
 
+static void
+UpdateWindowBacking(NSWindow *window)
+{
+  NSOpenGLView *view = (NSOpenGLView *)window.contentView;
+  wstate.backingScale = view.wantsBestResolutionOpenGLSurface ? window.backingScaleFactor : 1;
+  [[view openGLContext] update];
+}
+
 void
 axNotifySizeChanged(uint32_t width, uint32_t height)
 {
@@ -319,11 +327,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   wstate.Window = window;
   wstate.Delegate = delegate;
   
-  if ([openGLView wantsBestResolutionOpenGLSurface]) {
-    wstate.backingScale = [wstate.Window backingScaleFactor];
-  } else {
-    wstate.backingScale = 1;
-  }
+  UpdateWindowBacking(window);
 
   [openGLView release];
   [windowTitle release];
@@ -332,6 +336,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 }
 
 void axShutdown(void) {
+  axClearMessageQueue();
 #ifndef USE_SINGLE_WINDOW
 	NSWindow *window = hWnd->window;
   [window setContentView:nil];
@@ -571,13 +576,22 @@ axCreateSurface(uint32_t width, uint32_t height)
 //    return YES;
 //}
 - (void) windowDidResize:(NSNotification *)notification {
+  UpdateWindowBacking(self.window);
   uint32_t width = self.window.contentView.frame.size.width;
   uint32_t height = self.window.contentView.frame.size.height;
   //  axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(width, height));
   axNotifySizeChanged(width, height);
 }
 -(void) windowDidChangeScreen:(NSNotification *)notification {
+  UpdateWindowBacking(self.window);
+  axNotifySizeChanged(self.window.contentView.frame.size.width,
+                      self.window.contentView.frame.size.height);
   axPostMessageW(NULL, kEventWindowChangedScreen, 0, 0);
+}
+- (void)windowDidChangeBackingProperties:(NSNotification *)notification {
+  UpdateWindowBacking(self.window);
+  axNotifySizeChanged(self.window.contentView.frame.size.width,
+                      self.window.contentView.frame.size.height);
 }
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
   if (([sender draggingSourceOperationMask] & NSDragOperationGeneric) == NSDragOperationGeneric) {

@@ -151,6 +151,7 @@ axInit(void)
 void
 axShutdown(void)
 {
+  axClearMessageQueue();
   eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
   eglDestroySurface(egl_display, egl_surface);
   eglDestroyContext(egl_display, egl_ctx);
