@@ -5,9 +5,8 @@
  * axRemoveMessages without
  * requiring a live display server or windowing context.
  *
- * On macOS the internal queue is coupled to NSApp, so message-delivery tests
- * are skipped there; only build-time linkage and safety of the non-blocking
- * axPeekMessage path are exercised.
+ * On macOS axInit initializes NSApp without opening a render window so the
+ * same delivery and ownership checks exercise the Cocoa-backed queue.
  */
 
 #include "platform.h"
@@ -21,7 +20,7 @@ static void drain_queue(void)
 {
   struct AXmessage msg;
   while (axPeekMessage(&msg))
-    ;
+    axDisposeMessage(&msg);
 }
 
 /* -------------------------------------------------------------------
@@ -247,24 +246,46 @@ static void test_get_message(void)
   assert(axPeekMessage(&msg) == 0);
 }
 
+static unsigned disposed;
+static void dispose_owned(void *value) { disposed++; free(value); }
+
+static void post_owned(void *target, uint32_t event, uint32_t word)
+{
+  void *value = malloc(8);
+  assert(value);
+  struct AXmessage message = { .target = target, .message = event, .wParam = word, .lParam = value };
+  assert(axOwnMessageData(&message, value, dispose_owned));
+  axPostMessageOwnedW(message);
+}
+
+static void test_owned_coalescing(void)
+{
+  struct AXmessage message;
+  int a, b;
+  drain_queue();
+  for (unsigned i = 0; i < 2; i++) {
+    uint32_t event = i ? kEventWindowResized : kEventWindowPaint;
+    unsigned before = disposed;
+    post_owned(&a, event, 1);
+    post_owned(&b, event, 2);
+    post_owned(&a, kEventKeyDown, 3);
+    post_owned(&a, event, 4);
+    assert(disposed == before + 1);
+    assert(axPeekMessage(&message) && message.target == &a && message.wParam == 4);
+    axDisposeMessage(&message);
+    assert(axPeekMessage(&message) && message.target == &b && message.wParam == 2);
+    axDisposeMessage(&message);
+    assert(axPeekMessage(&message) && message.message == kEventKeyDown && message.wParam == 3);
+    axDisposeMessage(&message);
+    assert(!axPeekMessage(&message) && disposed == before + 4);
+  }
+}
+
 int main(void)
 {
 #ifdef __APPLE__
-  /*
-  * On macOS the message queue is coupled to NSApp: axPostMessageW posts to
-   * both the internal ring-buffer and to NSApp's event queue.  Without calling
-  * axInit (which sets up NSApp), axPeekMessage cannot retrieve events from
-   * the ring-buffer because the NSApp-based delivery path is not available.
-   *
-   * The behavioral tests below require a live NSApp and are therefore skipped
-   * here.  They are exercised indirectly when the application runs normally.
-   * Linkage (all symbols present) is verified by the existing API-completeness
-   * test target.
-   */
-  printf("Message queue behavioral tests skipped on macOS "
-         "(requires AX_Init / NSApp).\n");
-  return 0;
-#else
+  axInit();
+#endif
   test_empty_queue();
   test_post_and_poll();
   test_fifo_ordering();
@@ -274,8 +295,8 @@ int main(void)
   test_lparam_roundtrip();
   test_double_click_sequence();
   test_get_message();
+  test_owned_coalescing();
 
   printf("All message queue tests passed.\n");
   return 0;
-#endif
 }
