@@ -1,5 +1,6 @@
 #include "ios_local.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <PhotosUI/PhotosUI.h>
 
 char const *axGetPlatform(void) { return "ios"; }
 char const *axShareDirectory(void) {
@@ -165,6 +166,60 @@ bool_t axGetOpenFileName(AXopenfilename const *ofn) {
   if (!ok) return FALSE;
   strcpy(ofn->lpstrFile, destination.fileSystemRepresentation);
   IOS_TRACE("open selected path=%s imported=%d", ofn->lpstrFile, !local);
+  return TRUE;
+}
+
+@interface AXPhotoPicker : NSObject <PHPickerViewControllerDelegate>
+@property(nonatomic) BOOL done;
+@property(nonatomic, strong) NSData *png;
+@end
+@implementation AXPhotoPicker
+- (void)picker:(PHPickerViewController *)picker didFinishPicking:(NSArray<PHPickerResult *> *)results {
+  [picker dismissViewControllerAnimated:YES completion:nil];
+  NSItemProvider *provider = results.firstObject.itemProvider;
+  if (!provider) { self.done = YES; return; }
+  if (![provider canLoadObjectOfClass:UIImage.class]) {
+    IOS_TRACE("photo picker: selected item cannot be decoded"); self.done = YES; return;
+  }
+  [provider loadObjectOfClass:UIImage.class completionHandler:^(id<NSItemProviderReading> object, NSError *error) {
+    NSData *png = [object isKindOfClass:UIImage.class] ? UIImagePNGRepresentation((UIImage *)object) : nil;
+    if (!png) IOS_TRACE("photo picker: image decode failed: %s", error.localizedDescription.UTF8String);
+    dispatch_async(dispatch_get_main_queue(), ^{ self.png = png; self.done = YES; });
+  }];
+}
+#if !__has_feature(objc_arc)
+- (void)dealloc { [_png release]; [super dealloc]; }
+#endif
+@end
+
+bool_t axGetOpenImageName(AXopenfilename const *ofn) {
+  if (!ofn || !ofn->lpstrFile || !ofn->nMaxFile || !NSThread.isMainThread ||
+      !ios_window || ios_window.rootViewController.presentedViewController) {
+    IOS_TRACE("photo picker rejected: invalid request, thread or active modal"); return FALSE;
+  }
+  AXPhotoPicker *delegate = AXIOS_AUTORELEASE([AXPhotoPicker new]);
+  PHPickerConfiguration *config = AXIOS_AUTORELEASE([PHPickerConfiguration new]);
+  config.filter = PHPickerFilter.imagesFilter;
+  config.selectionLimit = 1;
+  PHPickerViewController *picker = AXIOS_AUTORELEASE([[PHPickerViewController alloc] initWithConfiguration:config]);
+  picker.delegate = delegate;
+  [ios_window.rootViewController presentViewController:picker animated:YES completion:nil];
+  while (!delegate.done) axWaitMessage(10);
+  ios_wait_for_dismissal();
+  if (!delegate.png) return FALSE;
+  NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:
+    [NSString stringWithFormat:@"orion-photo-%@.png", NSUUID.UUID.UUIDString]]];
+  if (strlen(url.fileSystemRepresentation) >= ofn->nMaxFile) {
+    IOS_TRACE("photo picker: path exceeds buffer capacity=%u", ofn->nMaxFile); return FALSE;
+  }
+  NSError *error = nil;
+  if (![delegate.png writeToURL:url options:NSDataWritingAtomic error:&error]) {
+    IOS_TRACE("photo picker: cannot save selected image: %s", error.localizedDescription.UTF8String); return FALSE;
+  }
+  static char previous[4096];
+  if (previous[0]) remove(previous);
+  snprintf(previous, sizeof(previous), "%s", url.fileSystemRepresentation);
+  strcpy(ofn->lpstrFile, url.fileSystemRepresentation);
   return TRUE;
 }
 

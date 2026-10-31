@@ -554,6 +554,12 @@ static inline bool_t axFileDialogsRequireNative(void) {
 AX_API bool_t
 axGetOpenFileName(AXopenfilename const *ofn);
 
+#ifdef AX_PLATFORM_IOS
+/** Select a photo without requesting library access. The app-owned PNG remains
+ * valid until the next successful call. Returns FALSE on cancel or failure. */
+AX_API bool_t axGetOpenImageName(AXopenfilename const *ofn);
+#endif
+
 /**
  * @brief Show a native save-file dialog.
  *
