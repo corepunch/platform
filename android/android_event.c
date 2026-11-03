@@ -401,8 +401,13 @@ axAndroidSetApp(struct android_app *app)
   android.app = app;
   app->onAppCmd = android_handle_cmd;
   app->onInputEvent = android_handle_input;
-  if (inbox_pipe[0] < 0 && pipe2(inbox_pipe, O_NONBLOCK | O_CLOEXEC) == 0)
+  if (inbox_pipe[0] < 0 && pipe(inbox_pipe) == 0) {
+    for (int i = 0; i < 2; i++) {
+      fcntl(inbox_pipe[i], F_SETFL, fcntl(inbox_pipe[i], F_GETFL) | O_NONBLOCK);
+      fcntl(inbox_pipe[i], F_SETFD, FD_CLOEXEC);
+    }
     ALooper_addFd(app->looper, inbox_pipe[0], ANDROID_LOOPER_INBOX, ALOOPER_EVENT_INPUT, NULL, NULL);
+  }
 }
 
 struct android_app *axAndroidGetApp(void) { return android.app; }
