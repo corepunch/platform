@@ -8,6 +8,9 @@ ARCH ?= $(shell uname -m)
 ifneq (,$(filter iphoneos iphonesimulator,$(SDK)))
 PLATFORM_OS := ios
 PLATFORM_UNAME_S := iOS
+else ifeq ($(SDK),android)
+PLATFORM_OS := android
+PLATFORM_UNAME_S := Android
 else ifdef EMSCRIPTEN
 PLATFORM_OS := emscripten
 PLATFORM_UNAME_S := Emscripten
@@ -55,6 +58,17 @@ else ifeq ($(PLATFORM_OS),ios)
 	LIB_EXT = a
 	FIND_SOURCES = ( find ios -name '*.m'; find unix -name '*.c'; find audio -name '*.c'; )
 	LANG = objective-c
+	HAS_WINDOWING := 1
+else ifeq ($(PLATFORM_OS),android)
+	# make SDK=android ANDROID_NDK=/path/to/ndk [ARCH=aarch64|x86_64] [ANDROID_API=26]
+	ANDROID_API ?= 26
+	ANDROID_HOST := $(firstword $(wildcard $(ANDROID_NDK)/toolchains/llvm/prebuilt/*))
+	CC = $(ANDROID_HOST)/bin/clang --target=$(ARCH)-linux-android$(ANDROID_API)
+	AR = $(ANDROID_HOST)/bin/llvm-ar
+	CFLAGS = -Wall -Wextra -fPIC -I. -I$(ANDROID_NDK)/sources/android/native_app_glue
+	LIB_EXT = a
+	FIND_SOURCES = ( find android -name "*.c"; find unix -name "*.c"; find audio -name "*.c"; )
+	LANG = c
 	HAS_WINDOWING := 1
 else ifeq ($(PLATFORM_OS),darwin)
 	CC = clang
@@ -151,6 +165,12 @@ $(OUTDIR)/ios-settings: ios-settings
 $(TARGET): $(IOS_SOURCES) $(OUTDIR)/ios-settings
 	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -DHAVE_WINDOWING -x $(LANG) -c - -o "$(OUTDIR)/platform.o"
 	xcrun --sdk $(SDK) ar rcs "$@" "$(OUTDIR)/platform.o"
+else ifeq ($(PLATFORM_OS),android)
+ANDROID_SOURCES := $(wildcard android/*.c android/*.h unix/*.c audio/*.c) platform.h events.h rc_server_impl.c
+$(TARGET): $(ANDROID_SOURCES)
+	@mkdir -p "$(OUTDIR)"
+	$(FIND_SOURCES) | sed 's|.*|$(HASH)include "&"|' | $(CC) $(CFLAGS) -DHAVE_WINDOWING -x $(LANG) -c - -o "$(OUTDIR)/platform.o"
+	$(AR) rcs "$@" "$(OUTDIR)/platform.o"
 else
 PLATFORM_SOURCES := $(shell $(FIND_SOURCES))
 $(TARGET): $(PLATFORM_SOURCES) platform.h events.h rc_server_impl.c
