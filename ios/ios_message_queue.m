@@ -55,8 +55,17 @@ static void ios_unlink(ios_message_t *prev, ios_message_t *p) {
 void ios_enqueue(struct AXmessage value) {
   pthread_mutex_lock(&ios_queue_mutex);
   if (value.message == kEventWindowResized || ios_is_paint(&value)) {
+    // One drawable: a system paint adds nothing to a queued paint, and an
+    // application paint takes over a queued system paint's place.
+    int system = value.message == kEventWindowPaint && !value.target;
     for (ios_message_t *p = ios_head; p; p = p->next) {
-      if (p->value.target == value.target && p->value.message == value.message) {
+      if (system && ios_is_paint(&p->value)) {
+        pthread_mutex_unlock(&ios_queue_mutex);
+        axDisposeMessage(&value);
+        return;
+      }
+      if ((p->value.target == value.target && p->value.message == value.message) ||
+          (ios_is_paint(&value) && p->value.message == kEventWindowPaint && !p->value.target)) {
         struct AXmessage old = p->value;
         value.id = old.id;
         p->value = value;
