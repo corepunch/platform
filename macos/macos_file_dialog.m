@@ -30,6 +30,25 @@ bool_t axFileDialogsRequireNative(void) {
   return required;
 }
 
+bool_t axMacPublishFile(const char *source, const char *target) {
+  @autoreleasepool {
+    NSString *input = source ? [NSString stringWithUTF8String:source] : nil;
+    NSString *output = target ? [NSString stringWithUTF8String:target] : nil;
+    if (!input.length || !output.length) {
+      fprintf(stderr, "[macos] cannot publish staged file: invalid source or target path\n");
+      fflush(stderr);
+      return FALSE;
+    }
+    NSError *error = nil;
+    NSData *data = [NSData dataWithContentsOfFile:input options:NSDataReadingMappedAlways error:&error];
+    if (data && [data writeToFile:output options:NSDataWritingAtomic error:&error]) return TRUE;
+    fprintf(stderr, "[macos] cannot publish staged file '%s' to '%s': %s\n", source, target,
+            error.localizedDescription.UTF8String ?: "unknown error");
+    fflush(stderr);
+    return FALSE;
+  }
+}
+
 @interface AXFilePanelFilters : NSObject {
   NSSavePanel *_panel;
   NSArray *_patterns;

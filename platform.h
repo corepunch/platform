@@ -531,6 +531,8 @@ typedef struct _AXopenfilename {
 /** @brief Whether the OS requires native panels to grant file access. */
 #if defined(__APPLE__) && TARGET_OS_OSX
 AX_API bool_t axFileDialogsRequireNative(void);
+/** @brief Atomically publish a staged file to a user-selected macOS path. */
+AX_API bool_t axMacPublishFile(const char *source, const char *target);
 #else
 static inline bool_t axFileDialogsRequireNative(void) {
 #ifdef AX_PLATFORM_IOS

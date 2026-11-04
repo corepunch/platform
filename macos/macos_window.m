@@ -568,8 +568,10 @@ axCreateSurface(uint32_t width, uint32_t height)
 
 @implementation WindowDelegate {}
 
-- (void) windowWillClose:(NSNotification *)aNotification {
+- (BOOL)windowShouldClose:(NSWindow *)sender {
+  // Keep the host visible while the event loop confirms or cancels the close.
   axPostMessageW(NULL, kEventWindowClosed, 0, 0);
+  return NO;
 }
 //- (bool)validateMenuItem:(NSMenuItem *)menuItem {
 //    NSLog(@"%@", menuItem.title);
