@@ -18,6 +18,10 @@ static int ios_is_paint(struct AXmessage const *value) {
          (ios_paint_message && value->message == ios_paint_message);
 }
 
+static int ios_is_system_paint(struct AXmessage const *value) {
+  return value->message == kEventWindowPaint && !value->target;
+}
+
 // Unsigned subtraction preserves ordering when the sequence wraps.
 static int ios_posted_by(uint32_t id, uint32_t last) {
   return (uint32_t)(last - id) < UINT32_C(0x80000000);
@@ -57,15 +61,16 @@ void ios_enqueue(struct AXmessage value) {
   if (value.message == kEventWindowResized || ios_is_paint(&value)) {
     // One drawable: a system paint adds nothing to a queued paint, and an
     // application paint takes over a queued system paint's place.
-    int system = value.message == kEventWindowPaint && !value.target;
+    int system = ios_is_system_paint(&value);
     for (ios_message_t *p = ios_head; p; p = p->next) {
-      if (system && ios_is_paint(&p->value)) {
+      int queued_system = ios_is_system_paint(&p->value);
+      if (system && ios_is_paint(&p->value) && !queued_system) {
         pthread_mutex_unlock(&ios_queue_mutex);
         axDisposeMessage(&value);
         return;
       }
       if ((p->value.target == value.target && p->value.message == value.message) ||
-          (ios_is_paint(&value) && p->value.message == kEventWindowPaint && !p->value.target)) {
+          (ios_is_paint(&value) && queued_system)) {
         struct AXmessage old = p->value;
         value.id = old.id;
         p->value = value;

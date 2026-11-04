@@ -17,6 +17,13 @@ static void test_unbounded_and_coalesced(void) {
   assert(axPeekMessage(&msg) && msg.message == kEventKeyDown && msg.wParam == 3);
   assert(axPeekMessage(&msg) && msg.message == kEventKeyUp && msg.wParam == 4);
   assert(!axPeekMessage(&msg));
+
+  int view;
+  axPostMessageW(NULL, kEventWindowPaint, 5, NULL);
+  axPostMessageW(&view, kEventWindowPaint, 6, NULL);
+  axPostMessageW(NULL, kEventWindowPaint, 7, NULL);
+  assert(axPeekMessage(&msg) && msg.target == &view && msg.wParam == 6);
+  assert(!axPeekMessage(&msg));
 }
 
 static void test_inertia_interrupt(void) {
