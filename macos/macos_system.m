@@ -183,7 +183,8 @@ void axInit(void) {
   //    [appMenuItem setSubmenu:appMenu];
   
   [NSApplication sharedApplication];
-  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  /* Offscreen workers must not become foreground applications. */
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
   [NSApp finishLaunching];
   //    [NSApp setMainMenu:menubar];
   
