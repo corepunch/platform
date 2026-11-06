@@ -306,6 +306,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
   ConfigureOpenGLView(openGLView, flags);
 
   if (!(flags & AX_WINDOW_HIDDEN)) {
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
   } else {
