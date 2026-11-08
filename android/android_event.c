@@ -137,7 +137,7 @@ axCancelTimer(uint32_t timer_id)
 
 /* Pumps the looper once: glue commands and input run their callbacks, which
  * post messages; timers and the cross-thread inbox are drained here. */
-static int
+int
 android_pump(int timeout_ms)
 {
   if (!android.app) return 0;

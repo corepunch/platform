@@ -97,8 +97,11 @@ bool_t
 axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flags)
 {
   (void)title; (void)width; (void)height; (void)flags;
-  /* The activity owns the window: wait for it once, while pumping lifecycle events. */
-  while (!axAndroidHasWindow() && !android.destroy) axWaitMessage(100);
+  /* The activity owns the window: wait for it once, while pumping lifecycle
+   * events. Pump the looper itself: focus and configuration changes can queue
+   * messages before the window arrives, and axWaitMessage returns at once
+   * while any are queued, which would never deliver APP_CMD_INIT_WINDOW. */
+  while (!axAndroidHasWindow() && !android.destroy) android_pump(100);
   if (!axAndroidHasWindow()) return FALSE;
   axPostMessageW(NULL, kEventWindowPaint, android_point_size(), NULL);
   return TRUE;

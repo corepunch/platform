@@ -32,6 +32,8 @@ uint32_t android_point_size(void);
 
 /* android_event.c */
 void android_handle_cmd(struct android_app *app, int32_t cmd);
+/* Runs looper callbacks and drains timers and the inbox for up to timeout_ms. */
+int android_pump(int timeout_ms);
 int32_t android_handle_input(struct android_app *app, AInputEvent *event);
 
 #endif
