@@ -298,3 +298,33 @@ if (axNetResolve("example.com", ip, (int)sizeof(ip))) {
 On **WebGL** the browser sandbox does not expose raw sockets.  Use the
 browser's `fetch` / `WebSocket` APIs from JavaScript instead, or integrate
 a higher-level HTTP library that is compiled with Emscripten.
+
+### Bounded business RPC
+
+`axHttpRpc` is a synchronous GET/POST helper intended for a dedicated worker,
+not the UI thread. It returns separate success, cancellation, timeout,
+unavailable, transport-error and response-too-large results; on success the
+caller owns and frees the returned response and must inspect the HTTP status.
+The cancel callback runs on the worker and must use thread-safe state. A
+cancellation or timeout after request submission does not prove that the server
+failed to commit: retain and retry the same request ID and parameters.
+
+On macOS and Linux this helper starts `/usr/bin/curl` in a separate process.
+The URL, bearer token and body are passed through a private stdin channel, not
+arguments or files. An absolute monotonic deadline covers DNS, connection, TLS,
+sending and reading; the parent terminates and reaps the helper on timeout or
+cancellation. It permits HTTPS with the system trust store or HTTP to explicit
+loopback addresses only, does not follow redirects, and does not inherit proxy,
+custom CA, curl configuration or TLS key-log environment settings. Request
+bodies are limited to 1 MiB and responses to 4 MiB. `/usr/bin/curl` must be
+installed. It must be trusted and protected by the host OS; this API is not a
+sandbox against a hostile local user or process.
+
+The Windows, iOS, Android and WebGL backends currently return
+`AX_HTTP_RPC_UNAVAILABLE`. They do not silently use the blocking HTTP client.
+`tests/http_rpc_test.c` checks loopback success, configuration escaping and
+argument secrecy, redirects, stalled headers and bodies, cancellation, plaintext
+and self-signed TLS rejection, and response limits. It skips loopback checks when the execution
+sandbox cannot bind local sockets; that skip does not validate the transport.
+Set `ORION_REQUIRE_LOOPBACK_TESTS=1` to make missing curl, OpenSSL, Python or
+loopback binding fail the test instead of skipping it; Linux CI uses this mode.
