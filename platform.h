@@ -1465,6 +1465,18 @@ enum {
   AX_NET_AF_IPV4 = 4, /**< IPv4 (AF_INET). */
   AX_NET_AF_IPV6 = 6, /**< IPv6 (AF_INET6). */
 };
+/** Bounded business RPC transport. Synchronous; call on a worker thread.
+ * HTTPS validates the system trust store. Plain HTTP is limited to loopback;
+ * redirects are not followed. The bearer and body are never put in arguments.
+ * Caller frees *response with free(). HTTP status is separate from transport status.
+ * A timeout/cancel after submission leaves the business result uncertain. */
+typedef bool_t (*AXhttpcancel)(void *context);
+enum { AX_HTTP_RPC_OK, AX_HTTP_RPC_CANCELLED, AX_HTTP_RPC_TIMEOUT,
+       AX_HTTP_RPC_UNAVAILABLE, AX_HTTP_RPC_ERROR, AX_HTTP_RPC_TOO_LARGE };
+AX_API int axHttpRpc(char const *method, char const *url, char const *bearer, char const *json,
+                     int timeout_ms, AXhttpcancel cancelled, void *context,
+                     char **response, size_t *response_length, int *http_status);
+
 /** @} */
 
 /**
