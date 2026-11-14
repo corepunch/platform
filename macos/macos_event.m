@@ -242,6 +242,10 @@ start_over:
     }
     return 1;
   } else if (event.type != NSEventTypeKeyDown) {
+    if (event.type == NSEventTypeLeftMouseDown) {
+      [macos_last_mouse_down release];
+      macos_last_mouse_down = [event retain];
+    }
     [NSApp sendEvent:event];
     [NSApp updateWindows];
   }

@@ -35,6 +35,7 @@
 #define kEventGesture 0xa8f3b522
 #define kEventPointerCancel 0xa8f3b523
 #define kEventAppearanceChanged 0xa8f3b524 // wParam: 1 when the OS now uses a dark appearance
+#define kEventMenuCommand 0xa8f3b525 // wParam: the command of the chosen axSetApplicationMenu item
 
 enum { AX_GESTURE_BEGIN, AX_GESTURE_UPDATE, AX_GESTURE_END, AX_GESTURE_CANCEL };
 typedef struct {

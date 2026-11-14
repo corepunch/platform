@@ -210,3 +210,25 @@ axSettingsLoad(char const *name, void *data, size_t capacity, size_t *out_size)
   return FALSE;
 }
 void axSetCursor(int cursor_id) { (void)cursor_id; }
+
+bool_t
+axSetApplicationMenu(const ax_menu_item_t *menus, uint32_t count)
+{
+  (void)menus; (void)count;
+  return FALSE;
+}
+
+bool_t
+axSetTitlebarHidden(bool_t hidden, uint32_t *controls_width, uint32_t *controls_height)
+{
+  (void)hidden;
+  if (controls_width) *controls_width = 0;
+  if (controls_height) *controls_height = 0;
+  return FALSE;
+}
+
+bool_t
+axDragWindow(void)
+{
+  return FALSE;
+}
