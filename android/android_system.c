@@ -47,3 +47,25 @@ bool_t axGetSaveFileName(struct _AXopenfilename const *ofn) { (void)ofn; return 
 bool_t axGetFolderName(struct _AXopenfilename const *ofn) { (void)ofn; return FALSE; }
 void axSetCursor(int cursor_id) { (void)cursor_id; }
 char const *KEY_GetKeyName(uint32_t keycode) { (void)keycode; return ""; }
+
+bool_t
+axSetApplicationMenu(const ax_menu_item_t *menus, uint32_t count)
+{
+  (void)menus; (void)count;
+  return FALSE;
+}
+
+bool_t
+axSetTitlebarHidden(bool_t hidden, uint32_t *controls_width, uint32_t *controls_height)
+{
+  (void)hidden;
+  if (controls_width) *controls_width = 0;
+  if (controls_height) *controls_height = 0;
+  return FALSE;
+}
+
+bool_t
+axDragWindow(void)
+{
+  return FALSE;
+}

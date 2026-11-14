@@ -721,6 +721,55 @@ AX_API bool_t
 axIsDarkTheme(void);
 
 /**
+ * @brief One entry of the operating system's application menu.
+ *
+ * A NULL @c title is a separator. An entry with @c items is a submenu;
+ * otherwise choosing it posts #kEventMenuCommand with @c command in wParam.
+ * @c key (an AX_KEY_* value, 0 for none) and @c modifiers (AX_MOD_*) are shown
+ * as the entry's shortcut; the application keeps handling the keys itself.
+ */
+typedef struct ax_menu_item {
+  const char                *title;
+  uint32_t                   command;
+  uint32_t                   key;
+  uint32_t                   modifiers;
+  const struct ax_menu_item *items;
+  uint32_t                   count;
+} ax_menu_item_t;
+
+/**
+ * @brief Install the application's menus in the operating system's menu bar.
+ *
+ * On macOS the menus follow the application's own menu in the system menu
+ * bar. The entries are copied. Returns `FALSE` on platforms without an
+ * application menu bar outside the window, where the application shows its
+ * menus itself.
+ */
+AX_API bool_t
+axSetApplicationMenu(const ax_menu_item_t *menus, uint32_t count);
+
+/**
+ * @brief Hide the window's title bar and let the content fill its place.
+ *
+ * On macOS the title bar turns transparent over the content and only the
+ * window controls stay; @p controls_width and @p controls_height receive the
+ * space they occupy at the content's top-left corner, in points. The content
+ * then drags the window with #axDragWindow. Returns `FALSE`, with zero
+ * sizes, where the platform keeps its title bar.
+ */
+AX_API bool_t
+axSetTitlebarHidden(bool_t hidden, uint32_t *controls_width, uint32_t *controls_height);
+
+/**
+ * @brief Move the window with the mouse, from the left button press being handled.
+ *
+ * Call while handling #kEventLeftButtonDown over content that stands in for a
+ * title bar. Returns `FALSE` where the platform cannot start the drag.
+ */
+AX_API bool_t
+axDragWindow(void);
+
+/**
  * @brief Return a short string identifying the current platform.
  *
  * @return One of `"macos"`, `"linux (wayland)"`, `"linux (x11)"`, `"qnx"`, or `"webgl"`.
