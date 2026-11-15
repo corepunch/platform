@@ -66,6 +66,34 @@ axAndroidPostMessage(struct AXmessage message)
   if (inbox_pipe[1] >= 0) (void)!write(inbox_pipe[1], &wake, 1);
 }
 
+void
+axAndroidPostText(char const *utf8)
+{
+  for (size_t i = 0, length = utf8 ? strlen(utf8) : 0; i < length;) {
+    unsigned char c = (unsigned char)utf8[i];
+    size_t n = c < 0x80 ? 1 : c < 0xe0 ? 2 : c < 0xf0 ? 3 : 4;
+    if (n > length - i) n = length - i;
+    void *chars = NULL;
+    memcpy(&chars, utf8 + i, n < sizeof(chars) ? n : sizeof(chars));
+    uint32_t key = n == 1 ? c : c & ((1u << (7 - n)) - 1);
+    for (size_t j = 1; j < n; j++) key = (key << 6) | (utf8[i + j] & 0x3f);
+    if (c == '\n' || c == '\r') { key = AX_KEY_ENTER; chars = NULL; }
+    axAndroidPostMessage((struct AXmessage){ .message = kEventKeyDown, .wParam = key, .lParam = chars });
+    axAndroidPostMessage((struct AXmessage){ .message = kEventKeyUp, .wParam = key });
+    i += n;
+  }
+}
+
+void
+axAndroidPostKey(int keycode)
+{
+  uint32_t key = keycode == AKEYCODE_DEL ? AX_KEY_BACKSPACE : keycode == AKEYCODE_FORWARD_DEL ? AX_KEY_DEL
+               : keycode == AKEYCODE_ENTER ? AX_KEY_ENTER : 0;
+  if (!key) return;
+  axAndroidPostMessage((struct AXmessage){ .message = kEventKeyDown, .wParam = key });
+  axAndroidPostMessage((struct AXmessage){ .message = kEventKeyUp, .wParam = key });
+}
+
 static void
 inbox_drain(void)
 {

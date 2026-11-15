@@ -11,8 +11,15 @@ timers and a cross-thread inbox).
 - One finger drives the left-button stream (down, dragged, up, cancel), with
   double-tap detection; scroll axes post `kEventScrollWheel`.
 - Text input comes from the application's Java input view through
-  `axAndroidPostMessage()`, which is safe from any thread. Hardware editing
-  keys (backspace, delete, enter, tab, arrows) arrive as key events.
+  `axAndroidPostText()` (committed UTF-8) and `axAndroidPostKey()` (Android
+  `KEYCODE_DEL`, `KEYCODE_FORWARD_DEL`, `KEYCODE_ENTER`), or any message
+  through `axAndroidPostMessage()`; all are safe from any thread. Hardware
+  editing keys (backspace, delete, enter, tab, arrows) arrive as key events.
+- `axSetTextInput()` calls the activity's
+  `public void showKeyboard(boolean visible, int type)` over JNI with type 0
+  (plain text). It attaches the calling thread to the Java VM; the
+  application detaches it before `android_main()` returns.
+- Audio plays through AAudio (link `-laaudio`).
 - `axAndroidSetInsets()` records system bar and soft keyboard insets, in
   points, reported by the activity's window-insets listener.
 - The window comes and goes with the activity; the GL context outlives it.

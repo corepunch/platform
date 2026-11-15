@@ -2,8 +2,8 @@
  * @file audio_backend.c
  * @brief Platform playback for the shared S16 device.
  *
- * macOS and iOS use AudioQueue, Windows uses waveOut, Linux uses ALSA when
- * the headers were available at build time. Other targets compile a stub
+ * macOS and iOS use AudioQueue, Windows uses waveOut, Android uses AAudio,
+ * Linux uses ALSA when the headers were available at build time. Other targets compile a stub
  * that reports no device so WAV loading and mixing still work.
  */
 #include "audio_backend.h"
@@ -178,6 +178,79 @@ ax_audio_hw_pause(bool_t pause)
     waveOutRestart(g_wave);
     g_hw_paused = 0;
   }
+}
+
+#elif defined(__ANDROID__)
+#include <aaudio/AAudio.h>
+
+static AAudioStream *g_stream = NULL;
+static int g_frame_bytes = 0;
+
+/* Runs on AAudio's real-time thread, as AudioQueue's callback does. */
+static aaudio_data_callback_result_t
+aaudio_fill(AAudioStream *stream, void *userdata, void *data, int32_t frames)
+{
+  (void)stream;
+  (void)userdata;
+  ax_audio_device_fill(data, frames * g_frame_bytes);
+  return AAUDIO_CALLBACK_RESULT_CONTINUE;
+}
+
+bool_t
+ax_audio_hw_open(int freq, int channels, int frames)
+{
+  AAudioStreamBuilder *builder = NULL;
+  aaudio_result_t result;
+  (void)frames; /* AAudio picks its burst size; the device fills any length. */
+  if (g_stream) return TRUE;
+  if ((result = AAudio_createStreamBuilder(&builder)) != AAUDIO_OK) {
+    fprintf(stderr, "[audio] AAudio builder failed: %s\n", AAudio_convertResultToText(result));
+    return FALSE;
+  }
+  AAudioStreamBuilder_setDirection(builder, AAUDIO_DIRECTION_OUTPUT);
+  AAudioStreamBuilder_setFormat(builder, AAUDIO_FORMAT_PCM_I16);
+  AAudioStreamBuilder_setChannelCount(builder, channels);
+  AAudioStreamBuilder_setSampleRate(builder, freq);
+  AAudioStreamBuilder_setPerformanceMode(builder, AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
+  AAudioStreamBuilder_setDataCallback(builder, aaudio_fill, NULL);
+  result = AAudioStreamBuilder_openStream(builder, &g_stream);
+  AAudioStreamBuilder_delete(builder);
+  if (result != AAUDIO_OK) {
+    fprintf(stderr, "[audio] AAudio open rejected rate=%d channels=%d: %s\n", freq, channels, AAudio_convertResultToText(result));
+    g_stream = NULL;
+    return FALSE;
+  }
+  if (AAudioStream_getSampleRate(g_stream) != freq || AAudioStream_getChannelCount(g_stream) != channels ||
+      AAudioStream_getFormat(g_stream) != AAUDIO_FORMAT_PCM_I16) {
+    fprintf(stderr, "[audio] AAudio opened rate=%d channels=%d, wanted rate=%d channels=%d S16\n",
+            AAudioStream_getSampleRate(g_stream), AAudioStream_getChannelCount(g_stream), freq, channels);
+    AAudioStream_close(g_stream);
+    g_stream = NULL;
+    return FALSE;
+  }
+  g_frame_bytes = channels * (int)sizeof(int16_t);
+  if ((result = AAudioStream_requestStart(g_stream)) != AAUDIO_OK) {
+    fprintf(stderr, "[audio] AAudio start failed: %s\n", AAudio_convertResultToText(result));
+    AAudioStream_close(g_stream);
+    g_stream = NULL;
+    return FALSE;
+  }
+  return TRUE;
+}
+
+void
+ax_audio_hw_close(void)
+{
+  if (!g_stream) return;
+  AAudioStream_requestStop(g_stream);
+  AAudioStream_close(g_stream);
+  g_stream = NULL;
+}
+
+void
+ax_audio_hw_pause(bool_t pause)
+{
+  (void)pause; /* Paused devices are fed silence by ax_audio_device_fill. */
 }
 
 #elif defined(__linux__) && defined(HAVE_ALSA)

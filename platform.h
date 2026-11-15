@@ -30,6 +30,15 @@
 #endif
 #endif
 
+#ifdef __ANDROID__
+#define AX_PLATFORM_ANDROID 1
+#endif
+
+/* Touch-first targets: finger-sized controls and a software keyboard. */
+#if defined(AX_PLATFORM_IOS) || defined(AX_PLATFORM_ANDROID)
+#define AX_PLATFORM_TOUCH 1
+#endif
+
 #ifndef LOWORD
 /** @brief Extract the low 16 bits of a 32-bit value. */
 #define LOWORD(l) ((uint16_t)(l & 0xFFFF))
@@ -606,11 +615,15 @@ axGetFolderName(AXopenfilename const *ofn);
 AX_API void
 axInit(void);
 
+#ifdef AX_PLATFORM_TOUCH
+/** Show (TRUE) or hide the software keyboard for the focused text field. */
+AX_API void axSetTextInput(bool_t enabled);
+#endif
+
 #ifdef AX_PLATFORM_IOS
 /** UIKit owns the main loop. start/frame/stop run on the main thread.
  * Declare AXSceneDelegate in the app scene manifest, or use the supplied
  * AXApplicationDelegate configuration through this entry point. */
-AX_API void axSetTextInput(bool_t enabled);
 AX_API int axRunApplication(int argc, char **argv, bool_t (*start)(int, char **),
                             void (*frame)(void), void (*stop)(void));
 #endif

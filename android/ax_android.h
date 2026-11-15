@@ -15,6 +15,11 @@ AX_API struct android_app *axAndroidGetApp(void);
 /* Thread-safe post for Java/UI-thread callbacks (text input, links, insets).
  * Copies the message; wakes a blocked axWaitMessage. */
 AX_API void axAndroidPostMessage(struct AXmessage message);
+/* Thread-safe input from the activity's IME view: committed UTF-8 text as key
+ * presses, and editing keys by Android KeyEvent code (KEYCODE_DEL, ENTER,
+ * FORWARD_DEL). */
+AX_API void axAndroidPostText(char const *utf8);
+AX_API void axAndroidPostKey(int keycode);
 
 /* Window insets in points: system bars and the soft keyboard above them. */
 AX_API void axAndroidSetInsets(float left, float top, float right, float bottom, float keyboard);

@@ -1,5 +1,6 @@
 #include "android_local.h"
 #include <android/configuration.h>
+#include <jni.h>
 
 static char g_settings[512], g_share[512], g_documents[512];
 
@@ -40,6 +41,34 @@ bool_t
 axIsDarkTheme(void)
 {
   return android.app && AConfiguration_getUiModeNight(android.app->config) == ACONFIGURATION_UI_MODE_NIGHT_YES;
+}
+
+/* Calls the activity's showKeyboard(boolean visible, int type), type 0 being
+ * plain text. JNI attaches the calling thread, which detaches before it exits. */
+void
+axSetTextInput(bool_t enabled)
+{
+  ANativeActivity *activity = android.app ? android.app->activity : NULL;
+  JNIEnv *env = NULL;
+  if (!activity) {
+    fprintf(stderr, "[android] axSetTextInput rejected enabled=%d: no activity\n", enabled);
+    return;
+  }
+  JavaVM *vm = activity->vm;
+  if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_6) != JNI_OK && (*vm)->AttachCurrentThread(vm, &env, NULL) != JNI_OK) {
+    ANDROID_LOG("axSetTextInput: cannot attach the thread to Java");
+    return;
+  }
+  jclass type = (*env)->GetObjectClass(env, activity->clazz);
+  jmethodID method = (*env)->GetMethodID(env, type, "showKeyboard", "(ZI)V");
+  (*env)->DeleteLocalRef(env, type);
+  if (!method) {
+    (*env)->ExceptionClear(env);
+    ANDROID_LOG("axSetTextInput: the activity has no showKeyboard(boolean, int)");
+    return;
+  }
+  (*env)->CallVoidMethod(env, activity->clazz, method, (jboolean)(enabled != 0), (jint)0);
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionDescribe(env); (*env)->ExceptionClear(env); }
 }
 
 bool_t axGetOpenFileName(struct _AXopenfilename const *ofn) { (void)ofn; return FALSE; }
