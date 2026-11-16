@@ -201,7 +201,7 @@ test-api: $(TARGET)
 	@printf '#include "platform.h"\n#include <assert.h>\nint main(void) {\n' > $(TEST_SRC)
 	@awk '/^AX_API[[:space:]]/ { line=$$0; while (line !~ /;/ && (getline nl) > 0) line=line " " nl; sub(/^AX_API[[:space:]]+/, "", line); n=split(line, parts, "("); if (n < 2) next; m=split(parts[1], toks, /[^A-Za-z0-9_]+/); name=toks[m]; if (name != "") printf "    assert(%s != NULL);\n", name }' $(TEST_SRC).api >> $(TEST_SRC)
 	@printf '    return 0;\n}\n' >> $(TEST_SRC)
-	@$(CC) -I. $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
+	@$(CC) -I. $(filter -DAX_METAL%,$(CFLAGS)) $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
 	@$(TEST_BIN)
 	@rm -f $(TEST_SRC) $(TEST_SRC).api $(TEST_BIN)
 	@echo "All platform API functions are defined."
