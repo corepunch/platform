@@ -11,6 +11,8 @@
 @end
 @implementation AXMetalView
 - (BOOL)wantsUpdateLayer { return YES; }
+// The renderer presents the layer's drawables; AppKit must not redraw it.
+- (void)updateLayer {}
 - (CALayer *)makeBackingLayer
 {
   CAMetalLayer *layer = [CAMetalLayer layer];
@@ -320,6 +322,7 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 #if AX_METAL
 	NSView          *openGLView  = [[AXMetalView alloc] initWithFrame:viewRect];
 	[openGLView setWantsLayer:YES];
+	[openGLView setLayerContentsRedrawPolicy:NSViewLayerContentsRedrawDuringViewResize];
 	[openGLView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
 #else
 	NSOpenGLPixelFormat *pf      = MakeOpenGLPixelFormat();
