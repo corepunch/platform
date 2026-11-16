@@ -187,14 +187,5 @@ void axInit(void) {
   [NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
   [NSApp finishLaunching];
   //    [NSApp setMainMenu:menubar];
-  
-  NSAppearance *appearance = [NSApp effectiveAppearance];
-  NSAppearanceName bestMatch = [appearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameDarkAqua, NSAppearanceNameAqua]];
-  
-  if ([bestMatch isEqualToString:NSAppearanceNameDarkAqua]) {
-    NSLog(@"App started in Dark Mode");
-  } else {
-    NSLog(@"App started in Light Mode");
-  }
 }
 
