@@ -1,6 +1,31 @@
 #include "macos_local.h"
 
 #import <OpenGL/gl.h>
+#if AX_METAL
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+
+// The window's content view when the renderer uses Metal: layer-backed by a
+// CAMetalLayer whose drawables the renderer acquires and presents itself.
+@interface AXMetalView : NSView
+@end
+@implementation AXMetalView
+- (BOOL)wantsUpdateLayer { return YES; }
+- (CALayer *)makeBackingLayer
+{
+  CAMetalLayer *layer = [CAMetalLayer layer];
+  id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+  layer.device = device;
+  [device release];
+  layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+  layer.framebufferOnly = NO;  // backdrop filters read the drawable
+  layer.opaque = YES;
+  return layer;
+}
+- (BOOL)acceptsFirstResponder { return YES; }
+- (BOOL)isOpaque { return YES; }
+@end
+#endif
 
 #define USE_SINGLE_WINDOW
 
@@ -115,9 +140,20 @@ struct wstate {
 static void
 UpdateWindowBacking(NSWindow *window)
 {
+#if AX_METAL
+  NSView *view = window.contentView;
+  wstate.backingScale = (wstate.flags & AX_WINDOW_HIGHDPI) ? window.backingScaleFactor : 1;
+  if ([view.layer isKindOfClass:[CAMetalLayer class]]) {
+    CAMetalLayer *layer = (CAMetalLayer *)view.layer;
+    layer.contentsScale = wstate.backingScale;
+    layer.drawableSize = CGSizeMake(view.bounds.size.width * wstate.backingScale,
+                                    view.bounds.size.height * wstate.backingScale);
+  }
+#else
   NSOpenGLView *view = (NSOpenGLView *)window.contentView;
   wstate.backingScale = view.wantsBestResolutionOpenGLSurface ? window.backingScaleFactor : 1;
   [[view openGLContext] update];
+#endif
 }
 
 void
@@ -281,12 +317,18 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 
 	NSRect           windowRect  = CenterOnScreen(width, height);
 	NSRect           viewRect    = CGRectMake(0, 0, width, height);
+#if AX_METAL
+	NSView          *openGLView  = [[AXMetalView alloc] initWithFrame:viewRect];
+	[openGLView setWantsLayer:YES];
+	[openGLView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+#else
 	NSOpenGLPixelFormat *pf      = MakeOpenGLPixelFormat();
 	NSOpenGLView    *openGLView  = [[NSOpenGLView alloc] initWithFrame:viewRect pixelFormat:pf];
+  [pf release];
+#endif
 	NSString        *windowTitle = [[NSString alloc] initWithUTF8String:title];
 	NSWindow        *window      = MakeWindow(windowRect, flags);
 	WindowDelegate  *delegate    = [[WindowDelegate alloc] init];
-  [pf release];
 
   [delegate setWindow:window];
   
@@ -303,7 +345,9 @@ axCreateWindow(char const *title, uint32_t width, uint32_t height, uint32_t flag
 	[window setFrameOrigin:CenterOnScreen(width, height).origin];
 	[window registerForDraggedTypes:[NSArray arrayWithObject:NSPasteboardTypeFileURL]];
 
+#if !AX_METAL
   ConfigureOpenGLView(openGLView, flags);
+#endif
 
   if (!(flags & AX_WINDOW_HIDDEN)) {
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -375,6 +419,9 @@ void axShutdown(void) {
       wstate.windowCtx = nil;
     }
   } else if (wstate.surf) {
+#if AX_METAL
+    wstate.surf = NULL;
+#endif
     if (wstate.ctx && [NSOpenGLContext currentContext] == (NSOpenGLContext *)wstate.ctx) {
       [NSOpenGLContext clearCurrentContext];
     }
@@ -435,6 +482,18 @@ bool_t axSetSize(uint32_t width, uint32_t height, bool_t centered) {
   }
 }
 
+#if AX_METAL
+// The renderer draws into the window's CAMetalLayer, or into its own texture
+// for an offscreen surface, and presents frames itself.
+void *axGetMetalLayer(void) {
+  CALayer *layer = wstate.Window ? wstate.Window.contentView.layer : nil;
+  return [layer isKindOfClass:[CAMetalLayer class]] ? layer : NULL;
+}
+void axBindFramebuffer(void) {}
+void axBeginPaint(void) {}
+void axEndPaint(void) {}
+void axMakeCurrentContext(void) {}
+#else
 void axBindFramebuffer(void) {
   if (wstate.Window) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -482,6 +541,7 @@ void axMakeCurrentContext(void) {
     CGLSetCurrentContext(wstate.ctx);
   }
 }
+#endif
 
 #include <OpenGL/OpenGL.h>
 #include <OpenGL/gl.h>
@@ -545,6 +605,15 @@ axCreateSurface(uint32_t width, uint32_t height)
   if (wstate.surf) {
     return TRUE;
   }
+#if AX_METAL
+  assert(!wstate.Window);
+  wstate.surf = (IOSurfaceRef)1;
+  wstate.width = width;
+  wstate.height = height;
+  wstate.backingScale = 1;
+  axPostMessageW(NULL, kEventWindowPaint, MAKEDWORD(width, height), 0);
+  return TRUE;
+#endif
   BuildSurfacePixelFormatAttributes();
   CGLPixelFormatObj pix;
   GLint npix;

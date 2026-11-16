@@ -154,6 +154,15 @@ CFLAGS += -arch $(ARCH)
 LDFLAGS += -arch $(ARCH)
 endif
 
+# METAL=1: Apple windows are backed by a CAMetalLayer and create no OpenGL
+# context; the renderer presents frames itself (see axGetMetalLayer).
+ifeq ($(METAL),1)
+ifneq (,$(filter darwin ios,$(PLATFORM_OS)))
+CFLAGS += -DAX_METAL=1
+LDFLAGS += -framework Metal -framework QuartzCore
+endif
+endif
+
 ifeq ($(PLATFORM_OS),ios)
 IOS_SOURCES := $(wildcard ios/*.m unix/*.c ios/*.h) platform.h events.h rc_server_impl.c
 .PHONY: ios-settings
