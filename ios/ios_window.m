@@ -406,6 +406,36 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 }
 @end
 
+typedef struct {
+  CFURLRef url;
+  BOOL scoped;
+  char path[];
+} ios_open_file_t;
+
+static void ios_release_open_file(void *data) {
+  ios_open_file_t *file = data;
+  if (file->scoped) [(__bridge NSURL *)file->url stopAccessingSecurityScopedResource];
+  CFRelease(file->url);
+  free(file);
+}
+
+static void ios_queue_open_files(NSSet<UIOpenURLContext *> *contexts) {
+  for (UIOpenURLContext *context in contexts) {
+    NSURL *url = context.URL;
+    if (!url.isFileURL) continue;
+    const char *path = url.fileSystemRepresentation;
+    if (!path) continue;
+    size_t length = strlen(path) + 1;
+    ios_open_file_t *file = malloc(sizeof(*file) + length);
+    if (!file) continue;
+    file->url = CFRetain((__bridge CFURLRef)url);
+    file->scoped = [url startAccessingSecurityScopedResource];
+    memcpy(file->path, path, length);
+    struct AXmessage event = {.message = kEventOpenFile, .lParam = file->path};
+    if (axOwnMessageData(&event, file, ios_release_open_file)) axPostMessageOwnedW(event);
+  }
+}
+
 @interface AXSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property(nonatomic, strong) UIWindow *window;
 @end
@@ -417,6 +447,10 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
   self.window.rootViewController = host;
   AXIOS_RELEASE(host);
   [self.window makeKeyAndVisible];
+  ios_queue_open_files(options.URLContexts);
+}
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts {
+  ios_queue_open_files(URLContexts);
 }
 - (void)sceneWillResignActive:(UIScene *)scene {
   IOS_TRACE("scene inactive");
@@ -429,6 +463,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 - (void)sceneDidBecomeActive:(UIScene *)scene {
   IOS_TRACE("scene active");
   ios_display_link.paused = NO;
+  axPostMessageW(NULL, kEventSetFocus, 0, NULL);
   axPostMessageW(NULL, kEventWindowPaint, axGetSize(NULL), NULL);
 }
 #if !__has_feature(objc_arc)

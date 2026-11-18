@@ -39,6 +39,15 @@ static NSURL *ios_documents_url(void) {
   return url;
 }
 
+const char *axIOSDocumentsDirectory(void) {
+  static char path[4096];
+  if (!path[0]) {
+    const char *documents = ios_documents_url().fileSystemRepresentation;
+    if (documents) snprintf(path, sizeof(path), "%s", documents);
+  }
+  return path;
+}
+
 // "name", then "name 2", "name 3", ... starting at the given attempt.
 static NSURL *ios_unique_document(NSURL *documents, NSString *name, int attempt) {
   NSURL *destination = nil;

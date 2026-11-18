@@ -1115,6 +1115,8 @@ AX_API uint32_t
 axGetSize(struct AXsize* size);
 
 #ifdef AX_PLATFORM_IOS
+/** Files-visible directory owned by the iOS application. */
+AX_API const char *axIOSDocumentsDirectory(void);
 /** Native safe-area insets in view points; the drawable itself fills the window. */
 AX_API void axIOSGetSafeArea(float *left, float *top, float *right, float *bottom);
 /** Docked keyboard bottom occlusion in view points for an embedded host; zero otherwise.

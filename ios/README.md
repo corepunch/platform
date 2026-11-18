@@ -61,7 +61,9 @@ open directly; external selections are read with security-scoped access and file
 coordination, then copied into Documents under a unique name. Native Save asks
 for a filename, applies the filter extension and confirms replacement. Files dragged in
 from other apps are copied into Documents under a unique name and posted as
-`kEventDragDrop` at the drop point, one event per file. External directory picking, offscreen native
+`kEventDragDrop` at the drop point, one event per file. Files opened through a registered document type
+are queued as `kEventOpenFile` during both scene creation and subsequent URL opens.
+The event holds security-scoped access until the consumer disposes of it. External directory picking, offscreen native
 windows and joystick discovery are not implemented; rejected requests log to
 stderr. Orion routes both Open and Save to these native dialogs.
 
