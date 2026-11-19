@@ -1126,6 +1126,23 @@ AX_API float axIOSGetKeyboardInset(void);
 AX_API void axIOSSetBackgroundColor(float red, float green, float blue);
 #endif
 
+#if defined(__APPLE__) && defined(AX_METAL)
+/**
+ * @brief The `CAMetalLayer *` the window presents with.
+ *
+ * Built with AX_METAL, iOS and macOS windows are backed by a CAMetalLayer and
+ * create no OpenGL context: #axMakeCurrentContext, #axBeginPaint,
+ * #axBindFramebuffer and #axEndPaint do nothing, and the renderer acquires
+ * and presents drawables itself. The platform keeps the layer's drawableSize
+ * at the window's size in pixels.
+ *
+ * @return The layer, or NULL for an offscreen surface or before
+ *         #axCreateWindow; the renderer then draws into a texture of
+ *         #axGetSize times #axGetScaling.
+ */
+AX_API void *axGetMetalLayer(void);
+#endif
+
 /**
  * @brief Wait for the next event or until @p msec milliseconds have elapsed.
  *

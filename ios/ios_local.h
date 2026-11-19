@@ -1,8 +1,13 @@
 #ifndef __IOS_LOCAL_H__
 #define __IOS_LOCAL_H__
 #import <UIKit/UIKit.h>
+#if AX_METAL
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+#else
 #import <QuartzCore/CAEAGLLayer.h>
 #import <OpenGLES/ES3/gl.h>
+#endif
 #include "../platform.h"
 #include "ios_message_queue.h"
 #if __has_feature(objc_arc)
@@ -26,7 +31,10 @@
 @end
 extern UIWindow *ios_window;
 extern AXView *ios_view;
+#if !AX_METAL
 extern EAGLContext *ios_context;
+#endif
+bool_t ios_has_surface(void);
 extern CADisplayLink *ios_display_link;
 void ios_resize_surface(void);
 void ios_cancel_timers(void);

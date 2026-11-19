@@ -11,9 +11,15 @@
 
 UIWindow *ios_window;
 AXView *ios_view;
-EAGLContext *ios_context;
 CADisplayLink *ios_display_link;
+#if AX_METAL
+static BOOL ios_metal;   // the view's CAMetalLayer is configured
+bool_t ios_has_surface(void) { return ios_metal; }
+#else
+EAGLContext *ios_context;
 static GLuint ios_framebuffer, ios_color, ios_depth;
+bool_t ios_has_surface(void) { return ios_context != nil; }
+#endif
 static int ios_width, ios_height, ios_pixel_w, ios_pixel_h;
 static float ios_scale = 1, ios_keyboard_inset;
 static bool_t (*ios_start)(int, char **);
@@ -90,7 +96,11 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
 }
 
 @implementation AXView
+#if AX_METAL
++ (Class)layerClass { return [CAMetalLayer class]; }
+#else
 + (Class)layerClass { return [CAEAGLLayer class]; }
+#endif
 - (BOOL)canBecomeFirstResponder { return YES; }
 - (BOOL)hasText { return YES; }
 - (UITextAutocorrectionType)autocorrectionType { return UITextAutocorrectionTypeNo; }
@@ -246,7 +256,7 @@ static bool_t ios_key(UIPress *press, uint32_t event, bool_t text_input) {
     self.gesture_center.x, self.gesture_center.y, self.gesture_center.x, self.gesture_center.y, 1, 0});
   self.gesture_first = nil; self.gesture_second = nil;
 }
-- (void)layoutSubviews { [super layoutSubviews]; if (ios_context) ios_resize_surface(); }
+- (void)layoutSubviews { [super layoutSubviews]; if (ios_has_surface()) ios_resize_surface(); }
 - (void)safeAreaInsetsDidChange {
   [super safeAreaInsetsDidChange];
   if (ios_external_host)
@@ -458,7 +468,9 @@ static void ios_queue_open_files(NSSet<UIOpenURLContext *> *contexts) {
   [ios_view end_gesture:YES];
   axPostMessageW(NULL, kEventKillFocus, 0, NULL);
   ios_display_link.paused = YES;
+#if !AX_METAL
   if (ios_context) { [EAGLContext setCurrentContext:ios_context]; glFinish(); }
+#endif
 }
 - (void)sceneDidBecomeActive:(UIScene *)scene {
   IOS_TRACE("scene active");
@@ -489,6 +501,67 @@ int axRunApplication(int argc, char **argv, bool_t (*start)(int, char **), void 
   @autoreleasepool { return UIApplicationMain(argc, argv, nil, NSStringFromClass(AXApplicationDelegate.class)); }
 }
 
+#if AX_METAL
+void ios_resize_surface(void) {
+  int w = (int)ios_view.bounds.size.width, h = (int)ios_view.bounds.size.height;
+  int pw = (int)(w * ios_scale), ph = (int)(h * ios_scale);
+  if (!w || !h || (pw == ios_pixel_w && ph == ios_pixel_h)) return;
+  ((CAMetalLayer *)ios_view.layer).drawableSize = CGSizeMake(pw, ph);
+  ios_pixel_w = pw; ios_pixel_h = ph;
+  ios_width = w; ios_height = h;
+  IOS_TRACE("resize view=%p points=%dx%d pixels=%dx%d", (__bridge void *)ios_view, w, h, pw, ph);
+  axPostMessageW(NULL, kEventWindowResized, MAKEDWORD(w, h), NULL);
+  axPostMessageW(NULL, kEventWindowPaint, MAKEDWORD(w, h), NULL);
+}
+
+bool_t axCreateWindow(const char *title, uint32_t w, uint32_t h, uint32_t flags) {
+  if (![NSThread isMainThread]) return FALSE;
+  if (ios_metal) return TRUE;
+  if (!ios_view) {
+    UIWindowScene *window_scene = nil;
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+      if (![scene isKindOfClass:UIWindowScene.class]) continue;
+      window_scene = (UIWindowScene *)scene;
+      if (scene.activationState == UISceneActivationStateForegroundActive ||
+          scene.activationState == UISceneActivationStateForegroundInactive) break;
+    }
+    if (!window_scene) { IOS_TRACE("create window requires a connected UIWindowScene"); return FALSE; }
+    // ORCA already owns UIApplicationMain and its per-scene display link.
+    ios_external_host = TRUE;
+    ios_window = [[UIWindow alloc] initWithWindowScene:window_scene];
+    ios_window.frame = window_scene.coordinateSpace.bounds;
+    AXController *host = [AXController new];
+    host.title = title ? [NSString stringWithUTF8String:title] : @"ORCA";
+    ios_window.rootViewController = host;
+    [host loadViewIfNeeded];
+    if (!(flags & AX_WINDOW_HIDDEN)) [ios_window makeKeyAndVisible];
+    [host.view setNeedsLayout];
+    [host.view layoutIfNeeded];
+    AXIOS_RELEASE(host);
+  }
+  id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+  if (!device) {
+    IOS_TRACE("Metal device creation failed");
+    axShutdown();
+    return FALSE;
+  }
+  ios_scale = ios_external_host || (flags & AX_WINDOW_HIGHDPI) ? ios_window.screen.scale : 1;
+  ios_view.contentScaleFactor = ios_scale;
+  CAMetalLayer *layer = (CAMetalLayer *)ios_view.layer;
+  layer.device = device;
+  AXIOS_RELEASE(device);
+  layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+  layer.framebufferOnly = NO;  // backdrop filters read the drawable
+  layer.opaque = YES;
+  layer.contentsScale = ios_scale;
+  ios_metal = TRUE;
+  ios_resize_surface();
+  IOS_TRACE("create window title=%s requested=%ux%u", title, w, h);
+  if (ios_width > 0) return TRUE;
+  axShutdown();
+  return FALSE;
+}
+#else
 void ios_resize_surface(void) {
   int w = (int)ios_view.bounds.size.width, h = (int)ios_view.bounds.size.height;
   int pw = (int)(w * ios_scale), ph = (int)(h * ios_scale);
@@ -561,6 +634,7 @@ bool_t axCreateWindow(const char *title, uint32_t w, uint32_t h, uint32_t flags)
   axShutdown();
   return FALSE;
 }
+#endif
 void axInit(void) {
   if (!ios_start) return;
   NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
@@ -571,12 +645,16 @@ void axShutdown(void) {
   [ios_view cancel_touch];
   [ios_view end_gesture:YES];
   axIOSShutdownEvents();
+#if AX_METAL
+  ios_metal = FALSE;
+#else
   [EAGLContext setCurrentContext:ios_context];
   glDeleteFramebuffers(1, &ios_framebuffer); glDeleteRenderbuffers(1, &ios_color); glDeleteRenderbuffers(1, &ios_depth);
   ios_framebuffer = ios_color = ios_depth = 0;
   [EAGLContext setCurrentContext:nil];
   AXIOS_RELEASE(ios_context);
   ios_context = nil;
+#endif
   ios_width = ios_height = ios_pixel_w = ios_pixel_h = 0;
   if (ios_external_host) {
     [ios_view resignFirstResponder];
@@ -630,6 +708,14 @@ uint32_t axGetSize(struct AXsize *size) {
   if (size) { size->width = ios_width; size->height = ios_height; }
   return MAKEDWORD(ios_width, ios_height);
 }
+#if AX_METAL
+// The renderer acquires and presents the layer's drawables itself.
+void *axGetMetalLayer(void) { return ios_metal ? (__bridge void *)ios_view.layer : NULL; }
+void axMakeCurrentContext(void) {}
+void axBindFramebuffer(void) {}
+void axBeginPaint(void) {}
+void axEndPaint(void) {}
+#else
 void axMakeCurrentContext(void) { [EAGLContext setCurrentContext:ios_context]; }
 void axBindFramebuffer(void) { glBindFramebuffer(GL_FRAMEBUFFER, ios_framebuffer); }
 void axBeginPaint(void) { axMakeCurrentContext(); axBindFramebuffer(); }
@@ -638,6 +724,7 @@ void axEndPaint(void) {
   glBindRenderbuffer(GL_RENDERBUFFER, ios_color);
   if (![ios_context presentRenderbuffer:GL_RENDERBUFFER]) IOS_TRACE("present failed");
 }
+#endif
 bool_t axSetSize(uint32_t w, uint32_t h, bool_t centered) {
   if (ios_external_host && w == (uint32_t)ios_width && h == (uint32_t)ios_height) return TRUE;
   IOS_TRACE("resize request rejected: iOS owns window size requested=%ux%u centered=%d", w, h, centered);

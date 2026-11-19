@@ -154,6 +154,15 @@ CFLAGS += -arch $(ARCH)
 LDFLAGS += -arch $(ARCH)
 endif
 
+# METAL=1: Apple windows are backed by a CAMetalLayer and create no OpenGL
+# context; the renderer presents frames itself (see axGetMetalLayer).
+ifeq ($(METAL),1)
+ifneq (,$(filter darwin ios,$(PLATFORM_OS)))
+CFLAGS += -DAX_METAL=1
+LDFLAGS += -framework Metal -framework QuartzCore
+endif
+endif
+
 ifeq ($(PLATFORM_OS),ios)
 IOS_SOURCES := $(wildcard ios/*.m unix/*.c ios/*.h) platform.h events.h rc_server_impl.c
 .PHONY: ios-settings
@@ -192,7 +201,7 @@ test-api: $(TARGET)
 	@printf '#include "platform.h"\n#include <assert.h>\nint main(void) {\n' > $(TEST_SRC)
 	@awk '/^AX_API[[:space:]]/ { line=$$0; while (line !~ /;/ && (getline nl) > 0) line=line " " nl; sub(/^AX_API[[:space:]]+/, "", line); n=split(line, parts, "("); if (n < 2) next; m=split(parts[1], toks, /[^A-Za-z0-9_]+/); name=toks[m]; if (name != "") printf "    assert(%s != NULL);\n", name }' $(TEST_SRC).api >> $(TEST_SRC)
 	@printf '    return 0;\n}\n' >> $(TEST_SRC)
-	@$(CC) -I. $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
+	@$(CC) -I. $(filter -DAX_METAL%,$(CFLAGS)) $(TEST_SRC) $(TEST_LDFLAGS) -o $(TEST_BIN)
 	@$(TEST_BIN)
 	@rm -f $(TEST_SRC) $(TEST_SRC).api $(TEST_BIN)
 	@echo "All platform API functions are defined."

@@ -47,6 +47,10 @@ axJoystickGetName(void)
 bool_t
 axSetSwapInterval(int interval)
 {
+#if AX_METAL
+  (void)interval;
+  return TRUE;  // CAMetalLayer presents on the display's vsync
+#endif
   CGLContextObj ctx = CGLGetCurrentContext();
   if (!ctx) {
     return FALSE;
