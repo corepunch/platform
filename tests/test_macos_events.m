@@ -61,6 +61,36 @@ static void test_remove_messages(void)
   drain_events();
 }
 
+static void discard_wake_events(void)
+{
+  while ([NSApp nextEventMatchingMask:NSEventMaskApplicationDefined
+                            untilDate:[NSDate date]
+                               inMode:NSDefaultRunLoopMode
+                              dequeue:YES]) {}
+}
+
+static void test_resize_without_wake_events(void)
+{
+  struct AXmessage msg;
+  wParam_t initial_size = MAKEDWORD(640, 480);
+  wParam_t final_size = MAKEDWORD(800, 600);
+  drain_events();
+  axPostMessageW(NULL, kEventWindowResized, initial_size, NULL);
+  axPostMessageW(NULL, kEventWindowPaint, initial_size, NULL);
+  // Native event tracking can consume wake events before ORCA polls them.
+  discard_wake_events();
+  axPostMessageW(NULL, kEventWindowResized, final_size, NULL);
+  axPostMessageW(NULL, kEventWindowPaint, final_size, NULL);
+  assert(axWaitMessage(100) == 1);
+  assert(axPeekMessage(&msg) && msg.message == kEventWindowResized && msg.wParam == final_size);
+
+  // A later wake must still deliver the coalesced paint first.
+  axPostMessageW(NULL, kEventTimer, 0, NULL);
+  assert(axPeekMessage(&msg) && msg.message == kEventWindowPaint && msg.wParam == final_size);
+  assert(axPeekMessage(&msg) && msg.message == kEventTimer);
+  assert(!axPeekMessage(&msg));
+}
+
 static void test_fullscreen(void)
 {
   assert(axCreateWindow("Fullscreen event test", 640, 480,
@@ -90,6 +120,7 @@ int main(int argc, char **argv)
     drain_events();
     test_event_lifetime();
     test_remove_messages();
+    test_resize_without_wake_events();
     if (argc > 1 && !strcmp(argv[1], "--fullscreen")) test_fullscreen();
     puts("macOS event lifetime tests passed.");
   }

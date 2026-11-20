@@ -206,6 +206,14 @@ GetKeyCode(NSEvent *event)
 }
 
 static int
+has_queued_message(void)
+{
+  while (queue.read != queue.write && !queue.data[queue.read].message)
+    queue.read++;
+  return queue.read != queue.write;
+}
+
+static int
 peek_message(struct AXmessage *e)
 {
   NSEvent *event;
@@ -216,30 +224,22 @@ start_over:
                                 inMode:NSDefaultRunLoopMode
                                dequeue:YES];
   
-  if (!event) {
-    /* Headless tests may have posted AX messages queued in queue.data
-     without a corresponding Cocoa event available right now.
-     Drain that queue directly so rebuild() coroutines can resume. */
-    while (queue.read != queue.write && !queue.data[queue.read].message) {
-      queue.read++;
+  if (!event || event.type == NSEventTypeApplicationDefined) {
+    if (!has_queued_message()) {
+      if (event) goto start_over;
+      return 0;
     }
-    if (queue.read != queue.write) {
-      memcpy(e, &queue.data[queue.read], sizeof(struct AXmessage));
-      memset(&queue.data[queue.read], 0, sizeof(struct AXmessage));
-      queue.read++;
-      return 1;
+    if (event) {
+      uint16_t slot = event.subtype;
+      if ((uint16_t)(slot - queue.read) >= (uint16_t)(queue.write - queue.read))
+        goto start_over;
+      // AppKit can consume wake events during native tracking. Deliver any
+      // earlier messages before using this wake for its original slot.
+      if (slot != queue.read)
+        [NSApp postEvent:event atStart:YES];
     }
-    return 0;
-  }
-  
-  if (event.type == NSEventTypeApplicationDefined) {
-    queue.read = event.subtype;
-    memcpy(e, &queue.data[queue.read], sizeof(struct AXmessage));
-    memset(&queue.data[queue.read], 0, sizeof(struct AXmessage));
-    queue.read++;
-    if (!e->message) {
-      goto start_over;
-    }
+    *e = queue.data[queue.read];
+    memset(&queue.data[queue.read++], 0, sizeof(struct AXmessage));
     return 1;
   } else if (event.type != NSEventTypeKeyDown) {
     if (event.type == NSEventTypeLeftMouseDown) {
@@ -314,13 +314,13 @@ axWaitMessage(longTime_t msec)
     NSDate *date = msec > 0
     ? [NSDate dateWithTimeIntervalSinceNow:(double)msec / 1000.0]
     : [NSDate distantFuture];
-    for (;;) {
+    while (!has_queued_message()) {
       NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
                                           untilDate:date
                                              inMode:NSDefaultRunLoopMode
                                             dequeue:YES];
       if (!event)
-        return 0;
+        return has_queued_message();
       /* ApplicationDefined events carry AXmessage payloads — put it back so
        axPeekMessage can dequeue and decode it. */
       if (event.type == NSEventTypeApplicationDefined) {
@@ -335,6 +335,7 @@ axWaitMessage(longTime_t msec)
       /* Internal Cocoa events (NSEventTypePeriodic, etc.) — discard and keep waiting. */
       [NSApp sendEvent:event];
     }
+    return 1;
   }
 }
 
